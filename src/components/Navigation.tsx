@@ -10,13 +10,13 @@ const Navigation = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/50">
+    <nav className="sticky top-0 z-50 bg-slate-100 backdrop-blur-sm border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="hover:opacity-80 transition-opacity duration-150">
-              <img src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png" alt="Trade Pilot logo" className="h-32 w-auto -my-8" />
+              <img src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png" alt="Trade Pilot logo" className="h-24 sm:h-32 md:h-40 w-auto -my-6 sm:-my-8 md:-my-12" />
             </Link>
           </div>
 

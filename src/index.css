@@ -18,16 +18,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
 
-    /* Orange for primary actions */
-    --primary: 24 100% 50%; /* Orange #FF6B00 */
+    /* Teal Green for primary actions - Trade Pilot brand */
+    --primary: 174 72% 40%; /* Teal Green #1A9D8F */
     --primary-foreground: 0 0% 100%;
 
     /* Navy for secondary actions */
-    --secondary: 198 100% 13%; /* Navy #002B45 */
+    --secondary: 210 100% 12%; /* Navy #002B45 */
     --secondary-foreground: 0 0% 100%;
 
-    /* Turquoise kept as accent */
-    --accent: 175 100% 38%; /* Turquoise #00C4B3 */
+    /* Orange kept as accent for highlights */
+    --accent: 24 100% 50%; /* Orange #FF6B00 */
     --accent-foreground: 0 0% 100%;
 
     /* Light grey for section backgrounds */
@@ -39,7 +39,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 24 100% 50%;
+    --ring: 174 72% 40%;
 
     --radius: 0.5rem;
 
