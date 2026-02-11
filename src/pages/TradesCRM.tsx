@@ -30,6 +30,8 @@ import {
   Home,
   Coins,
   Search,
+  Menu,
+  X,
   CheckCircle2,
   Circle,
   AlertTriangle,
@@ -57,6 +59,7 @@ const TradesCRM = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
 
   // Personal Information State
@@ -339,12 +342,27 @@ const TradesCRM = () => {
     }
   };
 
+  const handleMobileNavClick = (tabId: string) => {
+    setActiveTab(tabId);
+    setMobileSidebarOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col min-h-screen fixed left-0 top-0 z-40">
+      <aside className={`w-64 bg-white border-r border-slate-200 flex flex-col min-h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out ${
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
         {/* Logo */}
-        <div className="p-6 border-b border-slate-200">
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-baseline">
             <span className="text-xl font-bold text-secondary tracking-tight">Trade </span>
             <span className="relative">
@@ -352,6 +370,12 @@ const TradesCRM = () => {
               <span className="text-xl font-bold text-secondary tracking-tight">Pilot</span>
             </span>
           </div>
+          <button
+            className="lg:hidden p-1 rounded-md hover:bg-slate-100"
+            onClick={() => setMobileSidebarOpen(false)}
+          >
+            <X className="h-5 w-5 text-slate-500" />
+          </button>
         </div>
 
         {/* Navigation Items */}
@@ -361,7 +385,7 @@ const TradesCRM = () => {
             {mainNavItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleMobileNavClick(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                     activeTab === item.id
                       ? 'bg-primary/10 text-primary font-semibold'
@@ -383,7 +407,7 @@ const TradesCRM = () => {
             {secondaryNavItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleMobileNavClick(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                     activeTab === item.id
                       ? 'bg-primary/10 text-primary font-semibold'
@@ -414,37 +438,50 @@ const TradesCRM = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64">
+      <main className="flex-1 lg:ml-64">
         {/* Top Header */}
         <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-          <div className="px-8 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Mobile hamburger */}
+              <button
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 -ml-1"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5 text-slate-700" />
+              </button>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hidden sm:flex">
                   <Home className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Welcome back</p>
-                  <h1 className="text-xl font-bold text-slate-800">Ben</h1>
+                  <p className="text-xs sm:text-sm text-slate-500">Welcome back</p>
+                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">Ben</h1>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {/* Secondary Button - Outlined Style */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Full buttons on md+ screens */}
               <Button
                 variant="outline"
-                className="border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-semibold px-5 py-2"
+                className="hidden md:inline-flex border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-semibold px-5 py-2"
                 onClick={() => setActiveTab('leads')}
               >
                 View Leads
               </Button>
-              {/* Primary Button - Filled Style like "Join as a Trade" */}
               <Button
-                className="bg-secondary hover:bg-secondary/90 text-white font-semibold px-5 py-2 shadow-md"
+                className="hidden md:inline-flex bg-secondary hover:bg-secondary/90 text-white font-semibold px-5 py-2 shadow-md"
                 onClick={() => setActiveTab('leads to purchase')}
               >
                 <CreditCard className="h-4 w-4 mr-2" />
                 Buy Credits
+              </Button>
+              {/* Icon-only buttons on small screens */}
+              <Button variant="outline" size="icon" className="md:hidden border-slate-300" onClick={() => setActiveTab('leads')}>
+                <Users className="h-4 w-4 text-slate-600" />
+              </Button>
+              <Button variant="outline" size="icon" className="md:hidden border-slate-300" onClick={() => setActiveTab('leads to purchase')}>
+                <CreditCard className="h-4 w-4 text-slate-600" />
               </Button>
               <Button variant="outline" size="icon" className="relative border-slate-300">
                 <Bell className="h-4 w-4 text-slate-600" />
@@ -454,7 +491,7 @@ const TradesCRM = () => {
                   </span>
                 )}
               </Button>
-              <Button variant="outline" size="icon" className="border-slate-300" onClick={() => setActiveTab('settings')}>
+              <Button variant="outline" size="icon" className="border-slate-300 hidden sm:inline-flex" onClick={() => setActiveTab('settings')}>
                 <Settings className="h-4 w-4 text-slate-600" />
               </Button>
             </div>
@@ -462,7 +499,7 @@ const TradesCRM = () => {
         </header>
 
         {/* Page Content */}
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* Contextual Smart Banner - Only shows when relevant */}
@@ -473,18 +510,18 @@ const TradesCRM = () => {
                   bannerContent.type === 'info' ? 'bg-gradient-to-r from-sky-500 to-sky-600' :
                   'bg-gradient-to-r from-secondary to-secondary/90'
                 } text-white`}>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                           bannerContent.type === 'warning' ? 'bg-white/20' : 'bg-white/20'
                         }`}>
                           <bannerContent.icon className="h-5 w-5" />
                         </div>
-                        <p className="font-medium">{bannerContent.message}</p>
+                        <p className="font-medium text-sm sm:text-base">{bannerContent.message}</p>
                       </div>
                       <Button
-                        className={`font-semibold px-5 shrink-0 ${
+                        className={`font-semibold px-5 shrink-0 w-full sm:w-auto ${
                           bannerContent.type === 'warning' ? 'bg-white text-amber-600 hover:bg-white/90' :
                           bannerContent.type === 'success' ? 'bg-white text-primary hover:bg-white/90' :
                           'bg-white text-secondary hover:bg-white/90'
@@ -587,13 +624,13 @@ const TradesCRM = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Leads Section - Takes 2 columns */}
                 <Card className="border border-slate-100 shadow-sm lg:col-span-2">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
                         <Users className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg font-semibold text-slate-800">Your Leads</CardTitle>
+                        <CardTitle className="text-base sm:text-lg font-semibold text-slate-800">Your Leads</CardTitle>
                         <p className="text-sm text-slate-500">
                           {activeLeadsCount > 0 ? `${activeLeadsCount} active leads` : 'Get started with leads'}
                         </p>
@@ -615,23 +652,23 @@ const TradesCRM = () => {
                     <div className="space-y-3">
                       {!leadsLoading && filteredLeads.length > 0 ? (
                         filteredLeads.slice(0, 4).map(lead => (
-                          <div key={lead.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-primary/20 hover:bg-slate-50/80 transition-all cursor-pointer group">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-primary/20 hover:bg-slate-50/80 transition-all cursor-pointer group gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
                                 <Briefcase className="h-5 w-5 text-primary" />
                               </div>
-                              <div>
-                                <h4 className="font-medium text-slate-800">{lead.name}</h4>
-                                <p className="text-sm text-slate-500">{lead.service}</p>
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-slate-800 truncate">{lead.name}</h4>
+                                <p className="text-sm text-slate-500 truncate">{lead.service}</p>
                                 <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
-                                  <MapPin className="h-3 w-3" />
+                                  <MapPin className="h-3 w-3 shrink-0" />
                                   {lead.location}
                                 </p>
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start ml-13 sm:ml-0">
                               <Badge className={getStatusColor(lead?.priority)}>{lead?.priority}</Badge>
-                              <p className="text-sm font-semibold text-slate-800 mt-2">£{lead?.value ? lead?.value : '0'}</p>
+                              <p className="text-sm font-semibold text-slate-800 sm:mt-2">£{lead?.value ? lead?.value : '0'}</p>
                             </div>
                           </div>
                         ))
@@ -1211,9 +1248,9 @@ const TradesCRM = () => {
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
-           <div className='flex items-center justify-between'>
+           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2'>
             <h2 className="text-xl font-bold">Account Settings</h2>
-            <p>Remaining Credit: {profile?.credit}</p>
+            <p className="text-sm sm:text-base">Remaining Credit: {profile?.credit}</p>
            </div>
 
             {/* Personal Information */}

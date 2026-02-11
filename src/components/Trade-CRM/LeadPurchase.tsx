@@ -68,19 +68,19 @@ const LeadPurchase = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-xl font-bold">Leads to purchase</h2>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="text-sm px-3 py-1">
-            <Coins className="h-4 w-4 mr-2" />
-            Credit Cost: {CREDIT_COST} per lead
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <Badge variant="outline" className="text-xs sm:text-sm px-2 sm:px-3 py-1">
+            <Coins className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            {CREDIT_COST} per lead
           </Badge>
-          <Badge 
-            variant={hasInsufficientCredit ? "destructive" : "secondary"} 
-            className="text-sm px-3 py-1"
+          <Badge
+            variant={hasInsufficientCredit ? "destructive" : "secondary"}
+            className="text-xs sm:text-sm px-2 sm:px-3 py-1"
           >
-            <Coins className="h-4 w-4 mr-2" />
-            Your Credit: {profile?.credit || 0}
+            <Coins className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            Credit: {profile?.credit || 0}
           </Badge>
         </div>
       </div>
@@ -105,33 +105,32 @@ const LeadPurchase = () => {
 
             return (
               <Card key={lead.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-lg capitalize font-semibold">{lead.service}</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-base sm:text-lg capitalize font-semibold">{lead.service}</h3>
                         <Badge className={getStatusColor(lead.priority)}>{lead?.priority}</Badge>
                       </div>
+                      <p className="flex text-sm items-center gap-2 text-muted-foreground">
+                        <MapPin size={16} className="shrink-0" /> {lead?.location}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <div className="flex flex-col gap-2 items-end">
-                        <Badge variant="outline" className="text-xs">
-                          <Coins className="h-3 w-3 mr-1" />
-                          {CREDIT_COST} credits
-                        </Badge>
-                        <Button 
-                          disabled={cannotAccept || mutation.isPending} 
-                          size="sm" 
-                          onClick={() => handlePurchase(lead.id)}
-                        >
-                          { alreadyAccepted ? 'Purchased' : hasInsufficientCredit ? 'Insufficient Credits' : 'Purchase'}
-                        </Button>
-                      </div>
+                    <div className="flex items-center sm:flex-col gap-2 sm:items-end sm:shrink-0">
+                      <Badge variant="outline" className="text-xs">
+                        <Coins className="h-3 w-3 mr-1" />
+                        {CREDIT_COST} credits
+                      </Badge>
+                      <Button
+                        disabled={cannotAccept || mutation.isPending}
+                        size="sm"
+                        onClick={() => handlePurchase(lead.id)}
+                        className="whitespace-nowrap"
+                      >
+                        { alreadyAccepted ? 'Purchased' : hasInsufficientCredit ? 'No Credits' : 'Purchase'}
+                      </Button>
                     </div>
                   </div>
-                  <p className="flex text-sm items-center gap-2">
-                    <MapPin size={18} /> {lead?.location}
-                  </p>
                 </CardContent>
               </Card>
             );

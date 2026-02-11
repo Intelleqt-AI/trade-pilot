@@ -93,9 +93,9 @@ const TradeLeads = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className="text-xl font-bold">Lead Management</h2>
-        <Button onClick={() => setOpen(true)}>Add New Lead</Button>
+        <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">Add New Lead</Button>
         <AddLeadsForm open={open} setOpen={setOpen} />
       </div>
 
@@ -106,30 +106,30 @@ const TradeLeads = () => {
             const userBid = lead.bids?.find((bid: any) => bid.bid_by === profile?.id);
             return (
               <Card key={lead.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-lg capitalize font-semibold">{lead.name}</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-base sm:text-lg capitalize font-semibold">{lead.name}</h3>
                         <Badge className={getStatusColor(lead.priority)}>{lead?.priority}</Badge>
                       </div>
-                      <p className="text-muted-foreground mb-2">
+                      <p className="text-muted-foreground mb-2 text-sm sm:text-base">
                         {lead.service} - {lead.location}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
+                          <Phone className="h-3 w-3 shrink-0" />
                           {lead.phone}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {lead.email}
+                          <Mail className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.email}</span>
                         </span>
-                        <span>Last contact: 2 hours ago</span>
+                        <span className="hidden sm:inline">Last contact: 2 hours ago</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-primary mb-2">£{lead?.value ? lead?.value : '0'}</p>
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:shrink-0">
+                      <p className="text-lg sm:text-xl font-bold text-primary">£{lead?.value ? lead?.value : '0'}</p>
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleViewLead(lead)}>
                           View Lead
@@ -140,7 +140,7 @@ const TradeLeads = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-3 sm:mt-4 flex items-center gap-2">
                     {userBid && (
                       <span className="flex items-center gap-2">
                         {userBid.status === 'approved' && (
@@ -195,8 +195,8 @@ const TradeLeads = () => {
                       </span>
                     )}
                   </div>
-                  <div className="mt-4 flex items-center gap-6">
-                    <h4 className="text-md font-semibold">Proposed Quote</h4>
+                  <div className="mt-3 sm:mt-4 flex items-center gap-4 sm:gap-6">
+                    <h4 className="text-sm sm:text-md font-semibold">Proposed Quote</h4>
                     <p className="text-muted-foreground">£{userBid?.proposedValue ? userBid?.proposedValue : '0'}</p>
                   </div>
                 </CardContent>
@@ -248,7 +248,7 @@ const TradeLeads = () => {
 
       {/* View Lead Dialog */}
       <Dialog open={openViewLead} onOpenChange={setOpenViewLead}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Lead Details</DialogTitle>
             <DialogDescription>
@@ -261,7 +261,7 @@ const TradeLeads = () => {
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg border-b pb-2">Basic Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Service Type</label>
                     <p className="text-base capitalize">{viewedLead.service || 'N/A'}</p>
@@ -292,7 +292,7 @@ const TradeLeads = () => {
               {/* Contact Information */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg border-b pb-2">Contact Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Name</label>
                     <p className="text-base">{viewedLead.name || 'N/A'}</p>
@@ -330,7 +330,7 @@ const TradeLeads = () => {
               {/* Timestamps */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg border-b pb-2">Timeline</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Created At</label>
                     <p className="text-base">{viewedLead.created_at ? new Date(viewedLead.created_at).toLocaleString() : 'N/A'}</p>
