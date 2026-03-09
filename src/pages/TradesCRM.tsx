@@ -21,6 +21,27 @@ import {
   HelpCircle,
   BookOpen,
   Video,
+  LayoutDashboard,
+  ShoppingCart,
+  Star,
+  Headphones,
+  LogOut,
+  CreditCard,
+  Home,
+  Coins,
+  Search,
+  Menu,
+  X,
+  CheckCircle2,
+  Circle,
+  AlertTriangle,
+  ArrowRight,
+  ChevronRight,
+  Zap,
+  TrendingDown,
+  FileText,
+  Award,
+  Plus,
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -30,11 +51,15 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchJobs, fetchLeads, updateProfile } from '@/lib/api';
 import LeadPurchase from '@/components/Trade-CRM/LeadPurchase';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const TradesCRM = () => {
-  const { isAuthenticated, loading, isTrade, profile } = useAuth();
+  const { isAuthenticated, loading, isTrade, profile, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
 
   // Personal Information State
@@ -163,25 +188,146 @@ const TradesCRM = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Mock data for the dashboard
-  const stats = [
-    { title: 'Active Leads', value: `${filteredLeads?.length ?? 0}`, icon: Users, trend: '+12%' },
-    { title: 'Jobs This Month', value: `${jobsData?.length ?? 0}`, icon: Briefcase, trend: '+8%' },
-    { title: 'Revenue', value: 'Coming', icon: DollarSign, trend: '+15%' },
-    {
-      title: 'Completion Rate',
-      value: `${
-        jobsData && jobsData.length > 0
-          ? Math.round(((jobsData?.filter(job => job.status === 'complete').length ?? 0) / jobsData.length) * 100)
-          : 0
-      }%`,
+  // Navigation items for sidebar - Main section
+  const mainNavItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'jobs', label: 'Jobs', icon: Briefcase },
+    { id: 'leads', label: 'My Leads', icon: Users },
+  ];
 
-      icon: TrendingUp,
-      trend: '+2%',
+  // Navigation items for sidebar - Secondary section
+  const secondaryNavItems = [
+    { id: 'settings', label: 'My Profile', icon: FileText },
+    { id: 'leads to purchase', label: 'Credits', icon: Coins },
+    { id: 'account-settings', label: 'Settings', icon: Settings },
+    { id: 'support', label: 'Help Centre', icon: HelpCircle },
+  ];
+
+  // Calculate dynamic stats
+  const creditBalance = profile?.credit ?? 0;
+  const jobsNearYou = leadsData?.filter(item => item.location === profile?.postcode).length ?? 0;
+  const activeLeadsCount = filteredLeads?.length ?? 0;
+  const pendingTasks = jobsData?.filter(job => job.status !== 'complete').length ?? 0;
+  const completedJobs = jobsData?.filter(job => job.status === 'complete').length ?? 0;
+  const totalJobs = jobsData?.length ?? 0;
+  const responseRate = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
+
+  // Profile completeness check
+  const isProfileComplete = !!(
+    profile?.first_name &&
+    profile?.last_name &&
+    profile?.trade_specialty &&
+    profile?.postcode &&
+    profile?.phone
+  );
+  const hasServicesSet = !!profile?.trade_specialty;
+  const hasAreaSet = !!profile?.postcode;
+  const hasCredits = creditBalance > 0;
+  const isVerified = profile?.has_insurance || profile?.has_license;
+
+  // Contextual banner logic
+  const getBannerContent = () => {
+    if (creditBalance === 0) {
+      return {
+        type: 'warning',
+        message: "You're out of credits - top up to keep receiving leads",
+        cta: 'Buy Credits',
+        icon: AlertTriangle,
+        action: () => setActiveTab('leads to purchase')
+      };
+    }
+    if (creditBalance < 50 && creditBalance > 0) {
+      return {
+        type: 'info',
+        message: `${creditBalance} credits remaining - top up before they run out`,
+        cta: 'Top Up',
+        icon: Coins,
+        action: () => setActiveTab('leads to purchase')
+      };
+    }
+    if (jobsNearYou > 0) {
+      return {
+        type: 'success',
+        message: `${jobsNearYou} new jobs matching your services in your area`,
+        cta: 'View Jobs',
+        icon: Zap,
+        action: () => setActiveTab('leads to purchase')
+      };
+    }
+    if (!isProfileComplete) {
+      return {
+        type: 'neutral',
+        message: 'Complete your profile to appear higher in homeowner searches',
+        cta: 'Complete Profile',
+        icon: FileText,
+        action: () => setActiveTab('settings')
+      };
+    }
+    return null;
+  };
+
+  const bannerContent = getBannerContent();
+
+  // Enhanced stats for dashboard cards
+  const dashboardStats = [
+    {
+      title: 'Credit Balance',
+      value: creditBalance,
+      subtitle: creditBalance === 0 ? 'Top up to get leads' : creditBalance < 50 ? 'Running low' : 'Credits available',
+      icon: Coins,
+      color: 'bg-teal-50',
+      iconColor: 'text-teal-600',
+      trend: null,
+      variant: creditBalance === 0 ? 'warning' : creditBalance < 50 ? 'highlight' : 'default',
+      action: () => setActiveTab('leads to purchase'),
+      actionLabel: 'Top Up'
+    },
+    {
+      title: 'Jobs Near You',
+      value: jobsNearYou,
+      subtitle: jobsNearYou > 0 ? `${jobsNearYou} available now` : 'None in your area',
+      icon: MapPin,
+      color: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
+      trend: jobsNearYou > 0 ? { direction: 'up', value: 'New' } : null,
+      variant: jobsNearYou > 0 ? 'highlight' : 'default',
+      action: () => setActiveTab('leads to purchase'),
+      actionLabel: 'Browse'
+    },
+    {
+      title: 'Active Leads',
+      value: activeLeadsCount,
+      subtitle: activeLeadsCount > 0 ? 'Currently working' : 'No active leads',
+      icon: Users,
+      color: 'bg-sky-50',
+      iconColor: 'text-sky-600',
+      trend: null,
+      variant: 'default',
+      action: () => setActiveTab('leads'),
+      actionLabel: 'View All'
+    },
+    {
+      title: 'Profile Completion',
+      value: '60%',
+      subtitle: 'Complete your profile',
+      icon: Award,
+      color: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      trend: null,
+      variant: 'default',
+      action: () => setActiveTab('settings'),
+      actionLabel: 'Complete',
+      isPieChart: true,
+      percentage: 60
     },
   ];
 
   const upcomingAppointments = [];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -196,121 +342,546 @@ const TradesCRM = () => {
     }
   };
 
+  const handleMobileNavClick = (tabId: string) => {
+    setActiveTab(tabId);
+    setMobileSidebarOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-muted/30">
-      <Navigation />
+    <div className="min-h-screen bg-slate-50 flex">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
 
-      <div className="container mx-auto px-4 py-8 pt-20">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Trade Pilot for Business</h1>
-            <p className="text-muted-foreground mt-1">Your professional dashboard</p>
+      {/* Sidebar Navigation */}
+      <aside className={`w-64 bg-white border-r border-slate-200 flex flex-col min-h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out ${
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
+        {/* Logo */}
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-baseline">
+            <span className="text-xl font-bold text-secondary tracking-tight">Trade </span>
+            <span className="relative">
+              <span className="text-accent absolute -top-2.5 left-0 text-xs font-bold" style={{ transform: 'rotate(-15deg)' }}>✓</span>
+              <span className="text-xl font-bold text-secondary tracking-tight">Pilot</span>
+            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Avatar>
-              <AvatarImage src="" />
-              <AvatarFallback>JD</AvatarFallback>
-            </Avatar>
-          </div>
+          <button
+            className="lg:hidden p-1 rounded-md hover:bg-slate-100"
+            onClick={() => setMobileSidebarOpen(false)}
+          >
+            <X className="h-5 w-5 text-slate-500" />
+          </button>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex gap-4 mb-6 border-b">
-          {['dashboard', 'leads', 'leads to purchase', 'jobs', 'calendar', 'reviews', 'support', 'settings'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2 px-1 border-b-2 transition-colors capitalize ${
-                activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab === 'reviews' ? 'Reviews & Reputation' : tab}
-            </button>
-          ))}
-        </div>
+        {/* Navigation Items */}
+        <nav className="flex-1 p-4 flex flex-col">
+          {/* Main Navigation */}
+          <ul className="space-y-1">
+            {mainNavItems.map((item) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => handleMobileNavClick(item.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
+                    activeTab === item.id
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
 
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, index) => (
-                <Card key={index}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">{stat.title}</p>
-                        <p className="text-2xl font-bold">{stat.value}</p>
-                        <p className="text-sm text-green-600">{stat.trend}</p>
+          {/* Spacer */}
+          <div className="my-4 border-t border-slate-200"></div>
+
+          {/* Secondary Navigation */}
+          <ul className="space-y-1">
+            {secondaryNavItems.map((item) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => handleMobileNavClick(item.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
+                    activeTab === item.id
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Push Sign Out to bottom */}
+          <div className="flex-1"></div>
+        </nav>
+
+        {/* Sign Out Section */}
+        <div className="p-4 border-t border-slate-200">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-64">
+        {/* Top Header */}
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Mobile hamburger */}
+              <button
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 -ml-1"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5 text-slate-700" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center hidden sm:flex">
+                  <Home className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-slate-500">Welcome back</p>
+                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">Ben</h1>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Full buttons on md+ screens */}
+              <Button
+                variant="outline"
+                className="hidden md:inline-flex border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-semibold px-5 py-2"
+                onClick={() => setActiveTab('leads')}
+              >
+                View Leads
+              </Button>
+              <Button
+                className="hidden md:inline-flex bg-secondary hover:bg-secondary/90 text-white font-semibold px-5 py-2 shadow-md"
+                onClick={() => setActiveTab('leads to purchase')}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Buy Credits
+              </Button>
+              {/* Icon-only buttons on small screens */}
+              <Button variant="outline" size="icon" className="md:hidden border-slate-300" onClick={() => setActiveTab('leads')}>
+                <Users className="h-4 w-4 text-slate-600" />
+              </Button>
+              <Button variant="outline" size="icon" className="md:hidden border-slate-300" onClick={() => setActiveTab('leads to purchase')}>
+                <CreditCard className="h-4 w-4 text-slate-600" />
+              </Button>
+              <Button variant="outline" size="icon" className="relative border-slate-300">
+                <Bell className="h-4 w-4 text-slate-600" />
+                {(jobsData?.filter(job => job.status !== 'complete').length ?? 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center">
+                    {jobsData?.filter(job => job.status !== 'complete').length ?? 0}
+                  </span>
+                )}
+              </Button>
+              <Button variant="outline" size="icon" className="border-slate-300 hidden sm:inline-flex" onClick={() => setActiveTab('settings')}>
+                <Settings className="h-4 w-4 text-slate-600" />
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="p-4 sm:p-6 lg:p-8">
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              {/* Contextual Smart Banner - Only shows when relevant */}
+              {bannerContent && (
+                <Card className={`border-none shadow-sm ${
+                  bannerContent.type === 'warning' ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                  bannerContent.type === 'success' ? 'bg-gradient-to-r from-primary to-primary/80' :
+                  bannerContent.type === 'info' ? 'bg-gradient-to-r from-sky-500 to-sky-600' :
+                  'bg-gradient-to-r from-secondary to-secondary/90'
+                } text-white`}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          bannerContent.type === 'warning' ? 'bg-white/20' : 'bg-white/20'
+                        }`}>
+                          <bannerContent.icon className="h-5 w-5" />
+                        </div>
+                        <p className="font-medium text-sm sm:text-base">{bannerContent.message}</p>
                       </div>
-                      <stat.icon className="h-8 w-8 text-primary" />
+                      <Button
+                        className={`font-semibold px-5 shrink-0 w-full sm:w-auto ${
+                          bannerContent.type === 'warning' ? 'bg-white text-amber-600 hover:bg-white/90' :
+                          bannerContent.type === 'success' ? 'bg-white text-primary hover:bg-white/90' :
+                          'bg-white text-secondary hover:bg-white/90'
+                        }`}
+                        onClick={bannerContent.action}
+                      >
+                        {bannerContent.cta}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              )}
 
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Recent Leads</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {!leadsLoading &&
-                      filteredLeads.length !== 0 &&
-                      filteredLeads.slice(0, 3).map(lead => (
-                        <div key={lead.id} className="flex items-center justify-between p-3 border rounded-lg">
+              {/* Enhanced Stats Cards - Clickable with hover states */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                {dashboardStats.map((stat, index) => (
+                  <Card
+                    key={index}
+                    className={`border shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer bg-white group
+                      ${stat.variant === 'warning' ? 'border-amber-200 hover:border-amber-300' : ''}
+                      ${stat.variant === 'highlight' ? 'border-primary/20 hover:border-primary/40' : 'border-slate-100 hover:border-slate-200'}
+                    `}
+                    onClick={stat.action}
+                  >
+                    <CardContent className="p-5">
+                      {stat.isPieChart ? (
+                        /* Profile Completion Card with Pie Chart - matches standard card structure */
+                        <>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="relative w-11 h-11">
+                              <svg className="w-11 h-11 transform -rotate-90" viewBox="0 0 36 36">
+                                {/* Background circle */}
+                                <circle
+                                  cx="18"
+                                  cy="18"
+                                  r="14"
+                                  fill="none"
+                                  stroke="#e2e8f0"
+                                  strokeWidth="3"
+                                />
+                                {/* Progress circle */}
+                                <circle
+                                  cx="18"
+                                  cy="18"
+                                  r="14"
+                                  fill="none"
+                                  stroke="#9333ea"
+                                  strokeWidth="3"
+                                  strokeDasharray={`${stat.percentage * 0.88} 88`}
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-purple-600">{stat.percentage}%</span>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          </div>
                           <div>
-                            <h4 className="font-medium">{lead.name}</h4>
-                            <p className="text-sm text-muted-foreground">{lead.service}</p>
-                            <p className="text-sm text-muted-foreground">{lead.location}</p>
+                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{stat.title}</p>
+                            <p className="text-2xl font-bold text-slate-800">{stat.percentage}%</p>
+                            <p className="text-xs mt-1 text-slate-400">{stat.subtitle}</p>
                           </div>
-                          <div className="text-right">
-                            <Badge className={getStatusColor(lead?.priority)}>{lead?.priority}</Badge>
-                            <p className="text-sm font-medium mt-1">£{lead?.value ? lead?.value : '0'}</p>
+                        </>
+                      ) : (
+                        /* Standard Stats Card */
+                        <>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${stat.color} group-hover:scale-105 transition-transform`}>
+                              <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {stat.trend && (
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                  stat.trend.direction === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {stat.trend.direction === 'up' ? '↑' : '↓'} {stat.trend.value}
+                                </span>
+                              )}
+                              <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                  </div>
-                </CardContent>
-              </Card>
+                          <div>
+                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">{stat.title}</p>
+                            <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                            <p className={`text-xs mt-1 ${
+                              stat.variant === 'warning' ? 'text-amber-600' :
+                              stat.variant === 'highlight' ? 'text-primary' : 'text-slate-400'
+                            }`}>{stat.subtitle}</p>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Today's Schedule</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {upcomingAppointments.map((appointment, index) => (
-                      <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                        <div className="text-center">
-                          <Clock className="h-4 w-4 text-primary mx-auto" />
-                          <p className="text-sm font-medium">{appointment.time}</p>
+              {/* Recent Activity - Wider left, narrower right */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Leads Section - Takes 2 columns */}
+                <Card className="border border-slate-100 shadow-sm lg:col-span-2">
+                  <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base sm:text-lg font-semibold text-slate-800">Your Leads</CardTitle>
+                        <p className="text-sm text-slate-500">
+                          {activeLeadsCount > 0 ? `${activeLeadsCount} active leads` : 'Get started with leads'}
+                        </p>
+                      </div>
+                    </div>
+                    {activeLeadsCount > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-200 hover:border-primary/30"
+                        onClick={() => setActiveTab('leads')}
+                      >
+                        View All
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {!leadsLoading && filteredLeads.length > 0 ? (
+                        filteredLeads.slice(0, 4).map(lead => (
+                          <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-primary/20 hover:bg-slate-50/80 transition-all cursor-pointer group gap-3">
+                            <div className="flex items-center gap-3 sm:gap-4">
+                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
+                                <Briefcase className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-slate-800 truncate">{lead.name}</h4>
+                                <p className="text-sm text-slate-500 truncate">{lead.service}</p>
+                                <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {lead.location}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start ml-13 sm:ml-0">
+                              <Badge className={getStatusColor(lead?.priority)}>{lead?.priority}</Badge>
+                              <p className="text-sm font-semibold text-slate-800 sm:mt-2">£{lead?.value ? lead?.value : '0'}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        /* Onboarding Checklist for New Users */
+                        <div className="py-6">
+                          <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Zap className="h-8 w-8 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-800 mb-1">Get your first leads</h3>
+                            <p className="text-sm text-slate-500">Complete these steps to start receiving job opportunities</p>
+                          </div>
+
+                          <div className="space-y-3 max-w-md mx-auto">
+                            <div className={`flex items-center gap-3 p-3 rounded-lg ${isProfileComplete ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
+                              {isProfileComplete ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${isProfileComplete ? 'text-green-800' : 'text-slate-700'}`}>Complete your profile</p>
+                              </div>
+                              {!isProfileComplete && (
+                                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => setActiveTab('settings')}>
+                                  Complete
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className={`flex items-center gap-3 p-3 rounded-lg ${hasServicesSet ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
+                              {hasServicesSet ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${hasServicesSet ? 'text-green-800' : 'text-slate-700'}`}>Set your services & pricing</p>
+                              </div>
+                              {!hasServicesSet && (
+                                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => setActiveTab('settings')}>
+                                  Set up
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className={`flex items-center gap-3 p-3 rounded-lg ${hasAreaSet ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
+                              {hasAreaSet ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${hasAreaSet ? 'text-green-800' : 'text-slate-700'}`}>Define your service area</p>
+                              </div>
+                              {!hasAreaSet && (
+                                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => setActiveTab('settings')}>
+                                  Add area
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className={`flex items-center gap-3 p-3 rounded-lg ${hasCredits ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
+                              {hasCredits ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${hasCredits ? 'text-green-800' : 'text-slate-700'}`}>Purchase credits</p>
+                              </div>
+                              {!hasCredits && (
+                                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => setActiveTab('leads to purchase')}>
+                                  Buy now
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className={`flex items-center gap-3 p-3 rounded-lg ${isVerified ? 'bg-green-50 border border-green-100' : 'bg-slate-50 border border-slate-100'}`}>
+                              {isVerified ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-slate-300 shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${isVerified ? 'text-green-800' : 'text-slate-700'}`}>Add certifications</p>
+                                <p className="text-xs text-slate-400">Optional - builds trust</p>
+                              </div>
+                              {!isVerified && (
+                                <Button size="sm" variant="ghost" className="text-xs text-primary" onClick={() => setActiveTab('settings')}>
+                                  Add
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-center mt-6">
+                            <Button
+                              className="bg-primary hover:bg-primary/90 text-white"
+                              onClick={() => setActiveTab('leads to purchase')}
+                            >
+                              <Search className="h-4 w-4 mr-2" />
+                              Browse Available Jobs
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{appointment.client}</h4>
-                          <p className="text-sm text-muted-foreground">{appointment.service}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {appointment.location}
-                          </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tasks & Reminders Section - Takes 1 column */}
+                <Card className="border border-slate-100 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <Bell className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-slate-800">Tasks & Reminders</CardTitle>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Task
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-2 max-h-80 overflow-y-auto mt-6">
+                      {/* Demo Task 1 */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-primary/20 transition-colors cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                            <Clock className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-800 truncate">Invoice for 6 London Road</h4>
+                            <p className="text-xs text-slate-500">Invoicing</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-medium text-slate-500">To Do</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
+                      </div>
+
+                      {/* Demo Task 2 */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-primary/20 transition-colors cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-800 truncate">Send quote to Mr Ward</h4>
+                            <p className="text-xs text-slate-500">Quotes</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-medium text-primary">In Progress</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
+                      </div>
+
+                      {/* Demo Task 3 */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-primary/20 transition-colors cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                            <MessageCircle className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-800 truncate">Follow up with Miss Laton</h4>
+                            <p className="text-xs text-slate-500">Follow-up</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-medium text-slate-500">To Do</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
+                      </div>
+
+                      {/* Demo Task 4 */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-primary/20 transition-colors cursor-pointer">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10">
+                            <Clock className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-800 truncate">Book in Van MOT</h4>
+                            <p className="text-xs text-slate-500">Reminder</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-medium text-slate-500">To Do</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      className="w-full mt-3 text-sm text-slate-600 hover:text-primary"
+                    >
+                      View all tasks
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {activeTab === 'leads' && <TradeLeads />}
         {activeTab === 'leads to purchase' && <LeadPurchase />}
@@ -677,9 +1248,9 @@ const TradesCRM = () => {
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
-           <div className='flex items-center justify-between'>
+           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-2'>
             <h2 className="text-xl font-bold">Account Settings</h2>
-            <p>Remaining Credit: {profile?.credit}</p>
+            <p className="text-sm sm:text-base">Remaining Credit: {profile?.credit}</p>
            </div>
 
             {/* Personal Information */}
@@ -910,9 +1481,8 @@ const TradesCRM = () => {
             </Card>
           </div>
         )}
-      </div>
-
-      <Footer />
+        </div>
+      </main>
     </div>
   );
 };
