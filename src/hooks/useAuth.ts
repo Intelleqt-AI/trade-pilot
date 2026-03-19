@@ -3,6 +3,29 @@ import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, UserProfile } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { isDemoMode, DEMO_CREDENTIALS, mockProfiles } from '@/lib/mockData';
+
+// Demo user objects
+const DEMO_USERS = {
+  customer: {
+    id: 'demo-customer-user-id',
+    email: DEMO_CREDENTIALS.customer.email,
+    app_metadata: {},
+    user_metadata: { role: 'customer' },
+    aud: 'authenticated',
+    created_at: '2024-01-15T10:00:00Z',
+  } as unknown as User,
+  trade: {
+    id: 'demo-trade-user-id',
+    email: DEMO_CREDENTIALS.trade.email,
+    app_metadata: {},
+    user_metadata: { role: 'trade' },
+    aud: 'authenticated',
+    created_at: '2024-01-10T09:00:00Z',
+  } as unknown as User,
+};
+
+const DEMO_STORAGE_KEY = 'demo_auth_user';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -11,7 +34,20 @@ export const useAuth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
+    if (isDemoMode()) {
+      // Check for existing demo session
+      const storedUser = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (storedUser) {
+        const userType = storedUser as 'customer' | 'trade';
+        setUser(DEMO_USERS[userType]);
+        const profileId = userType === 'customer' ? 'demo-customer-id' : 'demo-trade-id';
+        setProfile(mockProfiles[profileId]);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Real Supabase auth flow
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -21,13 +57,11 @@ export const useAuth = () => {
       }
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer to avoid potential deadlocks; then fetch profile
         setTimeout(() => {
           fetchProfile(session.user!.id);
         }, 0);
@@ -47,7 +81,6 @@ export const useAuth = () => {
       if (error) throw error;
 
       if (!data) {
-        // Lazily create a profile if it doesn't exist
         const { data: userResp } = await supabase.auth.getUser();
         const email = userResp.user?.email ?? null;
 
@@ -83,6 +116,14 @@ export const useAuth = () => {
       role: UserRole;
     }
   ) => {
+    if (isDemoMode()) {
+      toast({
+        title: 'Demo Mode',
+        description: 'Sign up is disabled in demo mode. Please use the demo login credentials.',
+      });
+      return { data: null, error: null };
+    }
+
     try {
       setLoading(true);
 
@@ -94,9 +135,6 @@ export const useAuth = () => {
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            // firstName: userData.firstName,
-            // lastName: userData.lastName,
-            // role: userData.role,
             ...userData,
           },
         },
@@ -124,6 +162,45 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    if (isDemoMode()) {
+      setLoading(true);
+
+      // Check demo credentials
+      if (email === DEMO_CREDENTIALS.customer.email && password === DEMO_CREDENTIALS.customer.password) {
+        localStorage.setItem(DEMO_STORAGE_KEY, 'customer');
+        setUser(DEMO_USERS.customer);
+        setProfile(mockProfiles['demo-customer-id']);
+        toast({
+          title: 'Demo Login Successful',
+          description: 'Welcome! You are logged in as a customer.',
+        });
+        setLoading(false);
+        return { data: { user: DEMO_USERS.customer }, error: null };
+      }
+
+      if (email === DEMO_CREDENTIALS.trade.email && password === DEMO_CREDENTIALS.trade.password) {
+        localStorage.setItem(DEMO_STORAGE_KEY, 'trade');
+        setUser(DEMO_USERS.trade);
+        setProfile(mockProfiles['demo-trade-id']);
+        toast({
+          title: 'Demo Login Successful',
+          description: 'Welcome! You are logged in as a trade professional.',
+        });
+        setLoading(false);
+        return { data: { user: DEMO_USERS.trade }, error: null };
+      }
+
+      // Invalid demo credentials
+      toast({
+        title: 'Invalid Demo Credentials',
+        description: `Use customer@demo.com or trade@demo.com with password: demo123`,
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return { data: null, error: { message: 'Invalid demo credentials' } as AuthError };
+    }
+
+    // Real Supabase auth
     try {
       setLoading(true);
 
@@ -154,6 +231,17 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
+    if (isDemoMode()) {
+      localStorage.removeItem(DEMO_STORAGE_KEY);
+      setUser(null);
+      setProfile(null);
+      toast({
+        title: 'Signed out',
+        description: 'See you next time!',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
