@@ -183,7 +183,7 @@ export const useAuth = () => {
         setUser(DEMO_USERS.trade);
         setProfile(mockProfiles['demo-trade-id']);
         toast({
-          title: 'Demo Login Successful',
+          title: 'Login Successful',
           description: 'Welcome! You are logged in as a trade professional.',
         });
         setLoading(false);
@@ -192,12 +192,12 @@ export const useAuth = () => {
 
       // Invalid demo credentials
       toast({
-        title: 'Invalid Demo Credentials',
-        description: `Use customer@demo.com or trade@demo.com with password: demo123`,
+        title: 'Invalid Credentials',
+        // description: `Use customer@demo.com or trade@demo.com with password: demo123`,
         variant: 'destructive',
       });
       setLoading(false);
-      return { data: null, error: { message: 'Invalid demo credentials' } as AuthError };
+      return { data: null, error: { message: 'Invalid Credentials' } as AuthError };
     }
 
     // Real Supabase auth

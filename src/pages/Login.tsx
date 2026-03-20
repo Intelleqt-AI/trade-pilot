@@ -168,13 +168,7 @@ const Login = () => {
                     <h3 className="text-lg font-medium text-secondary">Customer Login</h3>
                     <p className="text-sm text-muted-foreground">Find and book trusted tradespeople</p>
                   </div>
-                  {isDemoMode() && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                      <p className="font-medium text-amber-800 mb-1">Demo Credentials:</p>
-                      <p className="text-amber-700">Email: <code className="bg-amber-100 px-1 rounded">{DEMO_CREDENTIALS.customer.email}</code></p>
-                      <p className="text-amber-700">Password: <code className="bg-amber-100 px-1 rounded">{DEMO_CREDENTIALS.customer.password}</code></p>
-                    </div>
-                  )}
+       
                   <LoginForm 
                     type="customer"
                     email={email}
@@ -194,13 +188,7 @@ const Login = () => {
                     <h3 className="text-lg font-medium text-secondary">Trade Professional</h3>
                     <p className="text-sm text-muted-foreground">Manage your business and leads</p>
                   </div>
-                  {isDemoMode() && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                      <p className="font-medium text-amber-800 mb-1">Demo Credentials:</p>
-                      <p className="text-amber-700">Email: <code className="bg-amber-100 px-1 rounded">{DEMO_CREDENTIALS.trade.email}</code></p>
-                      <p className="text-amber-700">Password: <code className="bg-amber-100 px-1 rounded">{DEMO_CREDENTIALS.trade.password}</code></p>
-                    </div>
-                  )}
+         
                   <LoginForm 
                     type="trade"
                     email={email}

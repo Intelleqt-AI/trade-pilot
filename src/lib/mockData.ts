@@ -6,11 +6,11 @@ export const isDemoMode = () => import.meta.env.VITE_DEMO_MODE === 'true';
 // Demo user credentials
 export const DEMO_CREDENTIALS = {
   customer: {
-    email: 'customer@demo.com',
+    email: 'customer@homeplus.com',
     password: 'demo123',
   },
   trade: {
-    email: 'trade@demo.com',
+    email: 'trade@homeplus.com',
     password: 'demo123',
   },
 };
@@ -20,7 +20,7 @@ export const mockProfiles: Record<string, UserProfile> = {
   'demo-customer-id': {
     id: 'demo-customer-id',
     user_id: 'demo-customer-user-id',
-    email: 'customer@demo.com',
+    email: 'customer@homeplus.com',
     first_name: 'James',
     last_name: 'Wilson',
     role: 'customer',
@@ -36,7 +36,7 @@ export const mockProfiles: Record<string, UserProfile> = {
   'demo-trade-id': {
     id: 'demo-trade-id',
     user_id: 'demo-trade-user-id',
-    email: 'trade@demo.com',
+    email: 'trade@homeplus.com',
     first_name: 'Michael',
     last_name: 'Thompson',
     role: 'trade',
