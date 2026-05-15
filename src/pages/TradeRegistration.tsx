@@ -2,20 +2,25 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, ArrowRight, CheckCircle, Upload, Star, Shield, Users, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Star, Shield, Users, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { usePost } from '@/hooks/usePost';
+import { toast } from '@/lib/toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { UK_LOCATIONS, LOCATION_POSTCODE } from '@/lib/ukLocations';
 
 const TradeRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp, loading } = useAuth();
+  const [locationOpen, setLocationOpen] = useState(false);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     // Step 1: Personal Details
@@ -31,6 +36,7 @@ const TradeRegistration = () => {
     businessType: '',
     yearsExperience: '',
     tradeSpecialty: '',
+    location: '',
     postcode: '',
 
     // Step 3: Verification
@@ -44,66 +50,71 @@ const TradeRegistration = () => {
 
   const totalSteps = 4;
 
+  const registerMutation = usePost({
+    onError: (err: any) => {
+      const errors = err?.response?.data?.errors ?? {};
+      const msg = errors.email?.[0] || errors.password?.[0] || errors.postcode?.[0] || err?.response?.data?.message || 'Registration failed.';
+      toast.error(msg);
+    },
+  });
+
+  const loading = registerMutation.isPending;
+
   const nextStep = async () => {
-    if (currentStep === 3) {
-      // Validate required fields for sign up
-      if (
-        !formData.firstName ||
-        !formData.lastName ||
-        !formData.email ||
-        !formData.password ||
-        !formData.confirmPassword ||
-        !formData.agreedToTerms ||
-        !formData.postcode ||
-        !formData.businessName ||
-        !formData.tradeSpecialty ||
-        !formData.businessType
-      ) {
+    if (currentStep === 1) {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+        toast.error('Please fill in all required fields.');
         return;
       }
-
-      // Validate password match
       if (formData.password !== formData.confirmPassword) {
+        toast.error('Passwords do not match.');
         return;
       }
-
-      // Sign up user
-      const { data, error } = await signUp(formData.email, formData.password, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: 'trade',
-        businessName: formData.businessName,
-        businessType: formData.businessType,
-        yearsExperience: formData.yearsExperience,
-        tradeSpecialty: formData.tradeSpecialty,
-        postcode: formData.postcode,
-        hasInsurance: formData.hasInsurance,
-        hasLicense: formData.hasLicense,
-        agreedToTerms: formData.agreedToTerms,
-        profileDescription: formData.profileDescription,
-        phone: formData.phone,
-      });
-
-      // console.log({
-      //   firstName: formData.firstName,
-      //   lastName: formData.lastName,
-      //   role: 'trade',
-      //   businessName: formData.businessName,
-      //   businessType: formData.businessType,
-      //   yearsExperience: formData.yearsExperience,
-      //   tradeSpecialty: formData.tradeSpecialty,
-      //   postcode: formData.postcode,
-      //   hasInsurance: formData.hasInsurance,
-      //   hasLicense: formData.hasLicense,
-      //   agreedToTerms: formData.agreedToTerms,
-      //   profileDescription: formData.profileDescription,
-      // });
-
-      if (data && !error) {
-        setCurrentStep(4);
+      if (formData.password.length < 8) {
+        toast.error('Password must be at least 8 characters.');
+        return;
       }
-    } else if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!formData.businessName || !formData.tradeSpecialty || !formData.businessType || !formData.postcode) {
+        toast.error('Please fill in all required business fields.');
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (!formData.agreedToTerms) {
+        toast.error('You must agree to the Terms & Conditions.');
+        return;
+      }
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      // Final step — submit all data
+      try {
+        const res: any = await registerMutation.mutateAsync({
+          url: '/api/v1/tradepilot/auth/trade/register/',
+          data: {
+            email: formData.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            password: formData.password,
+            password_confirm: formData.confirmPassword,
+            phone: formData.phone,
+            business_name: formData.businessName,
+            business_type: formData.businessType,
+            years_experience: formData.yearsExperience,
+            trade_specialty: formData.tradeSpecialty,
+            location: formData.location,
+            postcode: formData.postcode,
+            has_insurance: formData.hasInsurance,
+            has_license: formData.hasLicense,
+            profile_description: formData.profileDescription,
+          },
+        } as any);
+        const pending_token = res?.data?.pending_token;
+        navigate(`/verify-email?pending_token=${pending_token}&email=${encodeURIComponent(formData.email)}`);
+      } catch {
+        // error handled in onError
+      }
     }
   };
 
@@ -304,14 +315,59 @@ const TradeRegistration = () => {
               </div>
 
               <div className="space-y-2">
+                <Label>City / Area</Label>
+                <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                        !formData.location ? 'text-muted-foreground' : 'text-foreground',
+                      )}
+                    >
+                      <span className="truncate">{formData.location || 'Select city or area'}</span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search area…" />
+                      <CommandList>
+                        <CommandEmpty>No area found.</CommandEmpty>
+                        {UK_LOCATIONS.map(group => (
+                          <CommandGroup key={group.group} heading={group.group}>
+                            {group.items.map(item => (
+                              <CommandItem
+                                key={item}
+                                value={item}
+                                onSelect={val => {
+                                  updateFormData('location', val);
+                                  updateFormData('postcode', LOCATION_POSTCODE[val] ?? formData.postcode);
+                                  setLocationOpen(false);
+                                }}
+                              >
+                                <Check className={cn('mr-2 h-3.5 w-3.5', formData.location === item ? 'opacity-100' : 'opacity-0')} />
+                                {item}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="postcode">Postcode *</Label>
                 <Input
                   id="postcode"
                   value={formData.postcode}
-                  onChange={e => updateFormData('postcode', e.target.value)}
-                  placeholder="Enter postcodes or areas you cover (e.g., M1, M2, Manchester)"
+                  onChange={e => updateFormData('postcode', e.target.value.toUpperCase())}
+                  placeholder="e.g. M1 1AE"
+                  className="uppercase"
                 />
-                <p className="text-xs text-muted-foreground">Enter your post code</p>
+                <p className="text-xs text-muted-foreground">Auto-filled from area selection — you can edit it.</p>
               </div>
             </div>
           </div>
@@ -398,50 +454,42 @@ const TradeRegistration = () => {
       case 4:
         return (
           <div className="space-y-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-primary" />
-              </div>
-              <h2 className="text-2xl font-semibold text-secondary mb-2">Welcome to Trade Pilot!</h2>
-              <p className="text-muted-foreground">Your account has been created successfully</p>
+            <div>
+              <h2 className="text-2xl font-semibold text-secondary mb-2">One last step</h2>
+              <p className="text-muted-foreground">Tell customers about your services (optional)</p>
             </div>
 
-            <Card className="bg-muted/30">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">What happens next?</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
-                      1
-                    </div>
-                    <span className="text-sm">We'll review your application within 24 hours</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
-                      2
-                    </div>
-                    <span className="text-sm">You'll receive email confirmation once approved</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">
-                      3
-                    </div>
-                    <span className="text-sm">Start receiving job leads immediately</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             <div className="space-y-2">
-              <Label htmlFor="profileDescription">Tell customers about your services (Optional)</Label>
+              <Label htmlFor="profileDescription">About your business</Label>
               <Textarea
                 id="profileDescription"
                 value={formData.profileDescription}
                 onChange={e => updateFormData('profileDescription', e.target.value)}
                 placeholder="Describe your experience, specialties, and what makes you stand out..."
-                rows={4}
+                rows={5}
               />
+              <p className="text-xs text-muted-foreground">This will appear on your public profile. You can update it later.</p>
             </div>
+
+            <Card className="bg-muted/30">
+              <CardContent className="pt-6">
+                <p className="text-sm font-medium mb-3">After creating your account:</p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">1</div>
+                    <span className="text-sm">Verify your email with the code we send you</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">2</div>
+                    <span className="text-sm">We'll review your application within 24 hours</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">3</div>
+                    <span className="text-sm">Start receiving job leads immediately</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
@@ -538,19 +586,11 @@ const TradeRegistration = () => {
                 <span>Previous</span>
               </Button>
 
-              {currentStep < totalSteps ? (
-                <Button onClick={nextStep} className="flex items-center justify-center space-x-2 order-1 sm:order-2" disabled={loading}>
-                  <span>{loading ? 'Creating Account...' : 'Continue'}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button className="flex items-center justify-center space-x-2 order-1 sm:order-2" asChild>
-                  <Link to="/trades-crm">
-                    <span>Access Your CRM</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
+              <Button onClick={nextStep} className="flex items-center justify-center space-x-2 order-1 sm:order-2" disabled={loading}>
+                {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                <span>{loading ? (currentStep === 4 ? 'Creating Account...' : 'Loading...') : (currentStep === 4 ? 'Create Account' : 'Continue')}</span>
+                {!loading && <ArrowRight className="h-4 w-4" />}
+              </Button>
             </div>
 
             {currentStep === 1 && (

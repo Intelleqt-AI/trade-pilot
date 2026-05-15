@@ -50,17 +50,19 @@ import TradeLeads from '@/components/Trade-CRM/TradeLeads';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchJobs, fetchLeads, updateProfile } from '@/lib/api';
 import LeadPurchase from '@/components/Trade-CRM/LeadPurchase';
+import HomePlusJobsFeed from '@/components/trade-crm/HomePlusJobsFeed';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 const TradesCRM = () => {
-  const { isAuthenticated, loading, isTrade, profile, signOut } = useAuth();
+  const { isAuthenticated, loading, isTrade, user, profile, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
+  const [jobMarketCredits, setJobMarketCredits] = useState<number | null>(null);
 
   // Personal Information State
   const [firstName, setFirstName] = useState(profile?.first_name || '');
@@ -191,7 +193,8 @@ const TradesCRM = () => {
   // Navigation items for sidebar - Main section
   const mainNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'jobs', label: 'Jobs', icon: Briefcase },
+    { id: 'job-market', label: 'Job Market', icon: Search },
+    { id: 'jobs', label: 'My Jobs', icon: Briefcase },
     { id: 'leads', label: 'My Leads', icon: Users },
   ];
 
@@ -204,7 +207,7 @@ const TradesCRM = () => {
   ];
 
   // Calculate dynamic stats
-  const creditBalance = profile?.credit ?? 0;
+  const creditBalance = jobMarketCredits ?? (user as any)?.credit_balance ?? profile?.credit_balance ?? 0;
   const jobsNearYou = leadsData?.filter(item => item.location === profile?.postcode).length ?? 0;
   const activeLeadsCount = filteredLeads?.length ?? 0;
   const pendingTasks = jobsData?.filter(job => job.status !== 'complete').length ?? 0;
@@ -456,7 +459,7 @@ const TradesCRM = () => {
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-slate-500">Welcome back</p>
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">Ben</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">{user?.first_name || 'User'}</h1>
                 </div>
               </div>
             </div>
@@ -885,6 +888,13 @@ const TradesCRM = () => {
 
         {activeTab === 'leads' && <TradeLeads />}
         {activeTab === 'leads to purchase' && <LeadPurchase />}
+
+        {activeTab === 'job-market' && (
+          <HomePlusJobsFeed
+            creditBalance={creditBalance}
+            onCreditChange={(n) => setJobMarketCredits(n)}
+          />
+        )}
 
         {activeTab === 'jobs' && <TradeJobs />}
 

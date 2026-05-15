@@ -63,7 +63,7 @@ const LeadPurchase = () => {
     mutation.mutate({ lead: id, userID: profile?.id });
   };
 
-  const hasInsufficientCredit = (profile?.credit || 0) < CREDIT_COST;
+  const hasInsufficientCredit = (profile?.credit_balance || 0) < CREDIT_COST;
   const hasAlreadyAccepted = (leadId: number) => profile?.leads?.includes(leadId);
 
   return (
@@ -80,7 +80,7 @@ const LeadPurchase = () => {
             className="text-xs sm:text-sm px-2 sm:px-3 py-1"
           >
             <Coins className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-            Credit: {profile?.credit || 0}
+            Credit: {profile?.credit_balance || 0}
           </Badge>
         </div>
       </div>

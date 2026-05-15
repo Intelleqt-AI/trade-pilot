@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Eye, EyeOff, Lock, Mail, User, Hammer } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, User, Hammer, Loader2 } from "lucide-react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
-import { isDemoMode, DEMO_CREDENTIALS } from "@/lib/mockData"
+import { toast } from "@/lib/toast"
 
 const LoginForm = ({ 
   type, 
@@ -75,7 +75,7 @@ const LoginForm = ({
     </div>
 
     <Button type="submit" className="w-full bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 transition-all duration-300 transform hover:scale-[1.02]" disabled={loading}>
-      {loading ? 'Signing in...' : 'Sign In'}
+      {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Signing in...</> : 'Sign In'}
     </Button>
 
     <div className="mt-6 text-center">
@@ -96,35 +96,30 @@ const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [justLoggedIn, setJustLoggedIn] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [searchParams] = useSearchParams()
   const initialType = searchParams.get('type') === 'trade' ? 'trade' : 'customer'
-  const [activeTab, setActiveTab] = useState(initialType)
-  
-  const navigate = useNavigate()
-  const { signIn, loading, profile, user } = useAuth()
 
-  // Redirect after successful login and profile load
-  useEffect(() => {
-    if (justLoggedIn && user && profile) {
-      if (profile.role === 'trade') {
+  const navigate = useNavigate()
+  const { signIn } = useAuth()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) return
+    setLoading(true)
+    try {
+      const res: any = await signIn(email, password)
+      const user = res?.data?.user
+      if (user?.user_type === 'trade') {
         navigate('/trades-crm')
       } else {
         navigate('/find-tradespeople')
       }
-      setJustLoggedIn(false)
-    }
-  }, [justLoggedIn, user, profile, navigate])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!email || !password) return
-
-    const { data, error } = await signIn(email, password)
-    
-    if (data && !error) {
-      setJustLoggedIn(true)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.detail || 'Invalid email or password.'
+      toast.error(msg)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -148,9 +143,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={initialType} onValueChange={(val) => {
-              setActiveTab(val);
-            }} className="w-full">
+            <Tabs defaultValue={initialType} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/50 rounded-lg">
                 <TabsTrigger value="customer" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-md transition-all">
                   <User className="w-4 h-4 mr-2" />

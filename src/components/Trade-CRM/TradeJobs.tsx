@@ -1,13 +1,9 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { fetchJobs, postJobs, updateJobStatus } from '@/lib/api';
+import { fetchMyBids, updateTradeJobStatus } from '@/lib/api';
 import {
   DndContext,
   closestCenter,
@@ -20,60 +16,170 @@ import {
   useDroppable,
   DragOverlay,
 } from '@dnd-kit/core';
-import { SortableContext, arrayMove, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { useAuth } from '@/hooks/useAuth';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Slider } from '../ui/slider';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { Briefcase, Coins, Clock, Lock, MapPin, Star, User, CalendarDays, AlertTriangle } from 'lucide-react';
 
-// Utility to get badge color
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'high':
-      return 'bg-red-100 text-red-800';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'low':
-      return 'bg-green-100 text-green-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const URGENCY_COLOR: Record<string, string> = {
+  emergency: 'bg-red-50 text-red-700',
+  urgent: 'bg-orange-50 text-orange-700',
+  normal: 'bg-blue-50 text-blue-700',
+  flexible: 'bg-gray-100 text-gray-600',
 };
 
-// Sortable Job Card
-const SortableJobCard = React.memo(({ job, user }: any) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: job.id });
-  const style = { transform: CSS?.Transform?.toString(transform), transition, willChange: 'transform' } as React.CSSProperties;
+const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: boolean }) => {
+  const isRated = bid.rating !== null && bid.rating !== undefined;
+  const locationStr = [bid.job_location, bid.job_postcode].filter(Boolean).join(' · ');
+  const budgetStr = bid.job_budget_min
+    ? bid.job_budget_max
+      ? `£${parseFloat(bid.job_budget_min).toFixed(0)}–£${parseFloat(bid.job_budget_max).toFixed(0)}`
+      : `£${parseFloat(bid.job_budget_min).toFixed(0)}+`
+    : null;
+
+  return (
+    <div
+      className={`rounded-xl border bg-white overflow-hidden ${
+        isRated
+          ? 'border-amber-200'
+          : isDragging
+            ? 'shadow-xl border-gray-300'
+            : 'border-gray-200'
+      }`}
+    >
+      {isRated && (
+        <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 flex items-center gap-1.5">
+          <Lock className="h-3 w-3 text-amber-600 shrink-0" />
+          <span className="text-[10px] font-semibold text-amber-700">Owner rated · locked</span>
+        </div>
+      )}
+
+      <div className="p-3 space-y-2.5">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="font-semibold text-sm leading-snug text-gray-900">{bid.job_title}</h4>
+          <span className="shrink-0 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+            HomePlus
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs capitalize text-muted-foreground font-medium">{bid.job_trade}</span>
+          {bid.job_category && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span className="text-xs text-muted-foreground">{bid.job_category}</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {locationStr && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" />
+              {locationStr}
+            </span>
+          )}
+          {bid.job_urgency && (
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${URGENCY_COLOR[bid.job_urgency] ?? 'bg-gray-100 text-gray-600'}`}>
+              {bid.job_urgency}
+            </span>
+          )}
+        </div>
+
+        {bid.job_completed_at && (
+          <div className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 rounded-lg px-2 py-1">
+            <CalendarDays className="h-3 w-3 shrink-0" />
+            Completed {new Date(bid.job_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            <span className="text-green-500 font-normal ml-0.5">
+              {new Date(bid.job_completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        )}
+        {!bid.job_completed_at && bid.job_started_at && (
+          <div className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg px-2 py-1">
+            <CalendarDays className="h-3 w-3 shrink-0" />
+            Started {new Date(bid.job_started_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        )}
+        {!bid.job_completed_at && !bid.job_started_at && bid.job_todo_at && (
+          <div className="flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg px-2 py-1">
+            <CalendarDays className="h-3 w-3 shrink-0" />
+            Booked {new Date(bid.job_todo_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        )}
+
+        {bid.homeowner && (
+          <div className="flex items-center gap-1.5 text-xs bg-gray-50 rounded-lg px-2.5 py-1.5">
+            <User className="h-3 w-3 text-gray-400 shrink-0" />
+            <span className="font-medium text-gray-700">
+              {bid.homeowner.first_name} {bid.homeowner.last_name}
+            </span>
+            {bid.homeowner.phone && (
+              <span className="text-gray-400 ml-auto">{bid.homeowner.phone}</span>
+            )}
+          </div>
+        )}
+
+        {isRated && (
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map(n => (
+              <Star key={n} className={`h-3.5 w-3.5 ${n <= bid.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} />
+            ))}
+            {bid.rating_comment && (
+              <span className="text-[10px] text-muted-foreground ml-1 truncate max-w-[100px]">{bid.rating_comment}</span>
+            )}
+          </div>
+        )}
+
+        <div className="border-t border-gray-100 pt-2 flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1 font-semibold text-slate-800">
+            <Coins className="h-3 w-3" />
+            £{parseFloat(bid.amount).toFixed(0)}
+            {budgetStr && <span className="font-normal text-gray-400 ml-1">/ {budgetStr} budget</span>}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {bid.created_at ? timeAgo(bid.created_at) : ''}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SortableBidCard = React.memo(({ bid }: { bid: any }) => {
+  const isRated = bid.rating !== null && bid.rating !== undefined;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: bid.id,
+    disabled: isRated,
+  });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined,
+    transition,
+    willChange: 'transform',
+  } as React.CSSProperties;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`p-3 rounded-lg border bg-white hover:bg-gray-50 ${
-        isDragging ? 'shadow-lg opacity-50 cursor-grabbing' : 'border-gray-200 cursor-grab'
-      }`}
-      key={job.id}
+      {...(isRated ? {} : listeners)}
+      className={isRated ? 'cursor-not-allowed' : isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab hover:shadow-md transition-shadow'}
+      title={isRated ? "Owner have already rated this Job — can't move" : undefined}
     >
-      <h4 className="font-medium mb-2">
-        {job.trade} - {user?.first_name}
-      </h4>
-      <p className="text-sm text-muted-foreground mb-2">
-        {user?.first_name} {user?.last_name}
-      </p>
-      <div className="flex items-center justify-between">
-        <Badge className={getPriorityColor(job.priority)}>{job?.priority}</Badge>
-        <span className="text-sm text-muted-foreground">
-          {job.created_at ? new Date(job.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-        </span>
-      </div>
+      <BidCardContent bid={bid} isDragging={isDragging} />
     </div>
   );
 });
 
-// Droppable Column
 const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children, isDraggingOver }: any) => {
   const { setNodeRef } = useDroppable({ id: column.id });
   const isEmpty = !column.items || column.items.length === 0;
@@ -88,17 +194,15 @@ const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children
         <span className="font-medium text-gray-900">{column.name}</span>
         <Badge className="bg-black">{column.items?.length || 0}</Badge>
       </div>
-
       <div className="space-y-3">
         {children}
         {isEmpty && <div className="py-10 text-center text-gray-400 text-sm select-none">Drop jobs here</div>}
-
         {visibleCount < (column.items?.length || 0) && (
           <button
             onClick={() => onLoadMore(column.id)}
-            className="w-full text-xs text-gray-500 hover:text-black py-2 flex justify-center items-center gap-1"
+            className="w-full text-xs text-gray-500 hover:text-black py-2 flex justify-center items-center"
           >
-            Load More
+            Load more
           </button>
         )}
       </div>
@@ -106,59 +210,42 @@ const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children
   );
 });
 
+const COLUMNS = [
+  { id: 'To Do', name: 'To Do', status: 'todo' },
+  { id: 'In Progress', name: 'In Progress', status: 'in_progress' },
+  { id: 'Completed', name: 'Completed', status: 'completed' },
+];
+
 export default function TradeJobs() {
   const queryClient = useQueryClient();
-  const { data: jobsData, isLoading } = useQuery({ queryKey: ['Jobs'], queryFn: fetchJobs });
-  const postMutation = useMutation({
-    mutationFn: postJobs,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['Jobs'] });
-      toast('Job added successfully');
-    },
-    onError: () => {
-      toast('Error! Try again');
-    },
+
+  const { data: bidsData = [], isLoading } = useQuery({
+    queryKey: ['myBids'],
+    queryFn: fetchMyBids,
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: updateJobStatus,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['Jobs'] }),
+    mutationFn: updateTradeJobStatus,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myBids'] }),
     onError: () => toast.error('Failed to update job status'),
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tradeValue, setTradeValue] = useState('');
-  const [availability, setAvailability] = useState('');
-  const [locationValue, setLocationValue] = useState('');
-  const [priceRange, setPriceRange] = useState(0);
-  const [tagsValue, setTagsValue] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
-  const [priority, setPriority] = useState('Low');
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
   const [activeID, setActiveID] = useState<string | null>(null);
   const [overID, setOverID] = useState<string | null>(null);
-  const { profile: user } = useAuth();
-
-  const columns = ['To Do', 'In Progress', 'Completed'];
 
   useEffect(() => {
-    const colData = columns.map(name => ({
-      id: name,
-      name,
-      items:
-        jobsData?.filter((job: any) => {
-          if (name === 'To Do') return job.status === 'todo';
-          if (name === 'In Progress') return job.status === 'in-progress';
-          return job.status === 'complete';
-        }) || [],
+    const acceptedBids = (bidsData as any[]).filter(b => b.status === 'accepted');
+    const colData = COLUMNS.map(col => ({
+      ...col,
+      items: acceptedBids.filter(b => b.job_status === col.status),
     }));
     setTasks(colData);
-
-    // Initialize visible counts
     const counts: Record<string, number> = {};
     colData.forEach(col => (counts[col.id] = 10));
     setVisibleCounts(counts);
-  }, [jobsData]);
+  }, [bidsData]);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -178,150 +265,60 @@ export default function TradeJobs() {
     setOverID(null);
     if (!over) return;
 
-    const sourceCol = tasks.find(col => col.items.some(item => item.id === active.id));
-    const destCol = tasks.find(col => col.id === over.id || col.items.some(item => item.id === over.id));
-    if (!sourceCol || !destCol) return;
+    const sourceCol = tasks.find(col => col.items.some((item: any) => item.id === active.id));
+    const destCol = tasks.find(col => col.id === over.id || col.items.some((item: any) => item.id === over.id));
+    if (!sourceCol || !destCol || sourceCol.id === destCol.id) return;
 
-    const activeIndex = sourceCol.items.findIndex(item => item.id === active.id);
-    const movedItem = sourceCol.items[activeIndex];
+    const activeIndex = sourceCol.items.findIndex((item: any) => item.id === active.id);
+    const movedBid = sourceCol.items[activeIndex];
 
-    // Remove from source
+    // Block: homeowner has already rated this job
+    const isRated = movedBid.rating !== null && movedBid.rating !== undefined;
+    if (isRated) {
+      toast.error("Owner have already rated this Job — can't move", {
+        description: 'Rated jobs are locked to their completed state.',
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Warn: moving back from completed
+    const movingFromCompleted = sourceCol.status === 'completed' && destCol.status !== 'completed';
+
     sourceCol.items.splice(activeIndex, 1);
-
-    // Add to destination
-    destCol.items.push({
-      ...movedItem,
-      status: destCol.id === 'To Do' ? 'todo' : destCol.id === 'In Progress' ? 'in-progress' : 'complete',
-    });
-
+    destCol.items.push({ ...movedBid, job_status: destCol.status });
     setTasks([...tasks]);
 
-    // Update backend
-    updateStatusMutation.mutate({
-      jobId: movedItem.id,
-      status: destCol.id === 'To Do' ? 'todo' : destCol.id === 'In Progress' ? 'in-progress' : 'complete',
-    });
-    toast.success(`Job moved to ${destCol.name}`);
+    updateStatusMutation.mutate({ jobId: movedBid.job, status: destCol.status });
+
+    if (movingFromCompleted) {
+      toast.warning(`Moved back to ${destCol.name}`, {
+        description: 'This job was marked as completed — make sure this is intentional.',
+        duration: 5000,
+      });
+    } else {
+      toast.success(`Moved to ${destCol.name}`);
+    }
   };
 
-  const handleFormSubmit = () => {
-    if (!tradeValue || !availability || !locationValue) return toast.error('Please fill required fields');
-
-    const newJob = {
-      trade: tradeValue,
-      availability,
-      location: locationValue,
-      rate: priceRange,
-      tags: tagsValue,
-      status: 'todo',
-      priority,
-    };
-
-    postMutation.mutate(newJob);
-    setIsModalOpen(false);
-    setTradeValue('');
-    setAvailability('');
-    setLocationValue('');
-    setPriceRange(0);
-    setTagsValue('');
-  };
+  const activeItem = activeID
+    ? tasks.flatMap(col => col.items).find((item: any) => item.id === activeID)
+    : null;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold">Job Management</h2>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button>Add New Job</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-lg">Add Job</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label className="text-sm ">Select Trade</Label>
-                <Select onValueChange={v => setTradeValue(v)} value={tradeValue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Trade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Electrician">Electrician</SelectItem>
-                    <SelectItem value="Plumber">Plumber</SelectItem>
-                    <SelectItem value="Carpenter">Carpenter</SelectItem>
-                    <SelectItem value="Painter">Painter</SelectItem>
-                    <SelectItem value="Roofer">Roofer</SelectItem>
-                    <SelectItem value="Heating Engineer">Heating Engineer</SelectItem>
-                    <SelectItem value="Kitchen Fitter">Kitchen Fitter</SelectItem>
-                    <SelectItem value="Bathroom Fitter">Bathroom Fitter</SelectItem>
-                    <SelectItem value="Tiler">Tiler</SelectItem>
-                    <SelectItem value="Plasterer">Plasterer</SelectItem>
-                    <SelectItem value="Builder">Builder</SelectItem>
-                    <SelectItem value="Gardener">Gardener</SelectItem>
-                  </SelectContent>
-                </Select>{' '}
-              </div>{' '}
-              <div className="space-y-2">
-                <Label className="text-sm">Availability</Label>
-                <Select onValueChange={v => setAvailability(v)} value={availability}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select availability" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Available today">Available today</SelectItem>
-                    <SelectItem value="Available this week">Available this week</SelectItem>
-                    <SelectItem value="Available next week">Available next week</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Location</Label>
-                <Input
-                  placeholder="Enter location or postcode"
-                  value={locationValue}
-                  onChange={e => setLocationValue(e.target.value)}
-                />{' '}
-              </div>
-              <div className="space-y-2">
-                {' '}
-                <Label className="text-sm">Price per hour</Label>{' '}
-                <div className="px-1">
-                  {' '}
-                  <Input
-                    type="number"
-                    value={priceRange}
-                    onChange={(e: number[]) => setPriceRange(e.target.value)}
-                    className="w-full"
-                  />{' '}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground mt-2"></div>{' '}
-                </div>{' '}
-              </div>{' '}
-              <div className="space-y-2">
-                <Label className="text-sm">Priority</Label>
-                <Select onValueChange={v => setPriority(v)} value={priority}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Tags</Label>{' '}
-                <Input placeholder="eg: emergency, rewiring" value={tagsValue} onChange={e => setTagsValue(e.target.value)} />{' '}
-                <p className="text-xs text-muted-foreground mt-1">Separate tags with a comma</p>{' '}
-              </div>{' '}
-            </div>{' '}
-            <DialogFooter>
-              {' '}
-              <Button onClick={handleFormSubmit}>Save</Button>{' '}
-            </DialogFooter>{' '}
-          </DialogContent>
-        </Dialog>
+        {isLoading && <span className="text-sm text-muted-foreground">Loading…</span>}
       </div>
+
+      {!isLoading && tasks.every(col => col.items.length === 0) && (
+        <div className="py-16 text-center text-muted-foreground">
+          <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No accepted jobs yet</p>
+          <p className="text-sm mt-1">Accept bids from the Job Market to see jobs here</p>
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}
@@ -339,45 +336,21 @@ export default function TradeJobs() {
               onLoadMore={handleLoadMore}
               isDraggingOver={overID === col.id}
             >
-              <SortableContext items={col.items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                {col.items.slice(0, visibleCounts[col.id]).map(job => (
-                  <SortableJobCard user={user} key={job.id} job={job} />
+              <SortableContext items={col.items.map((item: any) => item.id)} strategy={verticalListSortingStrategy}>
+                {col.items.slice(0, visibleCounts[col.id] || 10).map((bid: any) => (
+                  <SortableBidCard key={bid.id} bid={bid} />
                 ))}
               </SortableContext>
             </DroppableColumn>
           ))}
         </div>
 
-        <DragOverlay>
-          {activeID ? (
-            <div className={`p-3 border rounded-lg bg-white shadow-lg`}>
-              <h4 className="font-medium mb-2">
-                {tasks.find(col => col.items.some(item => item.id === activeID))?.items.find(item => item.id === activeID)?.trade} -{' '}
-                {user?.first_name}
-              </h4>
-              <p className="text-sm text-muted-foreground mb-2">
-                {user?.first_name} {user?.last_name}
-              </p>
-              <div className="flex items-center justify-between">
-                <Badge
-                  className={getPriorityColor(
-                    tasks.find(col => col.items.some(item => item.id === activeID))?.items.find(item => item.id === activeID)?.priority
-                  )}
-                >
-                  {tasks.find(col => col.items.some(item => item.id === activeID))?.items.find(item => item.id === activeID)?.priority}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  {tasks.find(col => col.items.some(item => item.id === activeID))?.items.find(item => item.id === activeID)?.created_at
-                    ? new Date(
-                        tasks
-                          .find(col => col.items.some(item => item.id === activeID))
-                          ?.items.find(item => item.id === activeID)?.created_at
-                      ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : ''}
-                </span>
-              </div>
+        <DragOverlay dropAnimation={null}>
+          {activeItem && (
+            <div className="rotate-1 scale-105 shadow-2xl cursor-grabbing">
+              <BidCardContent bid={activeItem} isDragging />
             </div>
-          ) : null}
+          )}
         </DragOverlay>
       </DndContext>
     </div>

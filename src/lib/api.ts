@@ -1,4 +1,30 @@
+import { apiRequest } from './apiClient';
 import { supabase } from '@/integrations/supabase/client';
+
+// ─── Generic HTTP helpers (HomePlus backend) ──────────────────────────────────
+
+export const fetchData = <T = any>(url: string): Promise<T> =>
+  apiRequest<T>(url, { method: 'GET' });
+
+export const postData = <T = any>({ url, data, config }: { url: string; data?: any; config?: any }): Promise<T> => {
+  const isFormData = data instanceof FormData;
+  return apiRequest<T>(url, {
+    method: 'POST',
+    body: isFormData ? data : data !== undefined ? JSON.stringify(data) : undefined,
+    ...(config?.headers ? { headers: config.headers } : {}),
+  });
+};
+
+export const patchData = <T = any>({ url, data }: { url: string; data?: any }): Promise<T> => {
+  const isFormData = data instanceof FormData;
+  return apiRequest<T>(url, {
+    method: 'PATCH',
+    body: isFormData ? data : data !== undefined ? JSON.stringify(data) : undefined,
+  });
+};
+
+export const deleteData = <T = any>({ url }: { url: string }): Promise<T> =>
+  apiRequest<T>(url, { method: 'DELETE' });
 import {
   isDemoMode,
   getDemoLeads,
@@ -13,6 +39,37 @@ import {
   updateDemoProfile,
   mockArticles,
 } from '@/lib/mockData';
+
+// Update TradePilot user + TradePilotProfile via Django /me/ endpoint
+export const updateTradePilotMe = (data: Record<string, any>) =>
+  patchData({ url: 'api/v1/tradepilot/auth/me/', data });
+
+// My Bids (accepted HomePlus bids)
+export const fetchMyBids = () =>
+  fetchData<any>('/api/v1/tradepilot/jobs/my-bids/').then(r => r?.data ?? []);
+
+// Trade Documents
+export const fetchTradeDocuments = () =>
+  fetchData<any>('api/v1/tradepilot/profile/documents/').then(r => r?.data ?? []);
+
+export const uploadTradeDocument = (formData: FormData) =>
+  postData<any>({ url: 'api/v1/tradepilot/profile/documents/', data: formData });
+
+export const deleteTradeDocument = (id: string) =>
+  deleteData<any>({ url: `api/v1/tradepilot/profile/documents/${id}/` });
+
+// Trade Services
+export const fetchTradeServices = () =>
+  fetchData<any>('api/v1/tradepilot/profile/services/').then(r => r?.data ?? []);
+
+export const createTradeService = (data: Record<string, any>) =>
+  postData<any>({ url: 'api/v1/tradepilot/profile/services/', data });
+
+export const updateTradeService = ({ id, ...data }: { id: string; [key: string]: any }) =>
+  patchData<any>({ url: `api/v1/tradepilot/profile/services/${id}/`, data });
+
+export const deleteTradeService = (id: string) =>
+  deleteData<any>({ url: `api/v1/tradepilot/profile/services/${id}/` });
 
 // Add new job
 export const postJobs = async job => {
@@ -53,17 +110,54 @@ export const modifyLeads = async lead => {
   return { data };
 };
 
-// Fetch jobs
+// Normalise a Supabase CRM job to use consistent status values
+const normaliseSupabaseJob = (job: any) => ({
+  ...job,
+  _source: 'supabase' as const,
+  status:
+    job.status === 'in-progress' ? 'in_progress'
+    : job.status === 'complete' ? 'completed'
+    : job.status,
+});
+
+// Fetch accepted HomePlus jobs for the logged-in trade
+export const fetchMyJobs = async (): Promise<any[]> => {
+  try {
+    const res = await fetchData<any>('api/v1/tradepilot/jobs/my-jobs/');
+    return (res?.data ?? []).map((j: any) => ({ ...j, _source: 'homeplus' as const }));
+  } catch {
+    return [];
+  }
+};
+
+// Update status of an accepted HomePlus job
+export const updateTradeJobStatus = async ({ jobId, status }: { jobId: string; status: string }) =>
+  patchData({ url: `api/v1/tradepilot/jobs/my-jobs/${jobId}/status/`, data: { status } });
+
+// Fetch jobs — merges Supabase CRM jobs with accepted HomePlus jobs
 export const fetchJobs = async () => {
   if (isDemoMode()) {
     return getDemoJobs();
   }
 
-  const { data, error } = await supabase.from('jobs').select('*');
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+  const [supabaseResult, homeplusJobs] = await Promise.allSettled([
+    supabase.from('jobs').select('*'),
+    fetchMyJobs(),
+  ]);
+
+  const supabaseJobs: any[] =
+    supabaseResult.status === 'fulfilled' && !supabaseResult.value.error
+      ? (supabaseResult.value.data ?? []).map(normaliseSupabaseJob)
+      : [];
+
+  const acceptedJobs: any[] =
+    homeplusJobs.status === 'fulfilled' ? homeplusJobs.value : [];
+
+  // Deduplicate by id (safety guard in case of overlap)
+  const seen = new Set(supabaseJobs.map((j: any) => String(j.id)));
+  const uniqueAccepted = acceptedJobs.filter((j: any) => !seen.has(String(j.id)));
+
+  return [...supabaseJobs, ...uniqueAccepted];
 };
 
 // Fetch leads
@@ -125,8 +219,20 @@ export const updateProfile = async profile => {
   return data;
 };
 
-// Update job status
-export const updateJobStatus = async ({ jobId, status }) => {
+// Update job status — routes to HomePlus backend or Supabase based on source
+export const updateJobStatus = async ({
+  jobId,
+  status,
+  _source,
+}: {
+  jobId: string;
+  status: string;
+  _source?: string;
+}) => {
+  if (_source === 'homeplus') {
+    return updateTradeJobStatus({ jobId, status });
+  }
+
   if (isDemoMode()) {
     return { data: updateDemoJob(jobId, { status }) };
   }
