@@ -50,26 +50,23 @@ export const useAuth = () => {
 
   const user = meData?.data ?? null;
 
-  const loginMutation = usePost({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [ME_URL] });
-    },
-  });
+  const loginMutation = usePost<any>({});
 
-  const logoutMutation = usePost({});
-
-  const signIn = (email: string, password: string) =>
-    loginMutation.mutateAsync({
+  const signIn = async (email: string, password: string) => {
+    const res = await loginMutation.mutateAsync({
       url: '/api/v1/tradepilot/auth/login/',
       data: { email, password },
     } as any);
+    // Seed cache immediately so TradeCRMLayout sees authenticated user on navigate
+    if (res?.data?.user) {
+      queryClient.setQueryData([ME_URL], { data: res.data.user });
+    }
+    return res;
+  };
 
   const signOut = async () => {
     try {
-      await logoutMutation.mutateAsync({
-        url: '/api/v1/tradepilot/auth/logout/',
-        data: {},
-      } as any);
+      await apiRequest('/api/v1/tradepilot/auth/logout/', { method: 'POST' }, true);
     } catch {
       // ignore — cookies cleared server-side regardless
     } finally {
