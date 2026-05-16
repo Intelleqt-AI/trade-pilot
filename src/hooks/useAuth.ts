@@ -58,7 +58,7 @@ export const useAuth = () => {
 
   const logoutMutation = usePost({
     onSuccess: () => {
-      queryClient.setQueryData([ME_URL], null);
+      queryClient.clear();
     },
   });
 
