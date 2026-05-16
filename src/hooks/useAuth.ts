@@ -56,11 +56,7 @@ export const useAuth = () => {
     },
   });
 
-  const logoutMutation = usePost({
-    onSuccess: () => {
-      queryClient.clear();
-    },
-  });
+  const logoutMutation = usePost({});
 
   const signIn = (email: string, password: string) =>
     loginMutation.mutateAsync({
@@ -68,11 +64,18 @@ export const useAuth = () => {
       data: { email, password },
     } as any);
 
-  const signOut = () =>
-    logoutMutation.mutateAsync({
-      url: '/api/v1/tradepilot/auth/logout/',
-      data: {},
-    } as any);
+  const signOut = async () => {
+    try {
+      await logoutMutation.mutateAsync({
+        url: '/api/v1/tradepilot/auth/logout/',
+        data: {},
+      } as any);
+    } catch {
+      // ignore — cookies cleared server-side regardless
+    } finally {
+      queryClient.clear();
+    }
+  };
 
   return {
     user,

@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { fetchJobs } from '@/lib/api';
+import { fetchJobs, fetchMyBids, fetchData } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,10 +31,20 @@ const Dashboard = () => {
 
   const { data: jobsData } = useQuery({ queryKey: ['Jobs'], queryFn: fetchJobs });
 
+  const { data: jobFeedData } = useQuery({
+    queryKey: ['JobFeed'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/'),
+  });
+
+  const { data: myBidsData } = useQuery({
+    queryKey: ['MyBids'],
+    queryFn: fetchMyBids,
+  });
+
   const creditBalance =
     jobMarketCredits ?? (user as any)?.credit_balance ?? profile?.credit ?? 0;
-  const jobsNearYou = 10;
-  const activeLeadsCount = 3;
+  const jobsNearYou = Array.isArray(jobFeedData) ? jobFeedData.length : (jobFeedData?.data?.length ?? jobFeedData?.results?.length ?? 0);
+  const activeLeadsCount = Array.isArray(myBidsData) ? myBidsData.length : (myBidsData?.length ?? 0);
 
   const isProfileComplete = !!(
     profile?.first_name &&
