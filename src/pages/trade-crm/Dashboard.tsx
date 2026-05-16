@@ -5,10 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchJobs } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Users,
-  Briefcase,
   MapPin,
   Coins,
   Award,
@@ -92,19 +90,6 @@ const Dashboard = () => {
   };
 
   const bannerContent = getBannerContent();
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'high':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 capitalize';
-      case 'medium':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300 capitalize';
-      case 'low':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 capitalize';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 capitalize';
-    }
-  };
 
   const dashboardStats = [
     {
@@ -368,36 +353,7 @@ const Dashboard = () => {
             )}
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {!leadsLoading && filteredLeads.length > 0 ? (
-                filteredLeads.slice(0, 4).map((lead) => (
-                  <div
-                    key={lead.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-primary/20 hover:bg-slate-50/80 transition-all cursor-pointer group gap-3"
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors shrink-0">
-                        <Briefcase className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-medium text-slate-800 truncate">{lead.name}</h4>
-                        <p className="text-sm text-slate-500 truncate">{lead.service}</p>
-                        <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {lead.location}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start ml-13 sm:ml-0">
-                      <Badge className={getStatusColor(lead?.priority)}>{lead?.priority}</Badge>
-                      <p className="text-sm font-semibold text-slate-800 sm:mt-2">
-                        £{lead?.value ? lead?.value : '0'}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="py-6">
+            <div className="py-6">
                   <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Zap className="h-8 w-8 text-primary" />
@@ -452,15 +408,13 @@ const Dashboard = () => {
                   <div className="text-center mt-6">
                     <Button
                       className="bg-primary hover:bg-primary/90 text-white"
-                      onClick={() => navigate('/trades-crm/credits')}
+                      onClick={() => navigate('/trades-crm/job-market')}
                     >
                       <Search className="h-4 w-4 mr-2" />
                       Browse Available Jobs
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
           </CardContent>
         </Card>
 
