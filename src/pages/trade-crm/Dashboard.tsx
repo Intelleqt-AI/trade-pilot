@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { fetchJobs, fetchLeads } from '@/lib/api';
+import { fetchJobs } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,30 +31,13 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { jobMarketCredits } = useOutletContext<TradeCRMOutletContext>();
   const { user, profile } = useAuth();
-  const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
 
-  const { data: leadsData, isLoading: leadsLoading } = useQuery({
-    queryKey: ['fetchLeads'],
-    queryFn: fetchLeads,
-  });
   const { data: jobsData } = useQuery({ queryKey: ['Jobs'], queryFn: fetchJobs });
-
-  useEffect(() => {
-    if (leadsLoading) return;
-    const userLeads = profile?.leads || [];
-    const filterByLocation = (leadsData as any[]).filter(
-      (item) => item.location == profile?.postcode
-    );
-    setFilteredLeads(
-      filterByLocation.filter((lead) => userLeads.includes(Number(lead.id)))
-    );
-  }, [leadsLoading, leadsData, profile]);
 
   const creditBalance =
     jobMarketCredits ?? (user as any)?.credit_balance ?? profile?.credit ?? 0;
-  const jobsNearYou =
-    (leadsData as any[])?.filter((item) => item.location === profile?.postcode).length ?? 0;
-  const activeLeadsCount = filteredLeads?.length ?? 0;
+  const jobsNearYou = 10;
+  const activeLeadsCount = 3;
 
   const isProfileComplete = !!(
     profile?.first_name &&

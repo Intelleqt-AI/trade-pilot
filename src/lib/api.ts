@@ -78,21 +78,8 @@ export const postJobs = async (job: any) => {
   return postData({ url: 'api/v1/tradepilot/jobs/', data: job });
 };
 
-// Add new lead
-export const postLeads = async (lead: any) => {
-  if (isDemoMode()) {
-    return { data: addDemoLead(lead) };
-  }
-  return postData({ url: 'api/v1/tradepilot/leads/', data: lead });
-};
 
-// Modify lead
-export const modifyLeads = async (lead: any) => {
-  if (isDemoMode()) {
-    return { data: updateDemoLead(lead) };
-  }
-  return patchData({ url: `api/v1/tradepilot/leads/${lead.id}/`, data: lead });
-};
+
 
 // Fetch accepted HomePlus jobs for the logged-in trade
 export const fetchMyJobs = async (): Promise<any[]> => {
@@ -116,14 +103,7 @@ export const fetchJobs = async () => {
   return fetchMyJobs();
 };
 
-// Fetch leads
-export const fetchLeads = async () => {
-  if (isDemoMode()) {
-    return getDemoLeads();
-  }
-  const res = await fetchData<any>('api/v1/tradepilot/leads/');
-  return res?.data ?? res ?? [];
-};
+
 
 // Add bid
 export const addBids = async ({ updates }: { updates: any }) => {
@@ -162,35 +142,6 @@ export const updateJobStatus = async ({
     return { data: updateDemoJob(Number(jobId), { status }) };
   }
   return updateTradeJobStatus({ jobId, status });
-};
-
-// Purchase lead (credit deduction + lead assignment)
-export const addPurchase = async ({ lead, userID }: { lead: any; userID: string }) => {
-  if (isDemoMode()) {
-    const profiles = getDemoProfiles();
-    const profile = profiles[userID];
-
-    if (!profile) {
-      throw new Error('Profile not found');
-    }
-
-    const CREDIT_COST = 30;
-    const currentCredit = profile.credit || 0;
-
-    if (currentCredit < CREDIT_COST) {
-      throw new Error('Insufficient credits. You need at least 30 credits to accept a lead.');
-    }
-
-    const currentLeads = profile.leads || [];
-    const updatedLeads = [...currentLeads, lead];
-    const newCredit = currentCredit - CREDIT_COST;
-
-    updateDemoProfile({ id: userID, leads: updatedLeads, credit: newCredit });
-
-    return { data: { profile: profiles[userID] } };
-  }
-
-  return postData({ url: 'api/v1/tradepilot/leads/purchase/', data: { lead_id: lead.id } });
 };
 
 // ─── Blog API ─────────────────────────────────────────────────────────────────

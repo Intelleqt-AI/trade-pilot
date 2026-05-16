@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { postLeads } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -63,17 +62,6 @@ const AddLeadsForm = ({ open, setOpen }: AddLeadsFormProps) => {
     }
   };
 
-  const mutation = useMutation({
-    mutationFn: postLeads,
-    onSuccess: () => {
-      queryClient.refetchQueries(['fetchLeads']);
-      toast('Lead created successfully!');
-      handleDialog(false);
-    },
-    onError: () => {
-      toast('Error! Try again');
-    },
-  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -86,7 +74,7 @@ const AddLeadsForm = ({ open, setOpen }: AddLeadsFormProps) => {
 
   const handleAddLead = (e?: React.FormEvent) => {
     e?.preventDefault();
-    mutation.mutate(form);
+    // mutation.mutate(form);
   };
 
   const isFormComplete = Boolean(form.name && form.service && form.location && form.value && form.email);
