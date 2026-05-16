@@ -1,6 +1,6 @@
 import { useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import HomePlusJobsFeed from '@/components/trade-crm/HomePlusJobsFeed';
+import HomePlusJobsFeed from '@/components/Trade-CRM/HomePlusJobsFeed';
 import type { TradeCRMOutletContext } from '@/layouts/TradeCRMLayout';
 
 const JobMarket = () => {

@@ -50,7 +50,7 @@ import TradeLeads from '@/components/Trade-CRM/TradeLeads';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { fetchJobs, fetchLeads, updateProfile } from '@/lib/api';
 import LeadPurchase from '@/components/Trade-CRM/LeadPurchase';
-import HomePlusJobsFeed from '@/components/trade-crm/HomePlusJobsFeed';
+import HomePlusJobsFeed from '@/components/Trade-CRM/HomePlusJobsFeed';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
