@@ -11,6 +11,8 @@ import Support from "./pages/Support";
 import TradeRegistration from "./pages/TradeRegistration";
 import CustomerRegistration from "./pages/CustomerRegistration";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import VerifyEmail from "./pages/VerifyEmail";
 import Trades from "./pages/Trades";
@@ -68,6 +70,8 @@ const App = () => (
           <Route path="/trades/join" element={<TradeRegistration />} />
           <Route path="/join" element={<CustomerRegistration />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/blog" element={<Blog />} />

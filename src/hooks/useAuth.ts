@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import useFetch from './useFetch';
 import { usePost } from './usePost';
-import { apiRequest } from '@/lib/apiClient';
+import { apiRequest, BASE_URL } from '@/lib/apiClient';
 
 const ME_URL = '/api/v1/tradepilot/auth/me/';
 
@@ -66,7 +66,10 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      await apiRequest('/api/v1/tradepilot/auth/logout/', { method: 'POST' }, true);
+      await fetch(`${BASE_URL}/api/v1/tradepilot/auth/logout/`, {
+        method: 'POST',
+        credentials: 'include',
+      });
     } catch {
       // ignore — cookies cleared server-side regardless
     } finally {
