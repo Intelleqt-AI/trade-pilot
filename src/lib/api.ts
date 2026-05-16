@@ -1,5 +1,18 @@
 import { apiRequest } from './apiClient';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  isDemoMode,
+  getDemoLeads,
+  getDemoJobs,
+  getDemoProfiles,
+  addDemoLead,
+  updateDemoLead,
+  addDemoBid,
+  updateDemoBid,
+  addDemoJob,
+  updateDemoJob,
+  updateDemoProfile,
+  mockArticles,
+} from '@/lib/mockData';
 
 // ─── Generic HTTP helpers (HomePlus backend) ──────────────────────────────────
 
@@ -25,20 +38,6 @@ export const patchData = <T = any>({ url, data }: { url: string; data?: any }): 
 
 export const deleteData = <T = any>({ url }: { url: string }): Promise<T> =>
   apiRequest<T>(url, { method: 'DELETE' });
-import {
-  isDemoMode,
-  getDemoLeads,
-  getDemoJobs,
-  getDemoProfiles,
-  addDemoLead,
-  updateDemoLead,
-  addDemoBid,
-  updateDemoBid,
-  addDemoJob,
-  updateDemoJob,
-  updateDemoProfile,
-  mockArticles,
-} from '@/lib/mockData';
 
 // Update TradePilot user + TradePilotProfile via Django /me/ endpoint
 export const updateTradePilotMe = (data: Record<string, any>) =>
@@ -72,53 +71,28 @@ export const deleteTradeService = (id: string) =>
   deleteData<any>({ url: `api/v1/tradepilot/profile/services/${id}/` });
 
 // Add new job
-export const postJobs = async job => {
+export const postJobs = async (job: any) => {
   if (isDemoMode()) {
     return { data: addDemoJob(job) };
   }
-
-  const { data, error } = await supabase.from('jobs').insert(job);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return { data };
+  return postData({ url: 'api/v1/tradepilot/jobs/', data: job });
 };
 
 // Add new lead
-export const postLeads = async lead => {
+export const postLeads = async (lead: any) => {
   if (isDemoMode()) {
     return { data: addDemoLead(lead) };
   }
-
-  const { data, error } = await supabase.from('leads').insert([lead]);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return { data };
+  return postData({ url: 'api/v1/tradepilot/leads/', data: lead });
 };
 
 // Modify lead
-export const modifyLeads = async lead => {
+export const modifyLeads = async (lead: any) => {
   if (isDemoMode()) {
     return { data: updateDemoLead(lead) };
   }
-
-  const { data, error } = await supabase.from('leads').update(lead).eq('id', lead.id);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return { data };
+  return patchData({ url: `api/v1/tradepilot/leads/${lead.id}/`, data: lead });
 };
-
-// Normalise a Supabase CRM job to use consistent status values
-const normaliseSupabaseJob = (job: any) => ({
-  ...job,
-  _source: 'supabase' as const,
-  status:
-    job.status === 'in-progress' ? 'in_progress'
-    : job.status === 'complete' ? 'completed'
-    : job.status,
-});
 
 // Fetch accepted HomePlus jobs for the logged-in trade
 export const fetchMyJobs = async (): Promise<any[]> => {
@@ -134,30 +108,12 @@ export const fetchMyJobs = async (): Promise<any[]> => {
 export const updateTradeJobStatus = async ({ jobId, status }: { jobId: string; status: string }) =>
   patchData({ url: `api/v1/tradepilot/jobs/my-jobs/${jobId}/status/`, data: { status } });
 
-// Fetch jobs — merges Supabase CRM jobs with accepted HomePlus jobs
+// Fetch jobs
 export const fetchJobs = async () => {
   if (isDemoMode()) {
     return getDemoJobs();
   }
-
-  const [supabaseResult, homeplusJobs] = await Promise.allSettled([
-    supabase.from('jobs').select('*'),
-    fetchMyJobs(),
-  ]);
-
-  const supabaseJobs: any[] =
-    supabaseResult.status === 'fulfilled' && !supabaseResult.value.error
-      ? (supabaseResult.value.data ?? []).map(normaliseSupabaseJob)
-      : [];
-
-  const acceptedJobs: any[] =
-    homeplusJobs.status === 'fulfilled' ? homeplusJobs.value : [];
-
-  // Deduplicate by id (safety guard in case of overlap)
-  const seen = new Set(supabaseJobs.map((j: any) => String(j.id)));
-  const uniqueAccepted = acceptedJobs.filter((j: any) => !seen.has(String(j.id)));
-
-  return [...supabaseJobs, ...uniqueAccepted];
+  return fetchMyJobs();
 };
 
 // Fetch leads
@@ -165,172 +121,51 @@ export const fetchLeads = async () => {
   if (isDemoMode()) {
     return getDemoLeads();
   }
-
-  const { data, error } = await supabase.from('leads').select(`
-      *,
-      bids(*,
-      bidder:bid_by (
-         *
-        ))
-    `);
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
+  const res = await fetchData<any>('api/v1/tradepilot/leads/');
+  return res?.data ?? res ?? [];
 };
 
-// add bids
-export const addBids = async ({ updates }) => {
+// Add bid
+export const addBids = async ({ updates }: { updates: any }) => {
   if (isDemoMode()) {
     return addDemoBid(updates);
   }
-
-  const { data, error } = await supabase.from('bids').insert(updates);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+  return postData({ url: 'api/v1/tradepilot/bids/', data: updates });
 };
 
-// modify bids
-export const modifyBids = async updates => {
+// Modify bid
+export const modifyBids = async (updates: any) => {
   if (isDemoMode()) {
     return updateDemoBid(updates);
   }
-
-  const { data, error } = await supabase.from('bids').update(updates).eq('id', updates.id);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+  return patchData({ url: `api/v1/tradepilot/bids/${updates.id}/`, data: updates });
 };
 
 // Update profile
-export const updateProfile = async profile => {
+export const updateProfile = async (profile: any) => {
   if (isDemoMode()) {
     return updateDemoProfile(profile);
   }
-
-  const { data, error } = await supabase.from('profiles').update(profile).eq('id', profile.id);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+  return patchData({ url: 'api/v1/tradepilot/auth/me/', data: profile });
 };
 
-// Update job status — routes to HomePlus backend or Supabase based on source
+// Update job status
 export const updateJobStatus = async ({
   jobId,
   status,
-  _source,
 }: {
   jobId: string;
   status: string;
   _source?: string;
 }) => {
-  if (_source === 'homeplus') {
-    return updateTradeJobStatus({ jobId, status });
-  }
-
   if (isDemoMode()) {
-    return { data: updateDemoJob(jobId, { status }) };
+    return { data: updateDemoJob(Number(jobId), { status }) };
   }
-
-  const { data, error } = await supabase.from('jobs').update({ status }).eq('id', jobId);
-  if (error) {
-    throw new Error(error.message);
-  }
-  return { data };
+  return updateTradeJobStatus({ jobId, status });
 };
 
-// Blog API
-
-const API_URL = 'https://reassuring-paradise-02bc2fb070.strapiapp.com';
-
-// Fetch All Article
-export async function fetchArticles() {
-  if (isDemoMode()) {
-    return mockArticles;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/articles?populate=*&filters[Site][$eq]=tradepilot&pagination[pageSize]=100`, {});
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch articles: ${response.status}`);
-    }
-    const result = await response.json();
-    console.log('API response structure:', Object.keys(result));
-
-    return result;
-  } catch (error) {
-    console.error('Error fetching articles:', error);
-    return { data: [] };
-  }
-}
-
-// Fetch article by slug
-export async function fetchArticleBySlug(slug) {
-  if (isDemoMode()) {
-    const article = mockArticles.data.find(a => a.slug === slug || a.id.toString() === slug);
-    return article || null;
-  }
-
-  try {
-    if (!slug) {
-      console.warn('fetchArticleBySlug called with empty/undefined slug:', slug);
-      return null;
-    }
-    // First attempt: Try to find by slug
-    let response = await fetch(`${API_URL}/api/articles?filters[slug][$eq]=${slug}&populate=*&sort=updatedAt:desc`, {});
-
-    let result = await response.json();
-    if (!result.data || result.data.length === 0) {
-      const possibleId = parseInt(slug, 10);
-
-      if (!isNaN(possibleId)) {
-        response = await fetch(`${API_URL}/api/articles?filters[id][$eq]=${possibleId}&populate=*&sort=updatedAt:desc`, {
-          cache: 'no-store',
-        });
-
-        if (response.ok) {
-          result = await response.json();
-          return result.data && result.data.length > 0 ? result.data[0] : null;
-        }
-      }
-      return null;
-    }
-    return result.data[0];
-  } catch (error) {
-    console.error('Error fetching article:', error);
-    return null;
-  }
-}
-
-// Fetch Author Info
-export async function fetchAuthors() {
-  if (isDemoMode()) {
-    return { data: [{ id: 1, name: 'Trade Pilot Team', bio: 'Your trusted source for trade advice.' }] };
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/authors?populate=*`, {});
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch articles: ${response.status}`);
-    }
-    const result = await response.json();
-    console.log('API response structure:', Object.keys(result));
-
-    return result;
-  } catch (error) {
-    console.error('Error fetching articles:', error);
-    return { data: [] };
-  }
-}
-
-export const addPurchase = async ({ lead, userID }) => {
+// Purchase lead (credit deduction + lead assignment)
+export const addPurchase = async ({ lead, userID }: { lead: any; userID: string }) => {
   if (isDemoMode()) {
     const profiles = getDemoProfiles();
     const profile = profiles[userID];
@@ -350,53 +185,80 @@ export const addPurchase = async ({ lead, userID }) => {
     const updatedLeads = [...currentLeads, lead];
     const newCredit = currentCredit - CREDIT_COST;
 
-    updateDemoProfile({
-      id: userID,
-      leads: updatedLeads,
-      credit: newCredit,
-    });
+    updateDemoProfile({ id: userID, leads: updatedLeads, credit: newCredit });
 
-    return {
-      data: {
-        profile: profiles[userID],
-      },
-    };
+    return { data: { profile: profiles[userID] } };
   }
 
-  const { data: profile, error: fetchError } = await supabase.from('profiles').select('leads, credit').eq('id', userID).single();
-
-  if (fetchError) {
-    throw new Error(fetchError.message);
-  }
-
-  // Check if user has sufficient credit (30 credits required per lead)
-  const CREDIT_COST = 30;
-  const currentCredit = profile.credit || 0;
-
-  if (currentCredit < CREDIT_COST) {
-    throw new Error('Insufficient credits. You need at least 30 credits to accept a lead.');
-  }
-
-  // Create or update the leads array
-  const currentLeads = profile.leads || [];
-  const updatedLeads = [...currentLeads, lead];
-
-  // Calculate new credit balance
-  const newCredit = currentCredit - CREDIT_COST;
-
-  // Update the profiles table with the new leads array and deducted credit
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .update({ leads: updatedLeads, credit: newCredit })
-    .eq('id', userID);
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
-
-  return {
-    data: {
-      profile: profileData,
-    },
-  };
+  return postData({ url: 'api/v1/tradepilot/leads/purchase/', data: { lead_id: lead.id } });
 };
+
+// ─── Blog API ─────────────────────────────────────────────────────────────────
+
+const API_URL = 'https://reassuring-paradise-02bc2fb070.strapiapp.com';
+
+export async function fetchArticles() {
+  if (isDemoMode()) {
+    return mockArticles;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/articles?populate=*&filters[Site][$eq]=tradepilot&pagination[pageSize]=100`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch articles: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    return { data: [] };
+  }
+}
+
+export async function fetchArticleBySlug(slug: string) {
+  if (isDemoMode()) {
+    const article = mockArticles.data.find(a => a.slug === slug || a.id.toString() === slug);
+    return article || null;
+  }
+
+  try {
+    if (!slug) return null;
+
+    let response = await fetch(`${API_URL}/api/articles?filters[slug][$eq]=${slug}&populate=*&sort=updatedAt:desc`);
+    let result = await response.json();
+
+    if (!result.data || result.data.length === 0) {
+      const possibleId = parseInt(slug, 10);
+      if (!isNaN(possibleId)) {
+        response = await fetch(`${API_URL}/api/articles?filters[id][$eq]=${possibleId}&populate=*&sort=updatedAt:desc`, {
+          cache: 'no-store',
+        });
+        if (response.ok) {
+          result = await response.json();
+          return result.data && result.data.length > 0 ? result.data[0] : null;
+        }
+      }
+      return null;
+    }
+    return result.data[0];
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    return null;
+  }
+}
+
+export async function fetchAuthors() {
+  if (isDemoMode()) {
+    return { data: [{ id: 1, name: 'Trade Pilot Team', bio: 'Your trusted source for trade advice.' }] };
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/authors?populate=*`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch authors: ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching authors:', error);
+    return { data: [] };
+  }
+}

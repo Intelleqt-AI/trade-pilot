@@ -41,7 +41,7 @@ const Navigation = () => {
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" onClick={() => navigate('/login')}>
+                  <Button variant="ghost" onClick={() => navigate('/login?type=trade')}>
                     Sign In
                   </Button>
                   {/* <Button variant="default" asChild>

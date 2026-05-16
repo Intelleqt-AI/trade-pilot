@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Save, Mail, Phone, MapPin, User } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/integrations/supabase/client"
+import { patchData } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import Navigation from "@/components/Navigation"
 
@@ -50,9 +50,9 @@ const Profile = () => {
     try {
       setLoading(true)
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      await patchData({
+        url: 'api/v1/tradepilot/auth/me/',
+        data: {
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone: formData.phone,
@@ -61,11 +61,8 @@ const Profile = () => {
           city: formData.city,
           county: formData.county,
           postal_code: formData.postal_code,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id)
-
-      if (error) throw error
+        },
+      })
 
       toast({
         title: "Profile updated",

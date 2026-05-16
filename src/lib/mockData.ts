@@ -1,4 +1,31 @@
-import { UserProfile } from './supabase';
+type UserRole = 'customer' | 'trade';
+
+interface UserProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  phone?: string;
+  address_line_1?: string;
+  address_line_2?: string;
+  city?: string;
+  county?: string;
+  postcode?: string;
+  business_name?: string;
+  business_type?: string;
+  years_experience?: string;
+  trade_specialty?: string;
+  has_insurance?: boolean;
+  has_license?: boolean;
+  agreed_to_terms?: boolean;
+  profile_description?: string;
+  leads?: number[];
+  credit?: number;
+  created_at: string;
+  updated_at: string;
+}
 
 // Check if demo mode is enabled
 export const isDemoMode = () => import.meta.env.VITE_DEMO_MODE === 'true';
