@@ -46,7 +46,43 @@ import { toast } from '@/lib/toast';
 const JOBS_URL = '/api/v1/tradepilot/jobs/';
 const MY_BIDS_URL = '/api/v1/tradepilot/jobs/my-bids/';
 const ME_URL = '/api/v1/tradepilot/auth/me/';
-const BID_COST = 2;
+const MIN_BID_COST = 10;
+
+const QUESTION_LABELS: Record<string, string> = {
+  boilers_q1: 'What type of boiler do you have?',
+  boilers_q2: 'What needs doing to the boiler?',
+  boilers_q3: 'Is the property domestic or commercial?',
+  radiators_q1: 'What do you need help with?',
+  radiators_q2: 'How many radiators are involved (approx)?',
+  radiators_q3: 'Is this for a domestic or commercial property?',
+  appliances_q1: 'Which appliance do you need help with?',
+  appliances_q2: 'What needs doing?',
+  appliances_q3: 'Is the property domestic or commercial?',
+  fixtures_q1: 'Which fixture needs attention?',
+  fixtures_q2: 'What is the issue?',
+  fixtures_q3: 'Is the property domestic or commercial?',
+  'pipework,_taps_and_drainage_q1': 'What best describes the job?',
+  'pipework,_taps_and_drainage_q2': 'Is this an urgent issue?',
+  'pipework,_taps_and_drainage_q3': 'Is the property domestic or commercial?',
+  boilers_gas_q1: 'What fuel does your boiler use?',
+  boilers_gas_q2: 'What needs doing?',
+  boilers_gas_q3: 'Property type',
+  gas_hobs_cookers_and_ovens_q1: 'Which appliance?',
+  gas_hobs_cookers_and_ovens_q2: 'What needs doing?',
+  gas_hobs_cookers_and_ovens_q3: 'Property type',
+  gas_fires_and_flues_q1: 'What type of unit?',
+  gas_fires_and_flues_q2: 'What needs doing?',
+  gas_fires_and_flues_q3: 'Property type',
+  gas_safety_certificates_cp12_q1: 'Which certificate?',
+  gas_safety_certificates_cp12_q2: 'How many gas appliances to test?',
+  gas_safety_certificates_cp12_q3: 'Property type',
+  gas_leaks_and_emergency_q1: 'What is the issue?',
+  gas_leaks_and_emergency_q2: 'How urgent?',
+  gas_leaks_and_emergency_q3: 'Property type',
+  gas_pipework_q1: 'What best describes the job?',
+  gas_pipework_q2: 'Approximate length / scale?',
+  gas_pipework_q3: 'Property type',
+};
 
 const TRADE_OPTIONS = [
   { value: 'plumber', label: 'Plumber' },
@@ -63,6 +99,7 @@ const TRADE_OPTIONS = [
   { value: 'locksmith', label: 'Locksmith' },
   { value: 'glazier', label: 'Glazier' },
   { value: 'hvac', label: 'HVAC Engineer' },
+  { value: 'gas_engineer', label: 'Gas Engineer' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -110,8 +147,6 @@ interface Job {
   category: string;
   urgency: string;
   priority: string;
-  budget_min: string | null;
-  budget_max: string | null;
   preferred_date: string | null;
   location: string;
   postcode: string;
@@ -119,6 +154,8 @@ interface Job {
   property_detail: PropertyDetail | null;
   already_bid: boolean;
   files_count: number;
+  bid_credits: number;
+  bid_credits_note: string;
   answers: Record<string, unknown>;
   created_at: string;
 }
@@ -145,13 +182,6 @@ interface MyBid {
   rated_at: string | null;
   created_at: string;
   homeowner: Homeowner | null;
-}
-
-function formatBudget(min: string | null, max: string | null): string {
-  if (!min && !max) return 'Budget not specified';
-  if (min && max) return `£${parseFloat(min).toFixed(0)} – £${parseFloat(max).toFixed(0)}`;
-  if (min) return `From £${parseFloat(min).toFixed(0)}`;
-  return `Up to £${parseFloat(max!).toFixed(0)}`;
 }
 
 function timeAgo(dateStr: string): string {
@@ -208,7 +238,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
       queryClient.invalidateQueries({ predicate: q => (q.queryKey[0] as string)?.startsWith(JOBS_URL) });
       queryClient.invalidateQueries({ queryKey: [MY_BIDS_URL] });
       queryClient.invalidateQueries({ queryKey: [ME_URL] });
-      toast.success('Bid submitted! 2 credits deducted.');
+      toast.success('Bid submitted!');
       setSelectedJob(null);
       setBidAmount('');
       setBidDescription('');
@@ -233,7 +263,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     } as any);
   };
 
-  const insufficientCredits = creditBalance < BID_COST;
+  const insufficientCredits = creditBalance < MIN_BID_COST;
 
   return (
     <div className="space-y-6">
@@ -248,7 +278,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           className="text-sm px-3 py-1.5 self-start sm:self-auto"
         >
           <Coins className="h-4 w-4 mr-1.5" />
-          {creditBalance} credits · {BID_COST} per bid
+          {creditBalance} credits · from {MIN_BID_COST} per bid
         </Badge>
       </div>
 
@@ -258,7 +288,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-sm text-amber-800 font-medium">
-              You need at least {BID_COST} credits to bid. Top up your account to start bidding.
+              You need at least {MIN_BID_COST} credits to bid. Top up your account to start bidding.
             </p>
           </CardContent>
         </Card>
@@ -370,10 +400,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         </div>
                         <p className="text-sm text-slate-600 line-clamp-2 mb-3">{job.description}</p>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Coins className="h-3.5 w-3.5" />
-                            {formatBudget(job.budget_min, job.budget_max)}
-                          </span>
                           {(job.location || job.postcode || job.property_postcode) && (
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3.5 w-3.5" />
@@ -550,10 +576,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
               {/* Key info row */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><Coins className="h-3 w-3" />Budget</p>
-                  <p className="text-sm font-semibold text-slate-800">{formatBudget(detailJob.budget_min, detailJob.budget_max)}</p>
-                </div>
                 {detailJob.location && (
                   <div className="p-3 bg-slate-50 rounded-lg">
                     <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />Area</p>
@@ -625,8 +647,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       .filter(([key, val]) => val && key !== 'description')
                       .map(([key, val]) => (
                         <div key={key} className="flex gap-3 px-3 py-2">
-                          <span className="text-xs text-slate-500 capitalize min-w-[120px] shrink-0 pt-0.5">
-                            {key.replace(/_/g, ' ')}
+                          <span className="text-xs text-slate-500 min-w-[120px] shrink-0 pt-0.5">
+                            {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
                           </span>
                           <span className="text-xs text-slate-800 font-medium">{String(val)}</span>
                         </div>
@@ -644,6 +666,13 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             </div>
           )}
 
+          {detailJob && !detailJob.already_bid && detailJob.bid_credits_note && (
+            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mx-6 mb-2">
+              <Coins className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span>{detailJob.bid_credits} credits — {detailJob.bid_credits_note}</span>
+            </div>
+          )}
+
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDetailJob(null)}>Close</Button>
             {detailJob && (
@@ -654,10 +683,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </div>
               ) : (
                 <Button
-                  disabled={insufficientCredits}
+                  disabled={creditBalance < detailJob.bid_credits}
                   onClick={() => openBidDialog(detailJob)}
                 >
-                  Place Bid · {BID_COST} credits
+                  Place Bid · {detailJob.bid_credits} credits
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               )
@@ -744,7 +773,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   .filter(([key, val]) => val && key !== 'description')
                   .map(([key, val]) => (
                     <div key={key} className="flex gap-2 text-xs">
-                      <span className="text-slate-500 min-w-[96px] capitalize">{key.replace(/_/g, ' ')}</span>
+                      <span className="text-slate-500 min-w-[96px]">{QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}</span>
                       <span className="text-slate-800">{String(val)}</span>
                     </div>
                   ))
@@ -754,10 +783,15 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
             <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg">
               <span className="text-slate-600">Bid cost</span>
-              <span className="font-semibold text-slate-800 flex items-center gap-1">
-                <Coins className="h-4 w-4 text-amber-500" />
-                {BID_COST} credits (balance: {creditBalance} → {creditBalance - BID_COST})
-              </span>
+              <div className="text-right">
+                <span className="font-semibold text-slate-800 flex items-center gap-1 justify-end">
+                  <Coins className="h-4 w-4 text-amber-500" />
+                  {selectedJob?.bid_credits ?? MIN_BID_COST} credits (balance: {creditBalance} → {creditBalance - (selectedJob?.bid_credits ?? MIN_BID_COST)})
+                </span>
+                {selectedJob?.bid_credits_note && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{selectedJob.bid_credits_note}</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">

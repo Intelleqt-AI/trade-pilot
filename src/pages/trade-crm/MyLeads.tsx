@@ -126,18 +126,6 @@ export default function MyLeads() {
                         </p>
                       </div>
                     )}
-                    {(job.budget_min || job.budget_max) && (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Budget</p>
-                        <p className="text-sm font-medium">
-                          {job.budget_min && job.budget_max
-                            ? `£${Number(job.budget_min).toLocaleString()} – £${Number(job.budget_max).toLocaleString()}`
-                            : job.budget_min
-                            ? `From £${Number(job.budget_min).toLocaleString()}`
-                            : `Up to £${Number(job.budget_max).toLocaleString()}`}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </CardContent>

@@ -145,7 +145,6 @@ export const mockLeads = [
     status: 'open',
     priority: 'high',
     value: 3000,
-    budget: '£2,500 - £3,500',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'Within 2 weeks',
     customer_id: 'demo-customer-id',
@@ -177,7 +176,6 @@ export const mockLeads = [
     status: 'open',
     priority: 'medium',
     value: 5000,
-    budget: '£4,000 - £6,000',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'Within 1 month',
     customer_id: 'customer-2',
@@ -198,7 +196,6 @@ export const mockLeads = [
     status: 'quoted',
     priority: 'low',
     value: 30000,
-    budget: '£25,000 - £35,000',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'Flexible',
     customer_id: 'customer-3',
@@ -230,7 +227,6 @@ export const mockLeads = [
     status: 'open',
     priority: 'medium',
     value: 6500,
-    budget: '£5,000 - £8,000',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'Within 1 month',
     customer_id: 'customer-4',
@@ -251,7 +247,6 @@ export const mockLeads = [
     status: 'urgent',
     priority: 'high',
     value: 1200,
-    budget: '£500 - £2,000',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'ASAP',
     customer_id: 'customer-5',
@@ -272,7 +267,6 @@ export const mockLeads = [
     status: 'open',
     priority: 'low',
     value: 10000,
-    budget: '£8,000 - £12,000',
     location: 'M1 1AA', // Matches demo trade postcode
     urgency: 'Spring 2024',
     customer_id: 'customer-6',

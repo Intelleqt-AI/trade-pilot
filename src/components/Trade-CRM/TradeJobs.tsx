@@ -38,12 +38,6 @@ const URGENCY_COLOR: Record<string, string> = {
 const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: boolean }) => {
   const isRated = bid.rating !== null && bid.rating !== undefined;
   const locationStr = [bid.job_location, bid.job_postcode].filter(Boolean).join(' · ');
-  const budgetStr = bid.job_budget_min
-    ? bid.job_budget_max
-      ? `£${parseFloat(bid.job_budget_min).toFixed(0)}–£${parseFloat(bid.job_budget_max).toFixed(0)}`
-      : `£${parseFloat(bid.job_budget_min).toFixed(0)}+`
-    : null;
-
   return (
     <div
       className={`rounded-xl border bg-white overflow-hidden ${
@@ -142,7 +136,6 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
           <span className="flex items-center gap-1 font-semibold text-slate-800">
             <Coins className="h-3 w-3" />
             £{parseFloat(bid.amount).toFixed(0)}
-            {budgetStr && <span className="font-normal text-gray-400 ml-1">/ {budgetStr} budget</span>}
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
