@@ -317,7 +317,13 @@ const TradeCRMProfile = () => {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Postcode *</label>
-            <input disabled readOnly className="w-full p-2 border border-border rounded-md bg-background opacity-60" value={postcode} placeholder="Set during registration" />
+            <input
+              className="w-full p-2 border border-border rounded-md bg-background uppercase"
+              value={postcode}
+              onChange={e => setPostcode(e.target.value.toUpperCase())}
+              placeholder="e.g. SW1A 1AA"
+            />
+            <p className="text-xs text-muted-foreground">Used to match you to nearby jobs. Saving will geocode this postcode.</p>
           </div>
 
           <div className="space-y-2">
