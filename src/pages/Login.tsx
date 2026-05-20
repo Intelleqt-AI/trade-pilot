@@ -1,206 +1,203 @@
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Eye, EyeOff, Lock, Mail, User, Hammer } from "lucide-react"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { useState } from "react"
+import { Eye, EyeOff, Lock, Mail, Loader2, ArrowRight } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
-
-const LoginForm = ({ 
-  type, 
-  email, 
-  setEmail, 
-  password, 
-  setPassword, 
-  showPassword, 
-  setShowPassword, 
-  loading 
-}: { 
-  type: string
-  email: string
-  setEmail: (val: string) => void
-  password: string
-  setPassword: (val: string) => void
-  showPassword: boolean
-  setShowPassword: (val: boolean) => void
-  loading: boolean
-}) => (
-  <div className="space-y-4 pt-4">
-    <div className="space-y-2">
-      <Label htmlFor={`${type}-email`}>Email Address</Label>
-      <div className="relative">
-        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          id={`${type}-email`}
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="name@example.com"
-          className="pl-9"
-          required
-        />
-      </div>
-    </div>
-    
-    <div className="space-y-2">
-      <Label htmlFor={`${type}-password`}>Password</Label>
-      <div className="relative">
-        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          id={`${type}-password`}
-          type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          className="pl-9 pr-9"
-          required
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-          onClick={() => setShowPassword(!showPassword)}
-        >
-          {showPassword ? (
-            <EyeOff className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          )}
-        </Button>
-      </div>
-    </div>
-
-    <Button type="submit" className="w-full bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 transition-all duration-300 transform hover:scale-[1.02]" disabled={loading}>
-      {loading ? 'Signing in...' : 'Sign In'}
-    </Button>
-
-    <div className="mt-6 text-center">
-      <p className="text-sm text-muted-foreground">
-        Don't have an account?{' '}
-        <Link 
-          to={type === 'trade' ? '/trades/join' : '/join'} 
-          className="text-primary font-medium hover:underline"
-        >
-          Sign up as a {type === 'trade' ? 'Trade' : 'Customer'}
-        </Link>
-      </p>
-    </div>
-  </div>
-)
+import { toast } from "@/lib/toast"
 
 const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [justLoggedIn, setJustLoggedIn] = useState(false)
-  const [searchParams] = useSearchParams()
-  const initialType = searchParams.get('type') === 'trade' ? 'trade' : 'customer'
-  const [activeTab, setActiveTab] = useState(initialType)
-  
-  const navigate = useNavigate()
-  const { signIn, loading, profile, user } = useAuth()
+  const [loading, setLoading] = useState(false)
 
-  // Redirect after successful login and profile load
-  useEffect(() => {
-    if (justLoggedIn && user && profile) {
-      if (profile.role === 'trade') {
+  const navigate = useNavigate()
+  const { signIn } = useAuth()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) return
+    setLoading(true)
+    try {
+      const res: any = await signIn(email, password)
+      const user = res?.data?.user
+      if (user?.user_type === 'trade') {
         navigate('/trades-crm')
       } else {
         navigate('/find-tradespeople')
       }
-      setJustLoggedIn(false)
-    }
-  }, [justLoggedIn, user, profile, navigate])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!email || !password) return
-
-    const { data, error } = await signIn(email, password)
-    
-    if (data && !error) {
-      setJustLoggedIn(true)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.errors?.detail || 'Invalid email or password.'
+      toast.error(msg)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-secondary/5 via-background to-primary/5">
-      <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
-        <div className="mb-8">
-          <Link to="/" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to home</span>
-          </Link>
+    <div className="min-h-screen w-full flex">
+      {/* Left panel — branding */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-[#002B45] relative overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#1A9D8F] translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-[#FF6B00] -translate-x-1/2 translate-y-1/2" />
         </div>
 
-        <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm ring-1 ring-black/5">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-3xl font-bold ">
-              Welcome Back
-            </CardTitle>
-            <CardDescription className="text-base mt-2">
-              Sign in to manage your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={initialType} onValueChange={(val) => {
-              setActiveTab(val);
-            }} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/50 rounded-lg">
-                <TabsTrigger value="customer" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-md transition-all">
-                  <User className="w-4 h-4 mr-2" />
-                  Customer
-                </TabsTrigger>
-                <TabsTrigger value="trade" className="data-[state=active]:bg-white data-[state=active]:shadow-md rounded-md transition-all">
-                  <Hammer className="w-4 h-4 mr-2" />
-                  Trade
-                </TabsTrigger>
-              </TabsList>
+        <div className="relative z-10">
+          <img
+            src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
+            alt="Trade Pilot"
+            className="h-16 w-auto brightness-0 invert"
+          />
+        </div>
 
-              <TabsContent value="customer" className="mt-0 focus-visible:ring-0">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="text-center mb-6">
-                    <h3 className="text-lg font-medium text-secondary">Customer Login</h3>
-                    <p className="text-sm text-muted-foreground">Find and book trusted tradespeople</p>
-                  </div>
-                  <LoginForm 
-                    type="customer"
-                    email={email}
-                    setEmail={setEmail}
-                    password={password}
-                    setPassword={setPassword}
-                    showPassword={showPassword}
-                    setShowPassword={setShowPassword}
-                    loading={loading}
-                  />
-                </form>
-              </TabsContent>
+        <div className="relative z-10 space-y-8">
+          <div>
+            <h2 className="text-4xl font-bold text-white leading-tight">
+              Connect with the best <span className="text-[#1A9D8F]">tradespeople</span> in your area
+            </h2>
+            <p className="mt-4 text-white/60 text-lg leading-relaxed">
+              Thousands of verified trades professionals. Post a job, get quotes, get it done.
+            </p>
+          </div>
 
-              <TabsContent value="trade" className="mt-0 focus-visible:ring-0">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="text-center mb-6">
-                    <h3 className="text-lg font-medium text-secondary">Trade Professional</h3>
-                    <p className="text-sm text-muted-foreground">Manage your business and leads</p>
-                  </div>
-                  <LoginForm 
-                    type="trade"
-                    email={email}
-                    setEmail={setEmail}
-                    password={password}
-                    setPassword={setPassword}
-                    showPassword={showPassword}
-                    setShowPassword={setShowPassword}
-                    loading={loading}
-                  />
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { value: '10,000+', label: 'Verified Trades' },
+              { value: '50,000+', label: 'Jobs Completed' },
+              { value: '4.9★', label: 'Average Rating' },
+              { value: '£0', label: 'Free to Post' },
+            ].map(stat => (
+              <div key={stat.label} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="text-2xl font-bold text-[#1A9D8F]">{stat.value}</div>
+                <div className="text-sm text-white/50 mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="relative z-10 text-white/30 text-sm">
+          © {new Date().getFullYear()} Trade Pilot. All rights reserved.
+        </p>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+        <div className="w-full max-w-md mx-auto">
+          {/* Mobile logo */}
+          <div className="lg:hidden mb-10">
+            <img
+              src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
+              alt="Trade Pilot"
+              className="h-12 w-auto"
+            />
+          </div>
+
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#002B45]">Welcome back</h1>
+            <p className="text-gray-500 mt-2">Sign in to your account to continue</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  required
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A9D8F]/30 focus:border-[#1A9D8F] transition-all duration-200 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-[#1A9D8F] hover:text-[#157a6e] font-medium transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A9D8F]/30 focus:border-[#1A9D8F] transition-all duration-200 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[#1A9D8F] hover:bg-[#157a6e] text-white font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2 shadow-sm hover:shadow-md"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-xs text-gray-400 bg-white px-3">
+              Don't have an account?
+            </div>
+          </div>
+
+          {/* Sign up CTA */}
+          <Link
+            to="/trades/join"
+            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-[#002B45] text-[#002B45] font-semibold text-sm hover:bg-[#002B45] hover:text-white transition-all duration-200"
+          >
+            Create Trade Professional account
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+
+          <p className="text-center text-xs text-gray-400 mt-6">
+            By signing in you agree to our{' '}
+            <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+            {' '}and{' '}
+            <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Plus, Briefcase, Calendar, ChevronRight, Phone, Mail } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { addBids, fetchLeads, modifyBids, modifyLeads, postJobs } from '@/lib/api';
+import { addBids, modifyBids, postJobs } from '@/lib/api';
 import AddLeadsForm from '@/components/Trade-CRM/AddLeadsForm';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -32,46 +32,16 @@ const CustomerDashboard = () => {
   const [currentItem, setCurrentItem] = useState(null);
   const [currentBid, setCurrentBid] = useState(null);
 
-  const {
-    data: leadsData,
-    isLoading: leadsLoading,
-    error: leadsErros,
-    refetch: refetchLeads,
-  } = useQuery({
-    queryKey: ['fetchLeads'],
-    queryFn: fetchLeads,
-  });
-
+const leadsData = []
   // normalize leads for rendering
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const leads = (leadsData || []) as any[];
 
-  const quoteMutation = useMutation({
-    mutationFn: modifyLeads,
-    onSuccess: () => {
-      refetchLeads();
-      toast.success('Proposal accepted successfully');
-      const newJob = {
-        trade: currentItem?.service,
-        location: currentItem?.location,
-        rate: currentBid?.proposedValue,
-        status: 'todo',
-        priority: 'medium',
-        leads_id: currentItem?.id,
-        trader_id: currentBid?.bid_by,
-      };
-      postMutation.mutate(newJob);
-    },
-    onError: () => {
-      toast.error('Failed to accept');
-    },
-  });
 
   // modify bids mutation
   const modifyBidsMutation = useMutation({
     mutationFn: modifyBids,
     onSuccess: () => {
-      refetchLeads();
       // toast.success('Bid a successfully');
     },
     onError: () => {
@@ -93,7 +63,6 @@ const CustomerDashboard = () => {
   const handleAccept = (lead, bid?: any) => {
     setCurrentItem(lead);
     setCurrentBid(bid);
-    quoteMutation.mutate({ id: lead?.id, isApproved: true });
     modifyBidsMutation.mutate({ id: bid?.id, status: 'approved' });
   };
 

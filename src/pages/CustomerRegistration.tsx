@@ -5,15 +5,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ArrowRight, CheckCircle, Star, Shield, Users, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Star, Shield, Users, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { usePost } from "@/hooks/usePost";
+import { toast } from "@/lib/toast";
 
 const CustomerRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signUp, loading } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -26,28 +26,47 @@ const CustomerRegistration = () => {
 
   const totalSteps = 2;
 
+  const registerMutation = usePost({
+    onError: (err: any) => {
+      const errors = err?.response?.data?.errors ?? {};
+      const msg = errors.email?.[0] || errors.password?.[0] || err?.response?.data?.message || 'Registration failed.';
+      toast.error(msg);
+    },
+  });
+
+  const loading = registerMutation.isPending;
+
   const nextStep = async () => {
     if (currentStep === 1) {
-      // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.email || 
+      if (!formData.firstName || !formData.lastName || !formData.email ||
           !formData.password || !formData.confirmPassword || !formData.agreedToTerms) {
+        toast.error('Please fill in all required fields.');
         return;
       }
-
-      // Validate password match
       if (formData.password !== formData.confirmPassword) {
+        toast.error('Passwords do not match.');
+        return;
+      }
+      if (formData.password.length < 8) {
+        toast.error('Password must be at least 8 characters.');
         return;
       }
 
-      // Sign up user
-      const { data, error } = await signUp(formData.email, formData.password, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: 'customer'
-      });
-
-      if (data && !error) {
-        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+      try {
+        const res: any = await registerMutation.mutateAsync({
+          url: '/api/v1/tradepilot/auth/customer/register/',
+          data: {
+            email: formData.email,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            password: formData.password,
+            password_confirm: formData.confirmPassword,
+          },
+        } as any);
+        const pending_token = res?.data?.pending_token;
+        navigate(`/verify-email?pending_token=${pending_token}&email=${encodeURIComponent(formData.email)}`);
+      } catch {
+        // error handled in onError
       }
     } else if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
@@ -315,15 +334,14 @@ const CustomerRegistration = () => {
               </Button>
               
               {currentStep < totalSteps ? (
-                <Button 
+                <Button
                   onClick={nextStep}
                   className="flex items-center justify-center space-x-2 order-1 sm:order-2"
-                  disabled={loading || !formData.firstName || !formData.lastName || !formData.email || 
-                           !formData.password || !formData.confirmPassword || !formData.agreedToTerms ||
-                           formData.password !== formData.confirmPassword}
+                  disabled={loading}
                 >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                   <span>{loading ? 'Creating Account...' : 'Continue'}</span>
-                  <ArrowRight className="h-4 w-4" />
+                  {!loading && <ArrowRight className="h-4 w-4" />}
                 </Button>
               ) : (
                 <Button 

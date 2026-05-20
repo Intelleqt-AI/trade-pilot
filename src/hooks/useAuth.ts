@@ -1,189 +1,90 @@
-import { useState, useEffect } from 'react';
-import { User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { UserRole, UserProfile } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import useFetch from './useFetch';
+import { usePost } from './usePost';
+import { apiRequest, BASE_URL } from '@/lib/apiClient';
+
+const ME_URL = '/api/v1/tradepilot/auth/me/';
+
+export interface TradePilotUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  platform: string;
+  user_type: 'customer' | 'trade' | '';
+  is_active: boolean;
+  email_verified: boolean;
+  credit_balance: number | null;
+  // TradePilotProfile fields
+  phone: string;
+  business_name: string;
+  business_type: string;
+  years_experience: string;
+  trade_specialty: string;
+  postcode: string;
+  has_insurance: boolean;
+  has_license: boolean;
+  profile_description: string;
+}
+
+interface MeResponse {
+  data: TradePilotUser;
+}
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
+  const { data: meData, isLoading } = useFetch<MeResponse | null>(ME_URL, {
+    queryFn: async () => {
+      try {
+        return await apiRequest<MeResponse>(ME_URL, { method: 'GET' }, true);
+      } catch (err: any) {
+        if (err?.response?.status === 401) return null;
+        throw err;
       }
-    });
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        // Defer to avoid potential deadlocks; then fetch profile
-        setTimeout(() => {
-          fetchProfile(session.user!.id);
-        }, 0);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
+  const user = meData?.data ?? null;
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
-
-      if (error) throw error;
-
-      if (!data) {
-        // Lazily create a profile if it doesn't exist
-        const { data: userResp } = await supabase.auth.getUser();
-        const email = userResp.user?.email ?? null;
-
-        const { error: insertError } = await supabase.from('profiles').insert({
-          user_id: userId,
-          email,
-          first_name: '',
-          last_name: '',
-          role: 'customer',
-        });
-
-        if (insertError) throw insertError;
-
-        const { data: created } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
-
-        setProfile(created as UserProfile);
-      } else {
-        setProfile(data as UserProfile);
-      }
-    } catch (error) {
-      console.error('Error fetching/creating profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (
-    email: string,
-    password: string,
-    userData: {
-      firstName: string;
-      lastName: string;
-      role: UserRole;
-    }
-  ) => {
-    try {
-      setLoading(true);
-
-      const redirectUrl = `${window.location.origin}/`;
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            // firstName: userData.firstName,
-            // lastName: userData.lastName,
-            // role: userData.role,
-            ...userData,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Account created successfully',
-        description: 'Please check your email to verify your account.',
-      });
-
-      return { data, error: null };
-    } catch (error) {
-      const authError = error as AuthError;
-      toast({
-        title: 'Sign up failed',
-        description: authError.message,
-        variant: 'destructive',
-      });
-      return { data: null, error: authError };
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loginMutation = usePost<any>({});
 
   const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Signed in successfully',
-        description: 'Welcome back!',
-      });
-
-      return { data, error: null };
-    } catch (error) {
-      const authError = error as AuthError;
-      toast({
-        title: 'Sign in failed',
-        description: authError.message,
-        variant: 'destructive',
-      });
-      return { data: null, error: authError };
-    } finally {
-      setLoading(false);
+    const res = await loginMutation.mutateAsync({
+      url: '/api/v1/tradepilot/auth/login/',
+      data: { email, password },
+    } as any);
+    // Seed cache immediately so TradeCRMLayout sees authenticated user on navigate
+    if (res?.data?.user) {
+      queryClient.setQueryData([ME_URL], { data: res.data.user });
     }
+    return res;
   };
 
   const signOut = async () => {
     try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      toast({
-        title: 'Signed out successfully',
-        description: 'See you next time!',
+      await fetch(`${BASE_URL}/api/v1/tradepilot/auth/logout/`, {
+        method: 'POST',
+        credentials: 'include',
       });
-    } catch (error) {
-      const authError = error as AuthError;
-      toast({
-        title: 'Sign out failed',
-        description: authError.message,
-        variant: 'destructive',
-      });
+    } catch {
+      // ignore — cookies cleared server-side regardless
     } finally {
-      setLoading(false);
+      queryClient.clear();
     }
   };
 
   return {
     user,
-    profile,
-    loading,
-    signUp,
+    profile: user,
+    loading: isLoading,
     signIn,
     signOut,
     isAuthenticated: !!user,
-    isCustomer: profile?.role === 'customer',
-    isTrade: profile?.role === 'trade',
+    isCustomer: user?.user_type === 'customer',
+    isTrade: user?.user_type === 'trade',
   };
 };
