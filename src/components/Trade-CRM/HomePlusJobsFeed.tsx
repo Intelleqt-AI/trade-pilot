@@ -183,6 +183,10 @@ interface Job {
   bid_credits_note: string;
   answers: Record<string, unknown>;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number | null;
+  distance_km: number | null;
 }
 
 interface Homeowner {
@@ -228,6 +232,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [subTab, setSubTab] = useState<'available' | 'my-bids'>('available');
   const [tradeFilter, setTradeFilter] = useState('all');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
+  const [distanceFilter, setDistanceFilter] = useState<'all' | '10' | '20' | '30' | 'other'>('all');
+  const [customDistance, setCustomDistance] = useState<string>('');
   const [detailJob, setDetailJob] = useState<Job | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [bidAmount, setBidAmount] = useState('');
@@ -244,9 +250,17 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     const params = new URLSearchParams();
     if (tradeFilter && tradeFilter !== 'all') params.set('trade', tradeFilter);
     if (urgencyFilter && urgencyFilter !== 'all') params.set('urgency', urgencyFilter);
+    if (distanceFilter !== 'all') {
+      if (distanceFilter === 'other') {
+        const n = parseInt(customDistance, 10);
+        if (Number.isFinite(n) && n > 0) params.set('distance', String(n));
+      } else {
+        params.set('distance', distanceFilter);
+      }
+    }
     const qs = params.toString();
     return `${JOBS_URL}${qs ? '?' + qs : ''}`;
-  }, [tradeFilter, urgencyFilter]);
+  }, [tradeFilter, urgencyFilter, distanceFilter, customDistance]);
 
   const { data: jobsRes, isLoading: jobsLoading } = useFetch<any>(jobsUrl);
   const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(
@@ -370,6 +384,29 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={distanceFilter} onValueChange={v => setDistanceFilter(v as 'all' | '10' | '20' | '30' | 'other')}>
+              <SelectTrigger className="w-44 bg-white">
+                <SelectValue placeholder="Any distance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any distance</SelectItem>
+                <SelectItem value="10">Within 10 km</SelectItem>
+                <SelectItem value="20">Within 20 km</SelectItem>
+                <SelectItem value="30">Within 30 km</SelectItem>
+                <SelectItem value="other">Other (custom km)</SelectItem>
+              </SelectContent>
+            </Select>
+            {distanceFilter === 'other' && (
+              <Input
+                type="number"
+                min="1"
+                max="500"
+                value={customDistance}
+                onChange={e => setCustomDistance(e.target.value)}
+                placeholder="km"
+                className="w-24 bg-white"
+              />
+            )}
           </div>
 
           {/* Job list */}
@@ -425,10 +462,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         </div>
                         <p className="text-sm text-slate-600 line-clamp-2 mb-3">{job.description}</p>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          {(job.location || job.postcode || job.property_postcode) && (
+                          {job.distance_km !== null && job.distance_km !== undefined && (
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3.5 w-3.5" />
-                              {[job.location, job.postcode || job.property_postcode].filter(Boolean).join(' · ')}
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">
+                                {job.distance_km} km away
+                              </span>
                             </span>
                           )}
                           {job.preferred_date && (
@@ -601,16 +640,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
               {/* Key info row */}
               <div className="grid grid-cols-2 gap-3">
-                {detailJob.location && (
+                {detailJob.distance_km !== null && detailJob.distance_km !== undefined && (
                   <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />Area</p>
-                    <p className="text-sm font-semibold text-slate-800">{detailJob.location}</p>
-                  </div>
-                )}
-                {(detailJob.postcode || detailJob.property_postcode) && (
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />Postcode</p>
-                    <p className="text-sm font-semibold text-slate-800">{detailJob.postcode || detailJob.property_postcode}</p>
+                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />Distance</p>
+                    <p className="text-sm font-semibold text-slate-800">{detailJob.distance_km} km away</p>
                   </div>
                 )}
                 {detailJob.preferred_date && (
@@ -625,36 +658,25 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </div>
               </div>
 
-              {/* Property detail */}
+              {/* Property detail (type / beds / baths only — homeowner's location stays private until bid is accepted) */}
               {detailJob.property_detail && (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Property</p>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                    {detailJob.property_detail.name && (
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                        <Home className="h-4 w-4 text-slate-400 shrink-0" />
-                        {detailJob.property_detail.name}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      {detailJob.property_detail.address}
-                      {detailJob.property_detail.postcode ? ` · ${detailJob.property_detail.postcode}` : ''}
-                    </div>
-                    <div className="flex flex-wrap gap-3 mt-1">
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Home className="h-3 w-3" />
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex flex-wrap gap-3">
+                      <span className="flex items-center gap-1 text-xs text-slate-600">
+                        <Home className="h-3.5 w-3.5" />
                         {detailJob.property_detail.property_type.replace('_', ' ')}
                       </span>
                       {detailJob.property_detail.bedrooms > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <BedDouble className="h-3 w-3" />
+                        <span className="flex items-center gap-1 text-xs text-slate-600">
+                          <BedDouble className="h-3.5 w-3.5" />
                           {detailJob.property_detail.bedrooms} bed
                         </span>
                       )}
                       {detailJob.property_detail.bathrooms > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <Bath className="h-3 w-3" />
+                        <span className="flex items-center gap-1 text-xs text-slate-600">
+                          <Bath className="h-3.5 w-3.5" />
                           {detailJob.property_detail.bathrooms} bath
                         </span>
                       )}
