@@ -6,20 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Coins,
   MapPin,
@@ -49,64 +37,140 @@ const ME_URL = '/api/v1/tradepilot/auth/me/';
 const MIN_BID_COST = 10;
 
 const QUESTION_LABELS: Record<string, string> = {
+  // Plumbing – Boilers
   boilers_q1: 'What type of boiler do you have?',
   boilers_q2: 'What needs doing to the boiler?',
   boilers_q3: 'Is the property domestic or commercial?',
+
+  // Plumbing – Radiators
   radiators_q1: 'What do you need help with?',
   radiators_q2: 'How many radiators are involved (approx)?',
   radiators_q3: 'Is this for a domestic or commercial property?',
+
+  // Plumbing – Appliances
   appliances_q1: 'Which appliance do you need help with?',
   appliances_q2: 'What needs doing?',
   appliances_q3: 'Is the property domestic or commercial?',
+
+  // Plumbing – Fixtures
   fixtures_q1: 'Which fixture needs attention?',
   fixtures_q2: 'What is the issue?',
   fixtures_q3: 'Is the property domestic or commercial?',
+
+  // Plumbing – Pipework, taps & drainage
   'pipework,_taps_and_drainage_q1': 'What best describes the job?',
   'pipework,_taps_and_drainage_q2': 'Is this an urgent issue?',
   'pipework,_taps_and_drainage_q3': 'Is the property domestic or commercial?',
+
+  // Gas Engineer – Boilers (gas)
   boilers_gas_q1: 'What fuel does your boiler use?',
   boilers_gas_q2: 'What needs doing?',
   boilers_gas_q3: 'Property type',
+
+  // Gas Engineer – Gas hobs, cookers & ovens
   gas_hobs_cookers_and_ovens_q1: 'Which appliance?',
   gas_hobs_cookers_and_ovens_q2: 'What needs doing?',
   gas_hobs_cookers_and_ovens_q3: 'Property type',
+
+  // Gas Engineer – Gas fires & flues
   gas_fires_and_flues_q1: 'What type of unit?',
   gas_fires_and_flues_q2: 'What needs doing?',
   gas_fires_and_flues_q3: 'Property type',
+
+  // Gas Engineer – Gas safety certificates (CP12)
   gas_safety_certificates_cp12_q1: 'Which certificate?',
   gas_safety_certificates_cp12_q2: 'How many gas appliances to test?',
   gas_safety_certificates_cp12_q3: 'Property type',
+
+  // Gas Engineer – Gas leaks & emergency
   gas_leaks_and_emergency_q1: 'What is the issue?',
   gas_leaks_and_emergency_q2: 'How urgent?',
   gas_leaks_and_emergency_q3: 'Property type',
+
+  // Gas Engineer – Gas pipework
   gas_pipework_q1: 'What best describes the job?',
   gas_pipework_q2: 'Approximate length / scale?',
   gas_pipework_q3: 'Property type',
-  // Roofing categories
+
+  // Roofing – Pitched roof repairs
   pitched_roof_repairs_q1: "What's the issue?",
   pitched_roof_repairs_q2: 'How big is the affected area?',
   pitched_roof_repairs_q3: 'Property type',
+
+  // Roofing – Full or partial reroof
   full_or_partial_reroof_q1: "What's the scope?",
   full_or_partial_reroof_q2: 'Roof covering material?',
   full_or_partial_reroof_q3: 'Property type',
+
+  // Roofing – Flat roof
   flat_roof_q1: 'What needs doing?',
   flat_roof_q2: 'Flat roof material?',
   flat_roof_q3: 'Property type',
+
+  // Roofing – Gutters, fascias & soffits
   gutters_fascias_and_soffits_q1: "What's the job?",
   gutters_fascias_and_soffits_q2: 'Approximate scale?',
   gutters_fascias_and_soffits_q3: 'Property type',
+
+  // Roofing – Chimney work
   chimney_work_q1: "What's needed?",
   chimney_work_q2: 'How will the chimney be accessed?',
   chimney_work_q3: 'Property type',
-  'roof_windows___skylights_q1': 'What do you need?',
-  'roof_windows___skylights_q2': 'How many windows?',
-  'roof_windows___skylights_q3': 'Property type',
+
+  // Roofing – Roof windows / skylights
+  roof_windows___skylights_q1: 'What do you need?',
+  roof_windows___skylights_q2: 'How many windows?',
+  roof_windows___skylights_q3: 'Property type',
+
+  // Roofing – Lead work & flashing
   lead_work_and_flashing_q1: "What's the job?",
   lead_work_and_flashing_q2: 'Where is the lead work?',
   lead_work_and_flashing_q3: 'Property type',
+
+  // Roofing – Moss removal & roof cleaning
   moss_removal_and_roof_cleaning_q1: "What's the job?",
   moss_removal_and_roof_cleaning_q2: 'Scale of clean?',
   moss_removal_and_roof_cleaning_q3: 'Property type',
+
+  // Electrical – Fuse board (Consumer unit)
+  'fuse_board_(consumer_unit)_q1': 'What needs doing?',
+  'fuse_board_(consumer_unit)_q2': 'How old is the existing unit?',
+  'fuse_board_(consumer_unit)_q3': 'Property type',
+
+  // Electrical – Lighting
+  lighting_q1: 'What do you need help with?',
+  lighting_q2: 'How many lights/fittings are involved?',
+  lighting_q3: 'Property type',
+
+  // Electrical – Sockets & switches
+  sockets_and_switches_q1: 'What do you need help with?',
+  sockets_and_switches_q2: 'How many sockets/switches?',
+  sockets_and_switches_q3: 'Property type',
+
+  // Electrical – Rewiring & cabling
+  rewiring_and_cabling_q1: 'What best describes the job?',
+  rewiring_and_cabling_q2: 'Is the power currently working?',
+  rewiring_and_cabling_q3: 'Property type',
+
+  // Electrical – EV chargers
+  ev_chargers_q1: 'What do you need?',
+  ev_chargers_q2: 'Where is it being installed?',
+  ev_chargers_q3: 'Property type',
+
+  // Electrical – Testing & certificates
+  testing_and_certificates_q1: 'Which certificate/test?',
+  testing_and_certificates_q2: 'Approximate property size?',
+  testing_and_certificates_q3: 'Property type',
+
+  // Electrical – Appliances & hardwired equipment
+  appliances_and_hardwired_equipment_q1: 'Which appliance?',
+  appliances_and_hardwired_equipment_q2: 'What needs doing?',
+  appliances_and_hardwired_equipment_q3: 'Property type',
+
+  // Electrical – Smart home & networking
+  smart_home_and_networking_q1: 'What do you need help with?',
+  smart_home_and_networking_q2: 'How many devices/points?',
+  smart_home_and_networking_q3: 'Property type',
 };
 
 const TRADE_OPTIONS = [
@@ -230,7 +294,6 @@ interface Props {
 const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const queryClient = useQueryClient();
   const [subTab, setSubTab] = useState<'available' | 'my-bids'>('available');
-  const [tradeFilter, setTradeFilter] = useState('all');
   const [urgencyFilter, setUrgencyFilter] = useState('all');
   const [distanceFilter, setDistanceFilter] = useState<'all' | '10' | '20' | '30' | 'other'>('all');
   const [customDistance, setCustomDistance] = useState<string>('');
@@ -248,7 +311,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
   const jobsUrl = useMemo(() => {
     const params = new URLSearchParams();
-    if (tradeFilter && tradeFilter !== 'all') params.set('trade', tradeFilter);
     if (urgencyFilter && urgencyFilter !== 'all') params.set('urgency', urgencyFilter);
     if (distanceFilter !== 'all') {
       if (distanceFilter === 'other') {
@@ -260,12 +322,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     }
     const qs = params.toString();
     return `${JOBS_URL}${qs ? '?' + qs : ''}`;
-  }, [tradeFilter, urgencyFilter, distanceFilter, customDistance]);
+  }, [urgencyFilter, distanceFilter, customDistance]);
 
   const { data: jobsRes, isLoading: jobsLoading } = useFetch<any>(jobsUrl);
-  const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(
-    subTab === 'my-bids' ? MY_BIDS_URL : null,
-  );
+  const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(subTab === 'my-bids' ? MY_BIDS_URL : null);
 
   const jobs: Job[] = jobsRes?.data ?? [];
   const myBids: MyBid[] = bidsRes?.data ?? [];
@@ -312,10 +372,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           <h2 className="text-xl font-bold text-slate-800">Job Market</h2>
           <p className="text-sm text-slate-500 mt-0.5">Browse and bid on homeowner jobs</p>
         </div>
-        <Badge
-          variant={insufficientCredits ? 'destructive' : 'secondary'}
-          className="text-sm px-3 py-1.5 self-start sm:self-auto"
-        >
+        <Badge variant={insufficientCredits ? 'destructive' : 'secondary'} className="text-sm px-3 py-1.5 self-start sm:self-auto">
           <Coins className="h-4 w-4 mr-1.5" />
           {creditBalance} credits · from {MIN_BID_COST} per bid
         </Badge>
@@ -338,9 +395,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <button
           onClick={() => setSubTab('available')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            subTab === 'available'
-              ? 'bg-white shadow-sm text-slate-900'
-              : 'text-slate-600 hover:text-slate-800'
+            subTab === 'available' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-800'
           }`}
         >
           Available Jobs {!jobsLoading && `(${jobs.length})`}
@@ -348,9 +403,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <button
           onClick={() => setSubTab('my-bids')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            subTab === 'my-bids'
-              ? 'bg-white shadow-sm text-slate-900'
-              : 'text-slate-600 hover:text-slate-800'
+            subTab === 'my-bids' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-800'
           }`}
         >
           My Bids
@@ -362,17 +415,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <div className="space-y-4">
           {/* Filters */}
           <div className="flex flex-wrap gap-3">
-            <Select value={tradeFilter} onValueChange={setTradeFilter}>
-              <SelectTrigger className="w-44 bg-white">
-                <SelectValue placeholder="All trades" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All trades</SelectItem>
-                {TRADE_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
               <SelectTrigger className="w-44 bg-white">
                 <SelectValue placeholder="Any urgency" />
@@ -380,7 +422,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <SelectContent>
                 <SelectItem value="all">Any urgency</SelectItem>
                 {URGENCY_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -444,18 +488,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             </Badge>
                           )}
                           {urgencyConfig[job.urgency] && (
-                            <Badge
-                              variant="outline"
-                              className={`text-xs capitalize ${urgencyConfig[job.urgency].color}`}
-                            >
+                            <Badge variant="outline" className={`text-xs capitalize ${urgencyConfig[job.urgency].color}`}>
                               {urgencyConfig[job.urgency].label}
                             </Badge>
                           )}
                           {priorityConfig[job.priority] && (
-                            <Badge
-                              variant="outline"
-                              className={`text-xs capitalize ${priorityConfig[job.priority].color}`}
-                            >
+                            <Badge variant="outline" className={`text-xs capitalize ${priorityConfig[job.priority].color}`}>
                               {priorityConfig[job.priority].label} Priority
                             </Badge>
                           )}
@@ -495,12 +533,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             Bid sent
                           </div>
                         ) : (
-                          <Button
-                            size="sm"
-                            disabled={insufficientCredits}
-                            onClick={() => openBidDialog(job)}
-                            className="whitespace-nowrap"
-                          >
+                          <Button size="sm" disabled={insufficientCredits} onClick={() => openBidDialog(job)} className="whitespace-nowrap">
                             Bid
                             <ChevronRight className="h-4 w-4 ml-1" />
                           </Button>
@@ -539,21 +572,17 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1.5">
                           <h3 className="text-base font-semibold text-slate-800">{bid.job_title}</h3>
-                          <Badge variant="outline" className="capitalize text-xs">{bid.job_trade}</Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs capitalize ${bidStatusConfig[bid.status]?.color ?? ''}`}
-                          >
+                          <Badge variant="outline" className="capitalize text-xs">
+                            {bid.job_trade}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs capitalize ${bidStatusConfig[bid.status]?.color ?? ''}`}>
                             {bidStatusConfig[bid.status]?.label ?? bid.status}
                           </Badge>
                         </div>
-                        {bid.description && (
-                          <p className="text-sm text-slate-600 line-clamp-1 mb-2">{bid.description}</p>
-                        )}
+                        {bid.description && <p className="text-sm text-slate-600 line-clamp-1 mb-2">{bid.description}</p>}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                           <span className="flex items-center gap-1 font-medium text-slate-700">
-                            <Coins className="h-3.5 w-3.5" />
-                            £{parseFloat(bid.amount).toFixed(0)} bid
+                            <Coins className="h-3.5 w-3.5" />£{parseFloat(bid.amount).toFixed(0)} bid
                           </span>
                           {bid.availability && (
                             <span className="flex items-center gap-1">
@@ -570,15 +599,18 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <div className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
                             <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                             <span className="font-medium">{bid.rating}/5</span>
-                            {bid.rating_comment && (
-                              <span className="text-slate-500">— {bid.rating_comment}</span>
-                            )}
+                            {bid.rating_comment && <span className="text-slate-500">— {bid.rating_comment}</span>}
                           </div>
                         )}
                       </div>
                       <div className="shrink-0 flex flex-col items-end gap-2">
                         <span className="text-xs text-slate-400">
-                          Job: <span className={`font-medium capitalize ${bid.job_status === 'completed' ? 'text-green-600' : 'text-slate-600'}`}>{bid.job_status}</span>
+                          Job:{' '}
+                          <span
+                            className={`font-medium capitalize ${bid.job_status === 'completed' ? 'text-green-600' : 'text-slate-600'}`}
+                          >
+                            {bid.job_status}
+                          </span>
                         </span>
                         {bid.status === 'accepted' && bid.homeowner && (
                           <Button
@@ -608,7 +640,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             <DialogTitle className="leading-snug">{detailJob?.title}</DialogTitle>
             {detailJob && (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                <Badge variant="outline" className="capitalize text-xs">{detailJob.trade}</Badge>
+                <Badge variant="outline" className="capitalize text-xs">
+                  {detailJob.trade}
+                </Badge>
                 {detailJob.category && (
                   <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
                     {detailJob.category}
@@ -642,18 +676,27 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <div className="grid grid-cols-2 gap-3">
                 {detailJob.distance_km !== null && detailJob.distance_km !== undefined && (
                   <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><MapPin className="h-3 w-3" />Distance</p>
+                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Distance
+                    </p>
                     <p className="text-sm font-semibold text-slate-800">{detailJob.distance_km} km away</p>
                   </div>
                 )}
                 {detailJob.preferred_date && (
                   <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><Calendar className="h-3 w-3" />Preferred date</p>
+                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Preferred date
+                    </p>
                     <p className="text-sm font-semibold text-slate-800">{new Date(detailJob.preferred_date).toLocaleDateString('en-GB')}</p>
                   </div>
                 )}
                 <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1"><Clock className="h-3 w-3" />Posted</p>
+                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Posted
+                  </p>
                   <p className="text-sm font-semibold text-slate-800">{timeAgo(detailJob.created_at)}</p>
                 </div>
               </div>
@@ -710,34 +753,63 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   {detailJob.files_count} attachment{detailJob.files_count !== 1 ? 's' : ''} uploaded by homeowner
                 </p>
               )}
+
+              {/* Hidden contact — blurred until bid placed */}
+              <div className="relative rounded-xl overflow-hidden border border-slate-200">
+                <div className="p-4 space-y-3 select-none blur-sm pointer-events-none" aria-hidden="true">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">John D.</p>
+                      <p className="text-xs text-slate-400">Homeowner</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span>+44 7700 ••• •••</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                    <span>j••••@gmail.com</span>
+                  </div>
+                </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 backdrop-blur-[2px]">
+                  <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Phone className="h-4 w-4 text-slate-500" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 text-center px-4">Place bid to see contact details</p>
+                </div>
+              </div>
             </div>
           )}
 
           {detailJob && !detailJob.already_bid && detailJob.bid_credits_note && (
             <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mx-6 mb-2">
               <Coins className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              <span>{detailJob.bid_credits} credits — {detailJob.bid_credits_note}</span>
+              <span>
+                {detailJob.bid_credits} credits — {detailJob.bid_credits_note}
+              </span>
             </div>
           )}
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDetailJob(null)}>Close</Button>
-            {detailJob && (
-              detailJob.already_bid ? (
+            <Button variant="outline" onClick={() => setDetailJob(null)}>
+              Close
+            </Button>
+            {detailJob &&
+              (detailJob.already_bid ? (
                 <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium px-2">
                   <CheckCircle2 className="h-4 w-4" />
                   Bid already sent
                 </div>
               ) : (
-                <Button
-                  disabled={creditBalance < detailJob.bid_credits}
-                  onClick={() => openBidDialog(detailJob)}
-                >
+                <Button disabled={creditBalance < detailJob.bid_credits} onClick={() => openBidDialog(detailJob)}>
                   Place Bid · {detailJob.bid_credits} credits
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
-              )
-            )}
+              ))}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -747,9 +819,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Homeowner Contact</DialogTitle>
-            {contactBid && (
-              <p className="text-sm text-slate-500 mt-1">{contactBid.job_title}</p>
-            )}
+            {contactBid && <p className="text-sm text-slate-500 mt-1">{contactBid.job_title}</p>}
           </DialogHeader>
           {contactBid?.homeowner && (
             <div className="space-y-4 py-2">
@@ -790,7 +860,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setContactBid(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setContactBid(null)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -800,9 +872,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Submit a Bid</DialogTitle>
-            {selectedJob && (
-              <p className="text-sm text-slate-500 mt-1">{selectedJob.title}</p>
-            )}
+            {selectedJob && <p className="text-sm text-slate-500 mt-1">{selectedJob.title}</p>}
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -816,15 +886,15 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <span className="text-slate-800 font-medium">{selectedJob.category}</span>
                   </div>
                 )}
-                {selectedJob.answers && Object.entries(selectedJob.answers)
-                  .filter(([key, val]) => val && key !== 'description')
-                  .map(([key, val]) => (
-                    <div key={key} className="flex gap-2 text-xs">
-                      <span className="text-slate-500 min-w-[96px]">{QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}</span>
-                      <span className="text-slate-800">{String(val)}</span>
-                    </div>
-                  ))
-                }
+                {selectedJob.answers &&
+                  Object.entries(selectedJob.answers)
+                    .filter(([key, val]) => val && key !== 'description')
+                    .map(([key, val]) => (
+                      <div key={key} className="flex gap-2 text-xs">
+                        <span className="text-slate-500 min-w-[96px]">{QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}</span>
+                        <span className="text-slate-800">{String(val)}</span>
+                      </div>
+                    ))}
               </div>
             )}
 
@@ -833,11 +903,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <div className="text-right">
                 <span className="font-semibold text-slate-800 flex items-center gap-1 justify-end">
                   <Coins className="h-4 w-4 text-amber-500" />
-                  {selectedJob?.bid_credits ?? MIN_BID_COST} credits (balance: {creditBalance} → {creditBalance - (selectedJob?.bid_credits ?? MIN_BID_COST)})
+                  {selectedJob?.bid_credits ?? MIN_BID_COST} credits (balance: {creditBalance} →{' '}
+                  {creditBalance - (selectedJob?.bid_credits ?? MIN_BID_COST)})
                 </span>
-                {selectedJob?.bid_credits_note && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{selectedJob.bid_credits_note}</p>
-                )}
+                {selectedJob?.bid_credits_note && <p className="text-xs text-muted-foreground mt-0.5">{selectedJob.bid_credits_note}</p>}
               </div>
             </div>
 
@@ -878,19 +947,15 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedJob(null)}
-              disabled={bidMutation.isPending}
-            >
+            <Button variant="outline" onClick={() => setSelectedJob(null)} disabled={bidMutation.isPending}>
               Cancel
             </Button>
-            <Button
-              onClick={handleBidSubmit}
-              disabled={!bidAmount || bidMutation.isPending}
-            >
+            <Button onClick={handleBidSubmit} disabled={!bidAmount || bidMutation.isPending}>
               {bidMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Submitting…</>
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Submitting…
+                </>
               ) : (
                 <>Submit Bid</>
               )}

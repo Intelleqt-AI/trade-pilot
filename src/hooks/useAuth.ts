@@ -23,6 +23,10 @@ export interface TradePilotUser {
   years_experience: string;
   trade_specialty: string;
   postcode: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number;
   has_insurance: boolean;
   has_license: boolean;
   profile_description: string;
