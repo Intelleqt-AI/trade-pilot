@@ -120,6 +120,7 @@ const TradesCRM = () => {
 
   useEffect(() => {
     if (leadsLoading) return;
+    if (!leadsData) return;
     const userLeads = profile?.leads || [];
     const filterByLocation = leadsData.filter(item => item.location == profile?.postcode);
     setFilteredLeads(filterByLocation.filter(lead => userLeads.includes(Number(lead.id))));
@@ -508,7 +509,7 @@ const TradesCRM = () => {
               {/* Contextual Smart Banner - Only shows when relevant */}
               {bannerContent && (
                 <Card className={`border-none shadow-sm ${
-                  bannerContent.type === 'warning' ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                  bannerContent.type === 'warning' ? 'bg-gradient-to-r from-primary to-primary/80' :
                   bannerContent.type === 'success' ? 'bg-gradient-to-r from-primary to-primary/80' :
                   bannerContent.type === 'info' ? 'bg-gradient-to-r from-sky-500 to-sky-600' :
                   'bg-gradient-to-r from-secondary to-secondary/90'
@@ -525,7 +526,7 @@ const TradesCRM = () => {
                       </div>
                       <Button
                         className={`font-semibold px-5 shrink-0 w-full sm:w-auto ${
-                          bannerContent.type === 'warning' ? 'bg-white text-amber-600 hover:bg-white/90' :
+                          bannerContent.type === 'warning' ? 'bg-white text-primary hover:bg-white/90' :
                           bannerContent.type === 'success' ? 'bg-white text-primary hover:bg-white/90' :
                           'bg-white text-secondary hover:bg-white/90'
                         }`}
