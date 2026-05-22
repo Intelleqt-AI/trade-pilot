@@ -25,8 +25,9 @@ import { Separator } from '@/components/ui/separator';
 import {
   FileText, Trash2, ExternalLink, Plus, Pencil, MapPin,
   User, Building2, ShieldCheck, Wrench, Coins, Calendar,
-  Phone, Mail, AlertCircle, CheckCircle2, Clock,
+  Phone, Mail, AlertCircle, CheckCircle2, Clock, BadgeCheck,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { Slider } from '@/components/ui/slider';
 
@@ -225,9 +226,37 @@ const TradeCRMProfile = () => {
           </Avatar>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold text-foreground truncate">
-              {businessName || `${firstName} ${lastName}`.trim() || 'Your Profile'}
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-lg font-semibold text-foreground truncate">
+                {businessName || `${firstName} ${lastName}`.trim() || 'Your Profile'}
+              </h1>
+              {profile?.is_verified && (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="p-0 bg-transparent border-0 shadow-none">
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden w-56">
+                        <div className="bg-primary px-3 py-2.5 flex items-center gap-2">
+                          <BadgeCheck className="h-4 w-4 text-white shrink-0" />
+                          <span className="text-sm font-semibold text-white">Verified Account</span>
+                        </div>
+                        <div className="px-3 py-2.5 space-y-1.5">
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Your identity and business credentials have been reviewed and confirmed by the HomePlus team.
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-slate-700 pt-0.5">
+                            <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                            <span>Homeowners can trust your profile</span>
+                          </div>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
               {tradeSpecialty && (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">
