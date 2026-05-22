@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import NotificationPanel from '@/components/Trade-CRM/NotificationPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Calendar,
   Users,
@@ -42,6 +44,7 @@ import {
   FileText,
   Award,
   Plus,
+  BadgeCheck,
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -460,7 +463,35 @@ const TradesCRM = () => {
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-slate-500">Welcome back</p>
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">{user?.first_name || 'User'}</h1>
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-lg sm:text-xl font-bold text-slate-800">{user?.first_name || 'User'}</h1>
+                    {user?.is_verified && (
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="p-0 bg-transparent border-0 shadow-none">
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden w-56">
+                              <div className="bg-primary px-3 py-2.5 flex items-center gap-2">
+                                <BadgeCheck className="h-4 w-4 text-white shrink-0" />
+                                <span className="text-sm font-semibold text-white">Verified Account</span>
+                              </div>
+                              <div className="px-3 py-2.5 space-y-1.5">
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                  Your identity and business credentials have been reviewed and confirmed by the HomePlus team.
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-slate-700 pt-0.5">
+                                  <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                                  <span>Homeowners can trust your profile</span>
+                                </div>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -487,14 +518,7 @@ const TradesCRM = () => {
               <Button variant="outline" size="icon" className="md:hidden border-slate-300" onClick={() => setActiveTab('leads to purchase')}>
                 <CreditCard className="h-4 w-4 text-slate-600" />
               </Button>
-              <Button variant="outline" size="icon" className="relative border-slate-300">
-                <Bell className="h-4 w-4 text-slate-600" />
-                {(jobsData?.filter(job => job.status !== 'complete').length ?? 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center">
-                    {jobsData?.filter(job => job.status !== 'complete').length ?? 0}
-                  </span>
-                )}
-              </Button>
+              <NotificationPanel />
               <Button variant="outline" size="icon" className="border-slate-300 hidden sm:inline-flex" onClick={() => setActiveTab('settings')}>
                 <Settings className="h-4 w-4 text-slate-600" />
               </Button>

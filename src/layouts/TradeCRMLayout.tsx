@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import NotificationPanel from '@/components/Trade-CRM/NotificationPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,14 +13,14 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  Bell,
+
   CreditCard,
   Home,
   Menu,
   X,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchJobs } from '@/lib/api';
+
+
 
 const mainNavItems = [
   { path: '/trades-crm/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -47,8 +48,6 @@ const TradeCRMLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [jobMarketCredits, setJobMarketCredits] = useState<number | null>(null);
 
-  const { data: jobsData } = useQuery({ queryKey: ['Jobs'], queryFn: fetchJobs });
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -59,8 +58,6 @@ const TradeCRMLayout = () => {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!isTrade) return <Navigate to="/dashboard" replace />;
-
-  const pendingCount = (jobsData as any[])?.filter(job => job.status !== 'complete').length ?? 0;
 
   const handleSignOut = async () => {
     await signOut();
@@ -208,14 +205,7 @@ const TradeCRMLayout = () => {
               >
                 <CreditCard className="h-4 w-4 text-slate-600" />
               </Button>
-              <Button variant="outline" size="icon" className="relative border-slate-300">
-                <Bell className="h-4 w-4 text-slate-600" />
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-white text-xs rounded-full flex items-center justify-center">
-                    {pendingCount}
-                  </span>
-                )}
-              </Button>
+              <NotificationPanel />
               <Button
                 variant="outline"
                 size="icon"

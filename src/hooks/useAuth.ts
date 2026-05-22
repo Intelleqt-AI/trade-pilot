@@ -23,8 +23,13 @@ export interface TradePilotUser {
   years_experience: string;
   trade_specialty: string;
   postcode: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  radius_km: number;
   has_insurance: boolean;
   has_license: boolean;
+  is_verified: boolean;
   profile_description: string;
 }
 
@@ -45,7 +50,8 @@ export const useAuth = () => {
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const user = meData?.data ?? null;

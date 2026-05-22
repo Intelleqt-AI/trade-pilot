@@ -41,11 +41,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
   return (
     <div
       className={`rounded-xl border bg-white overflow-hidden ${
-        isRated
-          ? 'border-amber-200'
-          : isDragging
-            ? 'shadow-xl border-gray-300'
-            : 'border-gray-200'
+        isRated ? 'border-amber-200' : isDragging ? 'shadow-xl border-gray-300' : 'border-gray-200'
       }`}
     >
       {isRated && (
@@ -58,9 +54,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
       <div className="p-3 space-y-2.5">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-sm leading-snug text-gray-900">{bid.job_title}</h4>
-          <span className="shrink-0 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-            HomePlus
-          </span>
+          <span className="shrink-0 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">HomePlus</span>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -81,7 +75,9 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
             </span>
           )}
           {bid.job_urgency && (
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${URGENCY_COLOR[bid.job_urgency] ?? 'bg-gray-100 text-gray-600'}`}>
+            <span
+              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${URGENCY_COLOR[bid.job_urgency] ?? 'bg-gray-100 text-gray-600'}`}
+            >
               {bid.job_urgency}
             </span>
           )}
@@ -115,9 +111,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
             <span className="font-medium text-gray-700">
               {bid.homeowner.first_name} {bid.homeowner.last_name}
             </span>
-            {bid.homeowner.phone && (
-              <span className="text-gray-400 ml-auto">{bid.homeowner.phone}</span>
-            )}
+            {bid.homeowner.phone && <span className="text-gray-400 ml-auto">{bid.homeowner.phone}</span>}
           </div>
         )}
 
@@ -134,8 +128,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
 
         <div className="border-t border-gray-100 pt-2 flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1 font-semibold text-slate-800">
-            <Coins className="h-3 w-3" />
-            £{parseFloat(bid.amount).toFixed(0)}
+            <Coins className="h-3 w-3" />£{parseFloat(bid.amount).toFixed(0)}
           </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
@@ -165,7 +158,9 @@ const SortableBidCard = React.memo(({ bid }: { bid: any }) => {
       style={style}
       {...attributes}
       {...(isRated ? {} : listeners)}
-      className={isRated ? 'cursor-not-allowed' : isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab hover:shadow-md transition-shadow'}
+      className={
+        isRated ? 'cursor-not-allowed' : isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab hover:shadow-md transition-shadow'
+      }
       title={isRated ? "Owner have already rated this Job — can't move" : undefined}
     >
       <BidCardContent bid={bid} isDragging={isDragging} />
@@ -209,10 +204,12 @@ const COLUMNS = [
   { id: 'Completed', name: 'Completed', status: 'completed' },
 ];
 
+const EMPTY_BIDS: any[] = [];
+
 export default function TradeJobs() {
   const queryClient = useQueryClient();
 
-  const { data: bidsData = [], isLoading } = useQuery({
+  const { data: bidsData = EMPTY_BIDS, isLoading } = useQuery({
     queryKey: ['myBids'],
     queryFn: fetchMyBids,
   });
@@ -294,9 +291,7 @@ export default function TradeJobs() {
     }
   };
 
-  const activeItem = activeID
-    ? tasks.flatMap(col => col.items).find((item: any) => item.id === activeID)
-    : null;
+  const activeItem = activeID ? tasks.flatMap(col => col.items).find((item: any) => item.id === activeID) : null;
 
   return (
     <div className="space-y-6">
