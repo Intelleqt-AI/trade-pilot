@@ -14,17 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SectionCard } from '@/components/trade-pilot/SectionCard';
 import { SectionLabel } from '@/components/trade-pilot/SectionLabel';
 import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
-import { MatchRing } from '@/components/trade-pilot/MatchRing';
 import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { Banner } from '@/components/trade-pilot/Banner';
 import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
 import { toneDot, urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
-import {
-  MOCK_MARKET_INSIGHTS,
-  deriveCompetition,
-  deriveMatchScore,
-  deriveValueRange,
-} from '@/lib/designMockData';
+import { deriveCompetition } from '@/lib/designMockData';
 import {
   AlertTriangle,
   ArrowDownUp,
@@ -50,7 +44,6 @@ import {
   SlidersHorizontal,
   Star,
   User,
-  Wallet,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -411,7 +404,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     );
 
   const [subTab, setSubTab] = useState<'available' | 'my-bids'>('available');
-  const [sortBy, setSortBy] = useState<'match' | 'distance' | 'value'>('match');
+  const [sortBy, setSortBy] = useState<'newest' | 'distance'>('newest');
   const [detailJob, setDetailJob] = useState<Job | null>(null);
 
   const tradeCategories = useMemo(() => getCategoriesForSpecialty(profile?.trade_specialty), [profile?.trade_specialty]);
@@ -474,24 +467,22 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
   const { data: jobsRes, isLoading: jobsLoading } = useFetch<any>(jobsUrl);
   const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(MY_BIDS_URL);
+  const { data: marketRes } = useFetch<any>('/api/v1/tradepilot/jobs/dashboard/market-insights/');
 
   const jobs: Job[] = jobsRes?.data ?? [];
   const myBids: MyBid[] = bidsRes?.data ?? [];
+  const marketInsights = marketRes?.data ?? {};
 
   const sortedJobs = useMemo(() => {
-    const withDerived = jobs.map(job => ({
-      job,
-      match: deriveMatchScore(job, profile ?? undefined),
-      range: deriveValueRange(job),
-    }));
-    return withDerived.sort((a, b) => {
+    const withJob = jobs.map(job => ({ job }));
+    return withJob.sort((a, b) => {
       if (sortBy === 'distance') {
         return (a.job.distance_km ?? Infinity) - (b.job.distance_km ?? Infinity);
       }
-      if (sortBy === 'value') return b.range.high - a.range.high;
-      return b.match - a.match;
+      // newest first
+      return new Date(b.job.created_at).getTime() - new Date(a.job.created_at).getTime();
     });
-  }, [jobs, sortBy, profile]);
+  }, [jobs, sortBy]);
 
   const bidMutation = usePost({
     onSuccess: (res: any) => {
@@ -526,12 +517,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
   const insufficientCredits = creditBalance < MIN_BID_COST;
 
-  // Derived market insights (real where possible)
+  // New market jobs this week within the trader's area — powers the page header.
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const jobsThisWeek = jobs.filter(j => new Date(j.created_at).getTime() >= weekAgo).length;
-  const winRate = myBids.length
-    ? Math.round((myBids.filter(b => b.status === 'accepted').length / myBids.length) * 100)
-    : null;
 
   const radiusKm = profile?.radius_km ?? 25;
   const postcode = profile?.postcode ?? '';
@@ -623,9 +611,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="match">Best match</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
                 <SelectItem value="distance">Nearest</SelectItem>
-                <SelectItem value="value">Highest value</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
@@ -664,7 +651,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 />
               </div>
             ) : (
-              sortedJobs.map(({ job, match, range }) => {
+              sortedJobs.map(({ job }) => {
                 const comp = competitionMeta[deriveCompetition(job.bids_count)];
                 return (
                   <div
@@ -673,7 +660,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     className="cursor-pointer overflow-hidden rounded-xl border bg-card shadow-xs transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                   >
                     <div className="flex gap-4 p-5">
-                      <MatchRing value={match} size={52} />
                       <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span className="text-h3 font-semibold text-foreground">{job.title}</span>
@@ -702,13 +688,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             <span className="font-mono tabular-nums">{job.distance_km} km</span>
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1">
-                          <Wallet className="h-[13px] w-[13px]" />
-                          Est.{' '}
-                          <span className="font-mono font-semibold tabular-nums text-gray-700">
-                            £{range.low}–{range.high}
-                          </span>
-                        </span>
                         <span className="inline-flex items-center gap-1">
                           <Briefcase className="h-[13px] w-[13px]" />
                           <span className="font-mono tabular-nums">{job.bids_count}</span> bid
@@ -765,25 +744,25 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 <div className="rounded-lg bg-gray-50 px-3.5 py-3">
                   <SectionLabel className="mb-1">Avg. job value</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
-                    £{MOCK_MARKET_INSIGHTS.avgValue}
+                    {marketInsights.avg_job_value != null ? `£${marketInsights.avg_job_value}` : '—'}
                   </div>
                 </div>
                 <div className="rounded-lg bg-gray-50 px-3.5 py-3">
                   <SectionLabel className="mb-1">Jobs this week</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
-                    {jobsThisWeek}
+                    {marketInsights.jobs_this_week ?? 0}
                   </div>
                 </div>
                 <div className="rounded-lg bg-gray-50 px-3.5 py-3">
                   <SectionLabel className="mb-1">Your win rate</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-green-600">
-                    {winRate !== null ? `${winRate}%` : '—'}
+                    {marketInsights.win_rate != null ? `${marketInsights.win_rate}%` : '—'}
                   </div>
                 </div>
                 <div className="rounded-lg bg-gray-50 px-3.5 py-3">
                   <SectionLabel className="mb-1">Competition</SectionLabel>
                   <div className="text-h2 font-semibold text-foreground">
-                    {MOCK_MARKET_INSIGHTS.competition}
+                    {marketInsights.competition ?? '—'}
                   </div>
                 </div>
               </div>
@@ -919,7 +898,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           {detailJob && (
             <>
               <div className="flex items-start gap-3.5 border-b border-gray-100 p-6 pb-5 pr-12">
-                <MatchRing value={deriveMatchScore(detailJob, profile ?? undefined)} size={48} />
                 <div>
                   <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
                     {detailJob.title}
@@ -965,15 +943,6 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
                     </div>
                   )}
-                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
-                    <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Wallet className="h-3 w-3" />
-                      Est. value
-                    </div>
-                    <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
-                      £{deriveValueRange(detailJob).low}–{deriveValueRange(detailJob).high}
-                    </div>
-                  </div>
                   <div className="rounded-lg bg-gray-50 px-3 py-2.5">
                     <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
@@ -1353,12 +1322,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <DialogHeader>
                 <DialogTitle>Place a bid</DialogTitle>
                 {selectedJob && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedJob.title} · est.{' '}
-                    <span className="font-mono tabular-nums">
-                      £{deriveValueRange(selectedJob).low}–{deriveValueRange(selectedJob).high}
-                    </span>
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{selectedJob.title}</p>
                 )}
               </DialogHeader>
 

@@ -16,9 +16,17 @@ export interface ProfileStrengthResult {
   percent: number;
 }
 
+export interface ProfileStrengthInputs {
+  /** True when the trader has added ≥1 service (real TradeService rows). */
+  hasService?: boolean;
+  /** True when the trader has uploaded ≥1 certification document. */
+  hasCertificationDoc?: boolean;
+}
+
 export function profileStrength(
   profile: Record<string, any> | null | undefined,
-  creditBalance: number
+  creditBalance: number,
+  { hasService = false, hasCertificationDoc = false }: ProfileStrengthInputs = {}
 ): ProfileStrengthResult {
   const isProfileComplete = !!(
     profile?.first_name &&
@@ -27,17 +35,15 @@ export function profileStrength(
     profile?.postcode &&
     profile?.phone
   );
-  const hasServicesSet = !!profile?.trade_specialty;
   const hasAreaSet = !!profile?.postcode;
   const hasCredits = creditBalance > 0;
-  const isVerified = !!(profile?.has_insurance || profile?.has_license);
 
   const checks: ProfileCheck[] = [
     { key: 'profile', label: 'Complete your profile', done: isProfileComplete, route: '/trades-crm/profile', cta: 'Complete' },
-    { key: 'services', label: 'Set your services & pricing', done: hasServicesSet, route: '/trades-crm/profile', cta: 'Set up' },
+    { key: 'services', label: 'Set your services & pricing', done: hasService, route: '/trades-crm/profile', cta: 'Set up' },
     { key: 'area', label: 'Define your service area', done: hasAreaSet, route: '/trades-crm/profile', cta: 'Add area' },
     { key: 'credits', label: 'Purchase credits', done: hasCredits, route: '/trades-crm/credits', cta: 'Buy now' },
-    { key: 'certs', label: 'Add certifications', done: isVerified, route: '/trades-crm/profile', cta: 'Add' },
+    { key: 'certs', label: 'Add certifications', done: hasCertificationDoc, route: '/trades-crm/profile', cta: 'Add' },
   ];
 
   const percent = Math.round(

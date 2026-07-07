@@ -22,7 +22,6 @@ import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
 import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { CreditUsageBarChart } from '@/components/trade-pilot/charts/CreditUsageBarChart';
 import { CREDIT_PACKAGES } from '@/lib/creditPackages';
-import { MOCK_CREDIT_USAGE } from '@/lib/designMockData';
 import type { TradeCRMOutletContext } from '@/layouts/TradeCRMLayout';
 import {
   ArrowDownLeft,
@@ -143,71 +142,29 @@ const Credits = () => {
     }
   };
 
-  /* ---------- derived analytics (real history, mock fallback) ---------- */
+  /* ---------- credit-usage analytics (real, server-cached) ---------- */
 
-  const now = new Date();
-  const last30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const { data: creditUsage } = useQuery<any>({
+    queryKey: ['DashCreditUsage'],
+    queryFn: () =>
+      fetchData<any>('/api/v1/tradepilot/jobs/dashboard/credit-usage/').then((r: any) => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
 
-  const spent30d = bidCredits?.length
-    ? bidCredits
-        .filter(b => new Date(b.created_at).getTime() >= last30)
-        .reduce((s, b) => s + b.credits_spent, 0)
-    : MOCK_CREDIT_USAGE.spent30d;
-  const bought30d = transactions?.length
-    ? transactions
-        .filter(t => t.status === 'completed' && new Date(t.created_at).getTime() >= last30)
-        .reduce((s, t) => s + t.credits_added, 0)
-    : MOCK_CREDIT_USAGE.bought30d;
-
+  const spent30d = Number(creditUsage?.spent_30d ?? 0);
+  const bought30d = Number(creditUsage?.bought_30d ?? 0);
   const weeklySpend = spent30d / 4.3;
   const runwayWeeks = weeklySpend > 0 ? Math.round(balance / weeklySpend) : null;
 
-  const { monthlySeries, monthLabels } = useMemo(() => {
-    const months = Array.from({ length: 12 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-      return { y: d.getFullYear(), m: d.getMonth(), label: d.toLocaleDateString('en-GB', { month: 'short' })[0] };
-    });
-    const hasReal = (bidCredits?.length ?? 0) > 0;
-    const series = hasReal
-      ? months.map(({ y, m }) =>
-          bidCredits!
-            .filter(b => {
-              const d = new Date(b.created_at);
-              return d.getFullYear() === y && d.getMonth() === m;
-            })
-            .reduce((s, b) => s + b.credits_spent, 0)
-        )
-      : MOCK_CREDIT_USAGE.monthlySpend;
-    return { monthlySeries: series, monthLabels: months.map(m => m.label) };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bidCredits]);
+  const monthlySeries: number[] = creditUsage?.monthly_spend ?? [];
+  const monthLabels: string[] = creditUsage?.month_labels ?? [];
 
-  const byCategory = useMemo(() => {
-    if (!bidCredits?.length) {
-      return MOCK_CREDIT_USAGE.byCategory;
-    }
-    const groups = new Map<string, number>();
-    bidCredits.forEach(b => {
-      const key = (b.job_trade || 'Other').replace(/_/g, ' ');
-      groups.set(key, (groups.get(key) ?? 0) + b.credits_spent);
-    });
-    return [...groups.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([label, credits], i) => ({
-        label: label.charAt(0).toUpperCase() + label.slice(1),
-        credits,
-        colorClass: SHARE_COLORS[i % SHARE_COLORS.length],
-      }));
-  }, [bidCredits]);
-
+  const byCategory = ((creditUsage?.by_category ?? []) as { label: string; credits: number }[]).map(
+    (c, i) => ({ label: c.label, credits: c.credits, colorClass: SHARE_COLORS[i % SHARE_COLORS.length] })
+  );
   const totalByCategory = byCategory.reduce((s, c) => s + c.credits, 0);
-  const totalSpentAll = bidCredits?.reduce((s, b) => s + b.credits_spent, 0) ?? 0;
-  const wonCount = bidCredits?.filter(b => b.outcome === 'won').length ?? 0;
-  const avgPerBid = bidCredits?.length
-    ? Math.round(totalSpentAll / bidCredits.length)
-    : MOCK_CREDIT_USAGE.avgPerBid;
-  const costPerWin = wonCount > 0 ? Math.round(totalSpentAll / wonCount) : MOCK_CREDIT_USAGE.costPerWin;
+  const avgPerBid = Number(creditUsage?.avg_per_bid ?? 0);
+  const costPerWin = Number(creditUsage?.cost_per_win ?? 0);
 
   /* ---------- unified ledger ---------- */
 
@@ -340,8 +297,8 @@ const Credits = () => {
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="h-4 w-4 text-green-600" />
-              Secure Stripe checkout · New balance:{' '}
+              <Coins className="h-4 w-4 text-teal-600" />
+              After Payment New Balance:{' '}
               <span className="font-mono font-semibold tabular-nums text-foreground">
                 {balance + pkg.credits}
               </span>

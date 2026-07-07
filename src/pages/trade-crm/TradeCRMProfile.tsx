@@ -240,7 +240,11 @@ const TradeCRMProfile = () => {
   const servicePending = createServiceMutation.isPending || updateServiceMutation.isPending;
   const saving = updateProfileMutation.isPending;
   const fullName = `${firstName} ${lastName}`.trim();
-  const strength = profileStrength(profile, profile?.credit_balance ?? 0);
+  const hasUploadedDoc = (documents as any[]).length > 0;
+  const strength = profileStrength(profile, profile?.credit_balance ?? 0, {
+    hasService: (services as any[]).length > 0,
+    hasCertificationDoc: hasUploadedDoc,
+  });
   const hasVerifiedDoc = (documents as any[]).some((d: any) => d.is_verified);
 
   return (

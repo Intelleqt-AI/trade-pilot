@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { fetchMyBids, fetchData } from '@/lib/api';
-import { toast } from 'sonner';
+import { fetchMyBids, fetchData, fetchTradeDocuments, fetchTradeServices } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,32 +10,29 @@ import { StatCard } from '@/components/trade-pilot/StatCard';
 import { SectionCard } from '@/components/trade-pilot/SectionCard';
 import { SectionLabel } from '@/components/trade-pilot/SectionLabel';
 import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
-import { MatchRing } from '@/components/trade-pilot/MatchRing';
 import { ProgressRing } from '@/components/trade-pilot/ProgressRing';
 import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { RevenueAreaChart } from '@/components/trade-pilot/charts/RevenueAreaChart';
 import { profileStrength } from '@/lib/profileStrength';
 import {
-  MOCK_EARN_SERIES,
-  MOCK_KPI_DELTAS,
   MOCK_PROFILE_EXTRAS,
-  MOCK_REVENUE_FOOTER,
-  MOCK_SCHEDULE,
-  MOCK_CREDIT_USAGE,
-  deriveMatchScore,
   deriveCompetition,
-  deriveValueRange,
-  type SeriesPeriod,
 } from '@/lib/designMockData';
+
+type RevenuePeriod = '7d' | '1m' | '3m' | '1yr';
+const REVENUE_PERIOD_SUB: Record<RevenuePeriod, string> = {
+  '7d': 'last 7 days',
+  '1m': 'last 30 days',
+  '3m': 'last 3 months',
+  '1yr': 'last 12 months',
+};
 import { toneDot, urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
 import {
   ArrowRight,
   BadgeCheck,
   CalendarClock,
   Check,
-  Clock,
   Coins,
-  FileText,
   MapPin,
   Plus,
   Search,
@@ -69,18 +65,11 @@ const competitionLabel = {
 
 const competitionTone = { low: 'success', medium: 'warning', high: 'danger' } as const;
 
-const scheduleRail: Record<string, string> = {
-  brand: 'bg-teal-500',
-  info: 'bg-blue-500',
-  danger: 'bg-red-500',
-  neutral: 'bg-gray-400',
-};
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { jobMarketCredits } = useOutletContext<TradeCRMOutletContext>();
   const { user, profile } = useAuth();
-  const [period, setPeriod] = useState<SeriesPeriod>('30d');
+  const [period, setPeriod] = useState<RevenuePeriod>('1m');
 
   const { data: jobFeedData } = useQuery({
     queryKey: ['JobFeed'],
@@ -89,14 +78,60 @@ const Dashboard = () => {
 
   const { data: myBidsData } = useQuery({ queryKey: ['MyBids'], queryFn: fetchMyBids });
 
-  const { data: creditHistoryData } = useQuery({
-    queryKey: ['CreditHistory'],
-    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/credit-history/'),
+  const { data: documents = [] } = useQuery({
+    queryKey: ['tradeDocuments'],
+    queryFn: fetchTradeDocuments,
+    // Reflect uploads made on the Profile page as soon as the Dashboard mounts
+    // (the global default is refetchOnMount: false).
+    refetchOnMount: 'always',
   });
 
-  const { data: paymentsHistoryData } = useQuery({
-    queryKey: ['PaymentsHistory'],
-    queryFn: () => fetchData<any>('/api/v1/payments/history/'),
+  const { data: services = [] } = useQuery({
+    queryKey: ['tradeServices'],
+    queryFn: fetchTradeServices,
+    refetchOnMount: 'always',
+  });
+
+  const { data: creditUsage } = useQuery({
+    queryKey: ['DashCreditUsage'],
+    queryFn: () =>
+      fetchData<any>('/api/v1/tradepilot/jobs/dashboard/credit-usage/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+
+  // Dashboard KPIs — real, server-cached endpoints. refetchOnMount:'always' so
+  // returning to the dashboard reflects freshly-invalidated values (the server
+  // cache keeps recomputation cheap).
+  const { data: dashEarnings } = useQuery({
+    queryKey: ['DashEarnings'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/dashboard/earnings/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+  const { data: dashJobsWon } = useQuery({
+    queryKey: ['DashJobsWon'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/dashboard/jobs-won/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+  const { data: dashWinRate } = useQuery({
+    queryKey: ['DashWinRate'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/dashboard/win-rate/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+  const { data: dashJobsNear } = useQuery({
+    queryKey: ['DashJobsNear'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/dashboard/jobs-near-you/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+  const { data: revenue } = useQuery({
+    queryKey: ['DashRevenue', period],
+    queryFn: () =>
+      fetchData<any>(`/api/v1/tradepilot/jobs/dashboard/revenue/?period=${period}`).then(r => r?.data ?? r),
+    refetchOnMount: 'always',
+  });
+  const { data: dashSchedule } = useQuery({
+    queryKey: ['DashSchedule'],
+    queryFn: () => fetchData<any>('/api/v1/tradepilot/jobs/dashboard/today/').then(r => r?.data ?? r),
+    refetchOnMount: 'always',
   });
 
   const creditBalance =
@@ -107,48 +142,56 @@ const Dashboard = () => {
     : jobFeedData?.data ?? jobFeedData?.results ?? [];
   const myBids: any[] = Array.isArray(myBidsData) ? myBidsData : [];
 
-  // Derived KPIs from real bids
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // KPI values from the server-cached dashboard endpoints
+  const earningsAmount = Number(dashEarnings?.amount ?? 0);
+  const jobsWon = Number(dashJobsWon?.count ?? 0);
+  const winRate = Number(dashWinRate?.rate ?? 0);
+  const bidsPlaced = Number(dashWinRate?.total ?? 0);
+  const jobsNearCount = Number(dashJobsNear?.count ?? 0);
+
+  // Revenue card (real, server-cached per period)
+  const revenuePoints: { label: string; value: number }[] = revenue?.points ?? [];
+  const revenueTotal = Number(revenue?.total ?? 0);
+  const revenueFooter = [
+    { label: 'Bids placed', value: String(revenue?.bids_placed ?? 0) },
+    { label: 'Avg job value', value: `£${Number(revenue?.avg_job_value ?? 0).toLocaleString('en-GB')}` },
+    { label: 'Repeat customers', value: `${Number(revenue?.repeat_customers ?? 0)}%` },
+  ];
+
+  // Today's schedule (real: accepted jobs due today, with distance)
+  const scheduleItems: { id: string; title: string; customer: string; location: string; distance_km: number | null }[] =
+    dashSchedule?.items ?? [];
+
+  // Ratings for the Profile-strength card (real, from my-bids)
   const acceptedBids = myBids.filter(b => b.status === 'accepted');
-  const acceptedThisMonth = acceptedBids.filter(b => new Date(b.created_at) >= monthStart);
-  const earningsThisMonth = acceptedThisMonth.reduce((s, b) => s + Number(b.amount || 0), 0);
-  const winRate = myBids.length ? Math.round((acceptedBids.length / myBids.length) * 100) : 0;
   const ratedBids = acceptedBids.filter(b => b.rating != null);
   const avgRating = ratedBids.length
     ? (ratedBids.reduce((s, b) => s + Number(b.rating), 0) / ratedBids.length).toFixed(1)
     : null;
 
   // Credits spent / bought over the last 30 days (real history, mock fallback)
-  const last30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const creditEntries: any[] = Array.isArray(creditHistoryData)
-    ? creditHistoryData
-    : creditHistoryData?.data ?? creditHistoryData?.results ?? [];
-  const paymentEntries: any[] = Array.isArray(paymentsHistoryData)
-    ? paymentsHistoryData
-    : paymentsHistoryData?.data ?? paymentsHistoryData?.results ?? [];
-  const spent30d = creditEntries.length
-    ? creditEntries
-        .filter(e => new Date(e.created_at ?? e.date ?? 0).getTime() >= last30)
-        .reduce((s, e) => s + Math.abs(Number(e.credits ?? e.amount ?? 0)), 0)
-    : MOCK_CREDIT_USAGE.spent30d;
-  const bought30d = paymentEntries.length
-    ? paymentEntries
-        .filter(e => new Date(e.created_at ?? e.date ?? 0).getTime() >= last30)
-        .reduce((s, e) => s + Number(e.credits ?? 0), 0)
-    : MOCK_CREDIT_USAGE.bought30d;
+  const spent30d = Number(creditUsage?.spent_30d ?? 0);
+  const bought30d = Number(creditUsage?.bought_30d ?? 0);
   const spendRatio =
     spent30d + creditBalance > 0
       ? Math.min(100, Math.round((spent30d / (spent30d + creditBalance)) * 100))
       : 0;
 
   const radiusKm = (profile as any)?.radius_km ?? (profile as any)?.radius ?? 25;
-  const strength = profileStrength(profile, creditBalance);
+  const hasUploadedDoc = (documents as any[]).length > 0;
+  const hasVerifiedDoc = (documents as any[]).some(d => d.is_verified);
+  const hasService = (services as any[]).length > 0;
+  const strength = profileStrength(profile, creditBalance, {
+    hasService,
+    hasCertificationDoc: hasUploadedDoc,
+  });
 
   const rankedJobs = [...feedJobs]
-    .map(j => ({ job: j, match: deriveMatchScore(j, profile ?? undefined) }))
-    .sort((a, b) => b.match - a.match)
-    .slice(0, 5);
+    .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity))
+    .slice(0, 5)
+    .map(job => ({ job }));
 
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -173,10 +216,6 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex gap-2.5">
-          <Button variant="outline" onClick={() => toast('Quotes are coming soon')}>
-            <FileText className="h-4 w-4" />
-            New quote
-          </Button>
           <Button onClick={() => navigate('/trades-crm/job-market')}>
             <Search className="h-4 w-4" />
             Browse jobs
@@ -187,37 +226,34 @@ const Dashboard = () => {
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Earnings · this month"
-          value={`£${earningsThisMonth.toLocaleString('en-GB')}`}
-          sub="vs last month"
+          label="Earnings · last 30 days"
+          value={`£${earningsAmount.toLocaleString('en-GB')}`}
+          sub="completed jobs"
           icon={Wallet}
           tone="brand"
-          delta={MOCK_KPI_DELTAS.earnings}
         />
         <StatCard
           label="Jobs won"
-          value={String(acceptedThisMonth.length)}
-          sub="this month"
+          value={String(jobsWon)}
+          sub="all-time"
           icon={Trophy}
           tone="success"
-          delta={MOCK_KPI_DELTAS.jobsWon}
         />
         <StatCard
           label="Win rate"
           value={`${winRate}%`}
-          sub={`${myBids.length} bids placed`}
+          sub={`${bidsPlaced} bids placed`}
           icon={Target}
           tone="violet"
-          delta={MOCK_KPI_DELTAS.winRate}
         />
         <StatCard
           label="Jobs near you"
-          value={String(feedJobs.length)}
-          sub={`within ${radiusKm} km`}
+          value={String(jobsNearCount)}
+          sub={`within ${dashJobsNear?.radius_km ?? radiusKm} km`}
           icon={MapPin}
           tone="accent"
           badge={
-            feedJobs.length > 0 ? (
+            jobsNearCount > 0 ? (
               <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-orange-500">
                 New
               </span>
@@ -233,7 +269,7 @@ const Dashboard = () => {
         <div className="flex flex-col gap-4">
           <SectionCard
             title="New jobs near you"
-            subtitle={`${feedJobs.length} live · ranked by match, distance & value`}
+            subtitle={`${feedJobs.length} live · nearest first`}
             icon={Sparkles}
             action={
               <Button variant="outline" size="sm" onClick={() => navigate('/trades-crm/job-market')}>
@@ -255,9 +291,8 @@ const Dashboard = () => {
                 }
               />
             ) : (
-              rankedJobs.map(({ job, match }, i) => {
+              rankedJobs.map(({ job }, i) => {
                 const comp = deriveCompetition(job.bids_count);
-                const range = deriveValueRange(job);
                 return (
                   <div
                     key={job.id}
@@ -267,7 +302,6 @@ const Dashboard = () => {
                       i > 0 && 'border-t border-gray-100'
                     )}
                   >
-                    <MatchRing value={match} size={38} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-foreground">{job.title}</span>
@@ -286,12 +320,6 @@ const Dashboard = () => {
                             <span className="font-mono tabular-nums">{job.distance_km} km</span>
                           </span>
                         )}
-                        <span className="inline-flex items-center gap-1">
-                          <Wallet className="h-3 w-3" />
-                          <span className="font-mono tabular-nums">
-                            £{range.low}–{range.high}
-                          </span>
-                        </span>
                         <span className="inline-flex items-center gap-1">
                           <span className={cn('h-1.5 w-1.5 rounded-full', toneDot[competitionTone[comp]])} />
                           {competitionLabel[comp]}
@@ -317,27 +345,30 @@ const Dashboard = () => {
                 <SectionLabel>Revenue</SectionLabel>
                 <div className="mt-1.5 flex items-baseline gap-2.5">
                   <span className="font-mono text-[30px] font-semibold tabular-nums tracking-tight text-foreground">
-                    £{earningsThisMonth.toLocaleString('en-GB')}
+                    £{revenueTotal.toLocaleString('en-GB')}
                   </span>
-                  <Badge tone="success" size="sm" dot>
-                    {MOCK_KPI_DELTAS.earnings.value} vs last month
-                  </Badge>
+                  <span className="text-xs text-muted-foreground">{REVENUE_PERIOD_SUB[period]}</span>
                 </div>
               </div>
               <SegmentedControl
                 size="sm"
                 value={period}
-                onChange={v => setPeriod(v as SeriesPeriod)}
+                onChange={v => setPeriod(v as RevenuePeriod)}
                 items={[
                   { value: '7d', label: '7d' },
-                  { value: '30d', label: '30d' },
-                  { value: '12m', label: '12m' },
+                  { value: '1m', label: '1m' },
+                  { value: '3m', label: '3m' },
+                  { value: '1yr', label: '1yr' },
                 ]}
               />
             </div>
-            <RevenueAreaChart series={MOCK_EARN_SERIES[period]} className="h-40 w-full" />
+            <RevenueAreaChart
+              series={revenuePoints.map(p => p.value)}
+              labels={revenuePoints.map(p => p.label)}
+              className="h-40 w-full"
+            />
             <div className="mt-4 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4">
-              {MOCK_REVENUE_FOOTER.map(stat => (
+              {revenueFooter.map(stat => (
                 <div key={stat.label}>
                   <div className="mb-0.5 text-xs text-muted-foreground">{stat.label}</div>
                   <div className="font-mono text-h3 font-semibold tabular-nums text-foreground">
@@ -404,32 +435,26 @@ const Dashboard = () => {
                 </Badge>
               </div>
             </div>
-            <div className="mb-4 grid grid-cols-2 gap-2.5">
+            <div className="mb-4">
               <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                <span className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                <span
+                  className={cn(
+                    'inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg',
+                    hasVerifiedDoc
+                      ? 'bg-green-50 text-green-600'
+                      : hasUploadedDoc
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-gray-100 text-gray-400'
+                  )}
+                >
                   <BadgeCheck className="h-[15px] w-[15px]" />
                 </span>
                 <div className="min-w-0">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                    Verified
+                    Documents
                   </div>
                   <div className="truncate text-[13px] font-semibold text-foreground">
-                    {(profile as any)?.has_insurance || (profile as any)?.has_license
-                      ? 'Documents'
-                      : 'Not yet'}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                <span className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <Clock className="h-[15px] w-[15px]" />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground">
-                    Responds in
-                  </div>
-                  <div className="truncate text-[13px] font-semibold text-foreground">
-                    {MOCK_PROFILE_EXTRAS.respondsIn}
+                    {hasVerifiedDoc ? 'Verified' : hasUploadedDoc ? 'Pending review' : 'Not added'}
                   </div>
                 </div>
               </div>
@@ -467,31 +492,46 @@ const Dashboard = () => {
             </Button>
           </SectionCard>
 
-          {/* Today's schedule (mock) */}
+          {/* Today's schedule — accepted jobs due today, with distance */}
           <SectionCard
             title="Today's schedule"
-            subtitle={`${MOCK_SCHEDULE.length} appointments`}
+            subtitle={`${scheduleItems.length} job${scheduleItems.length === 1 ? '' : 's'} today`}
             icon={CalendarClock}
             bodyClassName="py-1.5 px-0"
           >
-            {MOCK_SCHEDULE.map((s, i) => (
-              <div key={i} className="flex gap-3 px-5 py-2.5 transition-colors hover:bg-gray-50">
-                <div className="w-11 shrink-0 text-right">
-                  <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
-                    {s.time}
+            {scheduleItems.length === 0 ? (
+              <EmptyState
+                icon={CalendarClock}
+                title="Nothing scheduled for today"
+                description="Jobs you've won with today's date will appear here."
+              />
+            ) : (
+              scheduleItems.map(item => (
+                <div key={item.id} className="flex gap-3 px-5 py-2.5 transition-colors hover:bg-gray-50">
+                  <div className="w-14 shrink-0 text-right">
+                    <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                      {item.distance_km != null ? item.distance_km : '—'}
+                    </div>
+                    <div className="text-[10px] text-gray-400">
+                      {item.distance_km != null ? 'km away' : ''}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-gray-400">{s.dur}</div>
-                </div>
-                <div className={cn('w-[3px] shrink-0 rounded-full', scheduleRail[s.tone])} />
-                <div className="min-w-0">
-                  <div className="truncate text-[13px] font-medium text-foreground">{s.title}</div>
-                  <div className="inline-flex items-center gap-1 text-xs text-gray-400">
-                    <MapPin className="h-[11px] w-[11px]" />
-                    {s.place}
+                  <div className="w-[3px] shrink-0 rounded-full bg-teal-500" />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium text-foreground">
+                      {item.title}
+                      {item.customer ? ` — ${item.customer}` : ''}
+                    </div>
+                    {item.location && (
+                      <div className="inline-flex items-center gap-1 text-xs text-gray-400">
+                        <MapPin className="h-[11px] w-[11px]" />
+                        {item.location}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </SectionCard>
         </div>
       </div>
