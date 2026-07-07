@@ -5,24 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold tracking-[-0.01em] transition-all duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-white hover:text-foreground shadow-sm hover:shadow-md",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-white hover:text-foreground",
+        default: "bg-primary text-primary-foreground shadow-xs hover:bg-teal-600",
+        secondary: "bg-secondary text-secondary-foreground shadow-xs hover:bg-navy-700",
         outline:
-          "border border-foreground text-foreground bg-background hover:bg-white hover:text-foreground",
-        secondary:
-          "bg-muted text-foreground hover:bg-muted/80",
-        ghost: "hover:bg-muted hover:text-foreground",
-        link: "text-secondary underline-offset-4 hover:underline",
+          "border border-border bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+        ghost: "text-gray-700 hover:bg-gray-50 hover:text-gray-900",
+        destructive: "bg-red-500 text-white shadow-xs hover:bg-red-600",
+        link: "text-teal-600 underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-12 px-6 py-3", /* 12px/24px padding as specified */
-        sm: "h-9 rounded-md px-3",
-        lg: "h-14 rounded-lg px-8",
+        default: "h-10 px-4 text-sm",
+        sm: "h-8 px-3 text-[13px]",
+        lg: "h-[46px] px-5 text-base",
         icon: "h-10 w-10",
       },
     },

@@ -1,111 +1,210 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Phone, Mail, HelpCircle, BookOpen, Video } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { PageTitle } from '@/components/trade-pilot/PageTitle';
+import { SectionCard } from '@/components/trade-pilot/SectionCard';
+import { EmptyState } from '@/components/trade-pilot/EmptyState';
+import { toneChip } from '@/components/trade-pilot/tones';
+import { MOCK_TICKETS, SUPPORT_CHANNELS, SUPPORT_FAQS } from '@/lib/designMockData';
+import {
+  ChevronRight,
+  HelpCircle,
+  LifeBuoy,
+  Mail,
+  MessageCircle,
+  Phone,
+  Plus,
+  Search,
+  Ticket,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const TradeSupport = () => (
-  <div className="space-y-6">
-    <div className="flex justify-between items-center">
-      <h2 className="text-xl font-bold">Support Centre</h2>
-      <Button>Contact Support</Button>
-    </div>
+const CHANNEL_ICONS = { chat: MessageCircle, phone: Phone, email: Mail } as const;
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <MessageCircle className="h-5 w-5" />
-            Live Chat
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">Get instant help from our support team</p>
-          <p className="text-sm text-muted-foreground mb-4">Available: 9 AM - 6 PM, Mon-Fri</p>
-          <Button className="w-full">Start Chat</Button>
-        </CardContent>
-      </Card>
+const TICKET_STATUS: Record<string, { label: string; tone: 'warning' | 'success' }> = {
+  in_progress: { label: 'In progress', tone: 'warning' },
+  resolved: { label: 'Resolved', tone: 'success' },
+};
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Phone className="h-5 w-5" />
-            Phone Support
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">Call us for urgent issues</p>
-          <p className="text-sm text-muted-foreground mb-4">0800 123 4567</p>
-          <Button variant="outline" className="w-full">
-            Call Now
-          </Button>
-        </CardContent>
-      </Card>
+const TOPICS = ['Getting started', 'Credits', 'Bidding', 'Payouts', 'Verification'];
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Mail className="h-5 w-5" />
-            Email Support
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground mb-4">Send us detailed questions</p>
-          <p className="text-sm text-muted-foreground mb-4">support@tradepilot.co.uk</p>
-          <Button variant="outline" className="w-full">
-            Send Email
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+const TradeSupport = () => {
+  const { user } = useAuth();
+  const [query, setQuery] = useState('');
+  const [topic, setTopic] = useState<string | null>(null);
 
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Your Support Tickets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 border rounded">
-              <div>
-                <h4 className="font-medium">Profile verification help</h4>
-                <p className="text-sm text-muted-foreground">Ticket #TP-001</p>
-              </div>
-              <Badge className="bg-green-100 text-green-800">Resolved</Badge>
-            </div>
-            <div className="flex justify-between items-center p-3 border rounded">
-              <div>
-                <h4 className="font-medium">Payment method update</h4>
-                <p className="text-sm text-muted-foreground">Ticket #TP-002</p>
-              </div>
-              <Badge className="bg-yellow-100 text-yellow-800">In Progress</Badge>
-            </div>
+  const filteredFaqs = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return SUPPORT_FAQS.filter(f => {
+      if (topic && f.topic !== topic) return false;
+      if (!q) return true;
+      return f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q);
+    });
+  }, [query, topic]);
+
+  return (
+    <div className="space-y-4">
+      <PageTitle title="Help Centre" subtitle="Guides, answers and ways to reach the team.">
+        <Button onClick={() => toast('Support tickets are coming soon')}>
+          <Plus className="h-4 w-4" />
+          New ticket
+        </Button>
+      </PageTitle>
+
+      {/* Search hero */}
+      <SectionCard bodyClassName="px-6 py-10">
+        <div className="mx-auto flex max-w-xl flex-col items-center text-center">
+          <h2 className="mb-4 text-display font-semibold text-foreground">
+            How can we help{user?.first_name ? `, ${user.first_name}` : ''}?
+          </h2>
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
+            <Input
+              className="h-[46px] pl-10 text-base"
+              placeholder="Search help articles…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Quick Help</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
-              <HelpCircle className="h-4 w-4 mr-2" />
-              Frequently Asked Questions
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <BookOpen className="h-4 w-4 mr-2" />
-              User Guide
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Video className="h-4 w-4 mr-2" />
-              Video Tutorials
-            </Button>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {TOPICS.map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTopic(topic === t ? null : t)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25',
+                  topic === t
+                    ? 'border-primary bg-teal-50 text-teal-700'
+                    : 'border-border bg-card text-gray-600 hover:bg-gray-50'
+                )}
+              >
+                {t}
+              </button>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
+
+      {/* Contact channels */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {SUPPORT_CHANNELS.map(channel => {
+          const Icon = CHANNEL_ICONS[channel.key as keyof typeof CHANNEL_ICONS] ?? LifeBuoy;
+          return (
+            <div
+              key={channel.key}
+              className="flex flex-col rounded-xl border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span
+                className={cn(
+                  'mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg',
+                  toneChip[channel.tone]
+                )}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <div className="text-sm font-semibold text-foreground">{channel.title}</div>
+              <p className="mt-1 flex-1 text-[13px] text-muted-foreground">{channel.description}</p>
+              <div className="mt-2 text-xs font-medium text-gray-500">{channel.meta}</div>
+              {channel.href ? (
+                <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
+                  <a href={channel.href}>{channel.cta}</a>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full"
+                  onClick={() => toast('Live chat is coming soon')}
+                >
+                  {channel.cta}
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tickets + FAQs */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <SectionCard
+          title="Your tickets"
+          subtitle="Recent support requests"
+          icon={Ticket}
+          bodyClassName="p-0"
+        >
+          {/* TODO(backend): wire to a real ticket system */}
+          {MOCK_TICKETS.length === 0 ? (
+            <EmptyState icon={Ticket} title="No tickets yet" description="Open a ticket and it will appear here." />
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {MOCK_TICKETS.map(ticket => {
+                const status = TICKET_STATUS[ticket.status];
+                return (
+                  <button
+                    key={ticket.id}
+                    type="button"
+                    onClick={() => toast('Support tickets are coming soon')}
+                    className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-gray-50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-foreground">
+                        {ticket.subject}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        <span className="font-mono tabular-nums">{ticket.id}</span> · updated {ticket.updated}
+                      </div>
+                    </div>
+                    <Badge tone={status.tone} size="sm" dot>
+                      {status.label}
+                    </Badge>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Popular questions"
+          subtitle={topic ? `Filtered by ${topic}` : 'Answers to common questions'}
+          icon={HelpCircle}
+          bodyClassName="px-5 py-1"
+        >
+          {filteredFaqs.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No matching articles"
+              description="Try a different search term or topic."
+            />
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {filteredFaqs.map((faq, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className="border-gray-100">
+                  <AccordionTrigger className="py-3.5 text-left text-[13px] font-semibold hover:no-underline">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-[13px] leading-relaxed text-muted-foreground">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </SectionCard>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default TradeSupport;

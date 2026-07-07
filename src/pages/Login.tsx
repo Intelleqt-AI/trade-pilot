@@ -3,6 +3,7 @@ import { Eye, EyeOff, Lock, Mail, Loader2, ArrowRight } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/lib/toast"
+import { Logo } from "@/components/trade-pilot/Logo"
 
 const Login = () => {
   const [email, setEmail] = useState("")
@@ -36,25 +37,21 @@ const Login = () => {
   return (
     <div className="min-h-screen w-full flex">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-[#002B45] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-navy-800 relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#1A9D8F] translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-[#FF6B00] -translate-x-1/2 translate-y-1/2" />
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-teal-500 translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-orange-500 -translate-x-1/2 translate-y-1/2" />
         </div>
 
         <div className="relative z-10">
-          <img
-            src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
-            alt="Trade Pilot"
-            className="h-16 w-auto brightness-0 invert"
-          />
+          <Logo onDark />
         </div>
 
         <div className="relative z-10 space-y-8">
           <div>
             <h2 className="text-4xl font-bold text-white leading-tight">
-              Connect with the best <span className="text-[#1A9D8F]">tradespeople</span> in your area
+              Connect with the best <span className="text-teal-400">tradespeople</span> in your area
             </h2>
             <p className="mt-4 text-white/60 text-lg leading-relaxed">
               Thousands of verified trades professionals. Post a job, get quotes, get it done.
@@ -69,7 +66,7 @@ const Login = () => {
               { value: '£0', label: 'Free to Post' },
             ].map(stat => (
               <div key={stat.label} className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <div className="text-2xl font-bold text-[#1A9D8F]">{stat.value}</div>
+                <div className="text-2xl font-bold text-teal-400">{stat.value}</div>
                 <div className="text-sm text-white/50 mt-1">{stat.label}</div>
               </div>
             ))}
@@ -86,15 +83,11 @@ const Login = () => {
         <div className="w-full max-w-md mx-auto">
           {/* Mobile logo */}
           <div className="lg:hidden mb-10">
-            <img
-              src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
-              alt="Trade Pilot"
-              className="h-12 w-auto"
-            />
+            <Logo onDark={false} />
           </div>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-[#002B45]">Welcome back</h1>
+            <h1 className="text-3xl font-bold text-navy-800">Welcome back</h1>
             <p className="text-gray-500 mt-2">Sign in to your account to continue</p>
           </div>
 
@@ -113,7 +106,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A9D8F]/30 focus:border-[#1A9D8F] transition-all duration-200 text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
                 />
               </div>
             </div>
@@ -126,7 +119,7 @@ const Login = () => {
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-[#1A9D8F] hover:text-[#157a6e] font-medium transition-colors"
+                  className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -140,7 +133,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A9D8F]/30 focus:border-[#1A9D8F] transition-all duration-200 text-sm"
+                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
                 />
                 <button
                   type="button"
@@ -156,7 +149,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[#1A9D8F] hover:bg-[#157a6e] text-white font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2 shadow-sm hover:shadow-md"
+              className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-primary hover:bg-teal-600 text-white font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed mt-2 shadow-sm hover:shadow-md"
             >
               {loading ? (
                 <>
@@ -185,7 +178,7 @@ const Login = () => {
           {/* Sign up CTA */}
           <Link
             to="/trades/join"
-            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-[#002B45] text-[#002B45] font-semibold text-sm hover:bg-[#002B45] hover:text-white transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-navy-800 text-navy-800 font-semibold text-sm hover:bg-navy-800 hover:text-white transition-all duration-200"
           >
             Create Trade Professional account
             <ArrowRight className="w-4 h-4" />

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -9,28 +8,51 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SectionCard } from '@/components/trade-pilot/SectionCard';
+import { SectionLabel } from '@/components/trade-pilot/SectionLabel';
+import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
+import { MatchRing } from '@/components/trade-pilot/MatchRing';
+import { EmptyState } from '@/components/trade-pilot/EmptyState';
+import { Banner } from '@/components/trade-pilot/Banner';
+import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
+import { toneDot, urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
 import {
-  Coins,
-  MapPin,
-  Clock,
+  MOCK_MARKET_INSIGHTS,
+  deriveCompetition,
+  deriveMatchScore,
+  deriveValueRange,
+} from '@/lib/designMockData';
+import {
+  AlertTriangle,
+  ArrowDownUp,
+  BarChart3,
+  Bath,
+  BedDouble,
   Briefcase,
   Calendar,
+  Check,
   CheckCircle2,
-  Loader2,
-  AlertTriangle,
   ChevronRight,
-  Star,
+  Clock,
+  Coins,
+  CreditCard,
   FileText,
-  Phone,
-  Mail,
-  User,
   Home,
-  BedDouble,
-  Bath,
-  Settings,
+  Loader2,
+  Lock,
+  Mail,
+  Map as MapIcon,
+  MapPin,
+  Phone,
+  SlidersHorizontal,
+  Star,
+  User,
+  Wallet,
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -42,6 +64,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { updateTradePilotMe } from '@/lib/api';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { getCategoriesForSpecialty } from '@/lib/jobCategories';
+import { cn } from '@/lib/utils';
 
 const _jobMarkerIcon = L.icon({
   iconRetinaUrl: markerIcon2x,
@@ -54,7 +77,7 @@ const _jobMarkerIcon = L.icon({
 
 function JobLocationMap({ lat, lng }: { lat: number; lng: number }) {
   return (
-    <div className="h-56 w-full rounded-lg overflow-hidden border border-slate-200">
+    <div className="h-56 w-full overflow-hidden rounded-lg border">
       <MapContainer
         center={[lat, lng]}
         zoom={15}
@@ -62,9 +85,44 @@ function JobLocationMap({ lat, lng }: { lat: number; lng: number }) {
         zoomControl={true}
         dragging={true}
         attributionControl={false}
-        style={{ height: '100%', width: '100%' }}
+        className="h-full w-full"
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Marker position={[lat, lng]} icon={_jobMarkerIcon} />
+      </MapContainer>
+    </div>
+  );
+}
+
+/** Read-only Leaflet mini-map of the trade's search area (right rail). */
+function SearchAreaMiniMap({
+  lat,
+  lng,
+  radiusKm,
+}: {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}) {
+  const zoom = Math.max(6, Math.min(13, Math.round(13.5 - Math.log2(radiusKm || 25))));
+  return (
+    <div className="h-60 w-full overflow-hidden rounded-lg border">
+      <MapContainer
+        center={[lat, lng]}
+        zoom={zoom}
+        scrollWheelZoom={false}
+        zoomControl={false}
+        dragging={false}
+        doubleClickZoom={false}
+        attributionControl={false}
+        className="h-full w-full"
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Circle
+          center={[lat, lng]}
+          radius={radiusKm * 1000}
+          pathOptions={{ color: '#0f8b7d', weight: 1.5, dashArray: '6 6', fillColor: '#0f8b7d', fillOpacity: 0.07 }}
+        />
         <Marker position={[lat, lng]} icon={_jobMarkerIcon} />
       </MapContainer>
     </div>
@@ -213,25 +271,6 @@ const QUESTION_LABELS: Record<string, string> = {
   smart_home_and_networking_q3: 'Property type',
 };
 
-const TRADE_OPTIONS = [
-  { value: 'plumber', label: 'Plumber' },
-  { value: 'electrician', label: 'Electrician' },
-  { value: 'builder', label: 'Builder' },
-  { value: 'decorator', label: 'Decorator' },
-  { value: 'roofer', label: 'Roofer' },
-  { value: 'carpenter', label: 'Carpenter' },
-  { value: 'plasterer', label: 'Plasterer' },
-  { value: 'tiler', label: 'Tiler' },
-  { value: 'gardener', label: 'Gardener' },
-  { value: 'cleaner', label: 'Cleaner' },
-  { value: 'handyman', label: 'Handyman' },
-  { value: 'locksmith', label: 'Locksmith' },
-  { value: 'glazier', label: 'Glazier' },
-  { value: 'hvac', label: 'HVAC Engineer' },
-  { value: 'gas_engineer', label: 'Gas Engineer' },
-  { value: 'other', label: 'Other' },
-];
-
 const URGENCY_OPTIONS = [
   { value: 'emergency', label: 'Emergency (same day)' },
   { value: 'urgent', label: 'Urgent (within 48h)' },
@@ -239,23 +278,22 @@ const URGENCY_OPTIONS = [
   { value: 'flexible', label: 'Flexible' },
 ];
 
-const urgencyConfig: Record<string, { label: string; color: string }> = {
-  emergency: { label: 'Emergency', color: 'bg-red-100 text-red-700 border-red-200' },
-  urgent: { label: 'Urgent', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  flexible: { label: 'Flexible', color: 'bg-green-100 text-green-700 border-green-200' },
+const bidStatusTone: Record<string, 'success' | 'warning' | 'danger'> = {
+  accepted: 'success',
+  pending: 'warning',
+  rejected: 'danger',
 };
 
-const bidStatusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  accepted: { label: 'Accepted', color: 'bg-green-100 text-green-700 border-green-200' },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-700 border-red-200' },
+const priorityTone: Record<string, 'danger' | 'warning' | 'neutral'> = {
+  high: 'danger',
+  medium: 'warning',
+  low: 'neutral',
 };
 
-const priorityConfig: Record<string, { label: string; color: string }> = {
-  high: { label: 'High', color: 'bg-red-100 text-red-700 border-red-200' },
-  medium: { label: 'Medium', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  low: { label: 'Low', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+const competitionMeta = {
+  low: { tone: 'success' as const, label: 'Low competition' },
+  medium: { tone: 'warning' as const, label: 'Some competition' },
+  high: { tone: 'danger' as const, label: 'High competition' },
 };
 
 interface PropertyDetail {
@@ -347,6 +385,7 @@ interface Props {
 
 const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { user: profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const urgencyFilter = searchParams.get('urgency') ?? 'all';
@@ -372,6 +411,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     );
 
   const [subTab, setSubTab] = useState<'available' | 'my-bids'>('available');
+  const [sortBy, setSortBy] = useState<'match' | 'distance' | 'value'>('match');
   const [detailJob, setDetailJob] = useState<Job | null>(null);
 
   const tradeCategories = useMemo(() => getCategoriesForSpecialty(profile?.trade_specialty), [profile?.trade_specialty]);
@@ -385,6 +425,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [bidAmount, setBidAmount] = useState('');
   const [bidDescription, setBidDescription] = useState('');
   const [bidAvailability, setBidAvailability] = useState('');
+  const [bidSuccess, setBidSuccess] = useState(false);
   const [contactBid, setContactBid] = useState<MyBid | null>(null);
 
   useEffect(() => {
@@ -419,6 +460,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
   const openBidDialog = (job: Job) => {
     setDetailJob(null);
+    setBidSuccess(false);
     setSelectedJob(job);
   };
 
@@ -431,10 +473,25 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   }, [urgencyFilter, categoryFilter]);
 
   const { data: jobsRes, isLoading: jobsLoading } = useFetch<any>(jobsUrl);
-  const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(subTab === 'my-bids' ? MY_BIDS_URL : null);
+  const { data: bidsRes, isLoading: bidsLoading } = useFetch<any>(MY_BIDS_URL);
 
   const jobs: Job[] = jobsRes?.data ?? [];
   const myBids: MyBid[] = bidsRes?.data ?? [];
+
+  const sortedJobs = useMemo(() => {
+    const withDerived = jobs.map(job => ({
+      job,
+      match: deriveMatchScore(job, profile ?? undefined),
+      range: deriveValueRange(job),
+    }));
+    return withDerived.sort((a, b) => {
+      if (sortBy === 'distance') {
+        return (a.job.distance_km ?? Infinity) - (b.job.distance_km ?? Infinity);
+      }
+      if (sortBy === 'value') return b.range.high - a.range.high;
+      return b.match - a.match;
+    });
+  }, [jobs, sortBy, profile]);
 
   const bidMutation = usePost({
     onSuccess: (res: any) => {
@@ -443,8 +500,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
       queryClient.invalidateQueries({ predicate: q => (q.queryKey[0] as string)?.startsWith(JOBS_URL) });
       queryClient.invalidateQueries({ queryKey: [MY_BIDS_URL] });
       queryClient.invalidateQueries({ queryKey: [ME_URL] });
-      toast.success('Bid submitted!');
-      setSelectedJob(null);
+      setBidSuccess(true);
       setBidAmount('');
       setBidDescription('');
       setBidAvailability('');
@@ -470,59 +526,69 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
   const insufficientCredits = creditBalance < MIN_BID_COST;
 
+  // Derived market insights (real where possible)
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const jobsThisWeek = jobs.filter(j => new Date(j.created_at).getTime() >= weekAgo).length;
+  const winRate = myBids.length
+    ? Math.round((myBids.filter(b => b.status === 'accepted').length / myBids.length) * 100)
+    : null;
+
+  const radiusKm = profile?.radius_km ?? 25;
+  const postcode = profile?.postcode ?? '';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Job Market</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Browse and bid on homeowner jobs</p>
+          <h1 className="text-h1 font-semibold text-foreground">Job Market</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-mono tabular-nums">{jobsThisWeek}</span> new jobs this week within{' '}
+            <span className="font-mono tabular-nums">{radiusKm}</span> km{postcode ? ` of ${postcode}` : ''}.
+          </p>
         </div>
-        <Badge variant={insufficientCredits ? 'destructive' : 'secondary'} className="text-sm px-3 py-1.5 self-start sm:self-auto">
-          <Coins className="h-4 w-4 mr-1.5" />
-          {creditBalance} credits · from {MIN_BID_COST} per bid
-        </Badge>
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-teal-50 px-3.5 text-[13px] font-semibold text-teal-700">
+            <Coins className="h-4 w-4" />
+            <span className="font-mono tabular-nums">{creditBalance}</span> credits
+          </span>
+          <Button variant="secondary" onClick={() => navigate('/trades-crm/credits')}>
+            <CreditCard className="h-4 w-4" />
+            Buy credits
+          </Button>
+        </div>
       </div>
 
       {/* Low credits warning */}
       {insufficientCredits && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-800 font-medium">
-              You need at least {MIN_BID_COST} credits to bid. Top up your account to start bidding.
-            </p>
-          </CardContent>
-        </Card>
+        <Banner
+          tone="warning"
+          icon={AlertTriangle}
+          title={`You need at least ${MIN_BID_COST} credits to bid`}
+          action={
+            <Button variant="outline" size="sm" onClick={() => navigate('/trades-crm/credits')}>
+              Top up
+            </Button>
+          }
+        >
+          Top up your account to start bidding on jobs.
+        </Banner>
       )}
 
-      {/* Sub-tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setSubTab('available')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            subTab === 'available' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-800'
-          }`}
-        >
-          Available Jobs {!jobsLoading && `(${jobs.length})`}
-        </button>
-        <button
-          onClick={() => setSubTab('my-bids')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            subTab === 'my-bids' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-600 hover:text-slate-800'
-          }`}
-        >
-          My Bids
-        </button>
-      </div>
-
-      {/* Available Jobs */}
-      {subTab === 'available' && (
-        <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3 items-center">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SegmentedControl
+          value={subTab}
+          onChange={v => setSubTab(v as 'available' | 'my-bids')}
+          items={[
+            { value: 'available', label: 'Available jobs', count: jobsLoading ? undefined : jobs.length },
+            { value: 'my-bids', label: 'My bids', count: bidsLoading ? undefined : myBids.length },
+          ]}
+        />
+        {subTab === 'available' && (
+          <div className="flex flex-wrap items-center gap-2.5">
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-              <SelectTrigger className="w-44 bg-white">
+              <SelectTrigger className="h-8 w-40 rounded-lg bg-white text-[13px]">
                 <SelectValue placeholder="Any urgency" />
               </SelectTrigger>
               <SelectContent>
@@ -536,7 +602,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             </Select>
             {tradeCategories.length > 0 && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-52 bg-white">
+                <SelectTrigger className="h-8 w-48 rounded-lg bg-white text-[13px]">
                   <SelectValue placeholder="Any category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -549,503 +615,626 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </SelectContent>
               </Select>
             )}
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-input bg-white text-sm text-slate-600 hover:bg-slate-50 transition-colors"
-              title="Search area settings"
-            >
-              <Settings className="h-4 w-4" />
-              {profile?.radius_km ? `${profile.radius_km} km radius` : 'Search area'}
-            </button>
+            <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-8 w-40 rounded-lg bg-white text-[13px]">
+                <span className="inline-flex items-center gap-1.5">
+                  <ArrowDownUp className="h-3.5 w-3.5 text-gray-400" />
+                  <SelectValue />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="match">Best match</SelectItem>
+                <SelectItem value="distance">Nearest</SelectItem>
+                <SelectItem value="value">Highest value</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+              <SlidersHorizontal className="h-[15px] w-[15px]" />
+              <span className="font-mono tabular-nums">{radiusKm}</span> km
+            </Button>
           </div>
+        )}
+      </div>
 
-          {/* Job list */}
-          {jobsLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-            </div>
-          ) : jobs.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Briefcase className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">No jobs available right now</p>
-                <p className="text-slate-400 text-sm mt-1">Check back soon or adjust your filters</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {jobs.map(job => (
-                <Card
-                  key={job.id}
-                  onClick={() => setDetailJob(job)}
-                  className="border border-slate-200 bg-white hover:shadow-md transition-shadow cursor-pointer"
-                >
-                  <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          <h3 className="text-base font-semibold text-slate-800">{job.title}</h3>
-                          <Badge variant="outline" className="capitalize text-xs">
+      {/* Available jobs */}
+      {subTab === 'available' && (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_340px]">
+          <div className="flex flex-col gap-3">
+            {jobsLoading ? (
+              <>
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="rounded-xl border bg-card p-5 shadow-xs">
+                    <div className="flex gap-4">
+                      <Skeleton className="h-[52px] w-[52px] rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-2/3" />
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : sortedJobs.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-card">
+                <EmptyState
+                  icon={Briefcase}
+                  title="No jobs available right now"
+                  description="Check back soon or adjust your filters and search area."
+                />
+              </div>
+            ) : (
+              sortedJobs.map(({ job, match, range }) => {
+                const comp = competitionMeta[deriveCompetition(job.bids_count)];
+                return (
+                  <div
+                    key={job.id}
+                    onClick={() => setDetailJob(job)}
+                    className="cursor-pointer overflow-hidden rounded-xl border bg-card shadow-xs transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                  >
+                    <div className="flex gap-4 p-5">
+                      <MatchRing value={match} size={52} />
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                          <span className="text-h3 font-semibold text-foreground">{job.title}</span>
+                          <Badge tone={urgencyBadgeTone(job.urgency)} size="sm">
+                            {urgencyLabel(job.urgency)}
+                          </Badge>
+                        </div>
+                        <div className="mb-2.5 flex flex-wrap gap-1.5">
+                          <Badge tone="neutral" size="sm" className="capitalize">
                             {job.trade}
                           </Badge>
                           {job.category && (
-                            <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
+                            <Badge tone="violet" size="sm">
                               {job.category}
                             </Badge>
                           )}
-                          {urgencyConfig[job.urgency] && (
-                            <Badge variant="outline" className={`text-xs capitalize ${urgencyConfig[job.urgency].color}`}>
-                              {urgencyConfig[job.urgency].label}
-                            </Badge>
-                          )}
-                          {priorityConfig[job.priority] && (
-                            <Badge variant="outline" className={`text-xs capitalize ${priorityConfig[job.priority].color}`}>
-                              {priorityConfig[job.priority].label} Priority
-                            </Badge>
-                          )}
                         </div>
-                        <p className="text-sm my-4 text-gray-500 line-clamp-2 mb-3">{job.description}</p>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          {job.distance_km !== null && job.distance_km !== undefined && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">
-                                {job.distance_km} km away
-                              </span>
-                            </span>
-                          )}
-                          {job.preferred_date && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {new Date(job.preferred_date).toLocaleDateString('en-GB')}
-                            </span>
-                          )}
-                          {job.files_count > 0 && (
-                            <span className="flex items-center gap-1">
-                              <FileText className="h-3.5 w-3.5" />
-                              {job.files_count} file{job.files_count !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Briefcase className="h-3.5 w-3.5" />
-                            {job.bids_count} bid{job.bids_count !== 1 ? 's' : ''}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {timeAgo(job.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="shrink-0" onClick={e => e.stopPropagation()}>
-                        {job.already_bid ? (
-                          <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Bid sent
-                          </div>
-                        ) : (
-                          <Button size="sm" disabled={insufficientCredits} onClick={() => openBidDialog(job)} className="whitespace-nowrap">
-                            Bid
-                            <ChevronRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        )}
+                        <p className="line-clamp-2 text-[13px] text-muted-foreground">{job.description}</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* My Bids */}
-      {subTab === 'my-bids' && (
-        <div className="space-y-4">
-          {bidsLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
-            </div>
-          ) : myBids.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-12 text-center">
-                <Briefcase className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">No bids submitted yet</p>
-                <p className="text-slate-400 text-sm mt-1">Browse available jobs and submit your first bid</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {myBids.map(bid => (
-                <Card key={bid.id} className="border border-slate-200 bg-white">
-                  <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          <h3 className="text-base font-semibold text-slate-800">{bid.job_title}</h3>
-                          <Badge variant="outline" className="capitalize text-xs">
-                            {bid.job_trade}
-                          </Badge>
-                          <Badge variant="outline" className={`text-xs capitalize ${bidStatusConfig[bid.status]?.color ?? ''}`}>
-                            {bidStatusConfig[bid.status]?.label ?? bid.status}
-                          </Badge>
-                        </div>
-                        {bid.description && <p className="text-sm text-slate-600 line-clamp-1 mb-2">{bid.description}</p>}
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                          <span className="flex items-center gap-1 font-medium text-slate-700">
-                            <Coins className="h-3.5 w-3.5" />£{parseFloat(bid.amount).toFixed(0)} bid
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-5 py-2.5">
+                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        {job.distance_km != null && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-[13px] w-[13px]" />
+                            <span className="font-mono tabular-nums">{job.distance_km} km</span>
                           </span>
-                          {bid.availability && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              Available {new Date(bid.availability).toLocaleDateString('en-GB')}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {timeAgo(bid.created_at)}
-                          </span>
-                        </div>
-                        {bid.rating && (
-                          <div className="mt-2 flex items-center gap-1.5 text-sm text-amber-600">
-                            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                            <span className="font-medium">{bid.rating}/5</span>
-                            {bid.rating_comment && <span className="text-slate-500">— {bid.rating_comment}</span>}
-                          </div>
                         )}
-                      </div>
-                      <div className="shrink-0 flex flex-col items-end gap-2">
-                        <span className="text-xs text-slate-400">
-                          Job:{' '}
-                          <span
-                            className={`font-medium capitalize ${bid.job_status === 'completed' ? 'text-green-600' : 'text-slate-600'}`}
-                          >
-                            {bid.job_status}
+                        <span className="inline-flex items-center gap-1">
+                          <Wallet className="h-[13px] w-[13px]" />
+                          Est.{' '}
+                          <span className="font-mono font-semibold tabular-nums text-gray-700">
+                            £{range.low}–{range.high}
                           </span>
                         </span>
-                        {bid.status === 'accepted' && bid.homeowner && (
+                        <span className="inline-flex items-center gap-1">
+                          <Briefcase className="h-[13px] w-[13px]" />
+                          <span className="font-mono tabular-nums">{job.bids_count}</span> bid
+                          {job.bids_count !== 1 ? 's' : ''}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={cn('h-1.5 w-1.5 rounded-full', toneDot[comp.tone])} />
+                          {comp.label}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-[13px] w-[13px]" />
+                          {timeAgo(job.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
+                        <span className="text-xs text-gray-400">
+                          from{' '}
+                          <span className="font-mono font-semibold tabular-nums text-teal-600">
+                            {job.bid_credits} cr
+                          </span>
+                        </span>
+                        {job.already_bid ? (
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-green-600">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Bid placed
+                          </span>
+                        ) : (
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="text-xs h-7 border-green-300 text-green-700 hover:bg-green-50"
-                            onClick={() => setContactBid(bid)}
+                            disabled={creditBalance < job.bid_credits}
+                            title={creditBalance < job.bid_credits ? 'Not enough credits' : undefined}
+                            onClick={() => openBidDialog(job)}
                           >
-                            <User className="h-3.5 w-3.5 mr-1" />
-                            View Contact
+                            Bid
+                            <ChevronRight className="h-[15px] w-[15px]" />
                           </Button>
                         )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Right rail */}
+          <div className="sticky top-[88px] hidden flex-col gap-4 lg:flex">
+            <SectionCard
+              title="Market insights"
+              subtitle={postcode ? `Your area · ${postcode}` : 'Your area'}
+              icon={BarChart3}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                  <SectionLabel className="mb-1">Avg. job value</SectionLabel>
+                  <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
+                    £{MOCK_MARKET_INSIGHTS.avgValue}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                  <SectionLabel className="mb-1">Jobs this week</SectionLabel>
+                  <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
+                    {jobsThisWeek}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                  <SectionLabel className="mb-1">Your win rate</SectionLabel>
+                  <div className="font-mono text-h2 font-semibold tabular-nums text-green-600">
+                    {winRate !== null ? `${winRate}%` : '—'}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                  <SectionLabel className="mb-1">Competition</SectionLabel>
+                  <div className="text-h2 font-semibold text-foreground">
+                    {MOCK_MARKET_INSIGHTS.competition}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Your search area"
+              subtitle={`${jobs.length} within ${radiusKm} km`}
+              icon={MapIcon}
+              bodyClassName="p-3.5"
+            >
+              {profile?.latitude != null && profile?.longitude != null ? (
+                <>
+                  <SearchAreaMiniMap lat={profile.latitude} lng={profile.longitude} radiusKm={radiusKm} />
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      Jobs shown are within your radius.
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
+                      Edit area
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <EmptyState
+                  icon={MapPin}
+                  title="No search area set"
+                  description="Set your location and radius to see jobs near you."
+                  action={
+                    <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+                      Set search area
+                    </Button>
+                  }
+                />
+              )}
+            </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* My bids */}
+      {subTab === 'my-bids' && (
+        <div className="flex flex-col gap-3.5">
+          {bidsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
+          ) : myBids.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-card">
+              <EmptyState
+                icon={Briefcase}
+                title="No bids submitted yet"
+                description="Browse available jobs and submit your first bid."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setSubTab('available')}>
+                    Browse jobs
+                  </Button>
+                }
+              />
+            </div>
+          ) : (
+            myBids.map(bid => (
+              <div key={bid.id} className="rounded-xl border bg-card p-5 shadow-xs">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                      <span className="text-h3 font-semibold text-foreground">{bid.job_title}</span>
+                      <Badge tone="neutral" size="sm" className="capitalize">
+                        {bid.job_trade}
+                      </Badge>
+                      <Badge tone={bidStatusTone[bid.status] ?? 'neutral'} size="sm" dot>
+                        {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Coins className="h-[13px] w-[13px]" />
+                        Your bid{' '}
+                        <span className="font-mono font-semibold tabular-nums text-gray-700">
+                          £{parseFloat(bid.amount).toFixed(0)}
+                        </span>
+                      </span>
+                      {bid.availability && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-[13px] w-[13px]" />
+                          Available {new Date(bid.availability).toLocaleDateString('en-GB')}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-[13px] w-[13px]" />
+                        {timeAgo(bid.created_at)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        Job:{' '}
+                        <span
+                          className={cn(
+                            'font-medium capitalize',
+                            bid.job_status === 'completed' ? 'text-green-600' : 'text-gray-600'
+                          )}
+                        >
+                          {bid.job_status.replace('_', ' ')}
+                        </span>
+                      </span>
+                    </div>
+                    {bid.rating && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[13px] text-amber-600">
+                        <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                        <span className="font-mono font-semibold tabular-nums">{bid.rating}/5</span>
+                        {bid.rating_comment && (
+                          <span className="text-muted-foreground">— {bid.rating_comment}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {bid.status === 'accepted' && bid.homeowner ? (
+                    <Button variant="outline" size="sm" onClick={() => setContactBid(bid)}>
+                      <User className="h-[15px] w-[15px]" />
+                      View contact
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-gray-400">Awaiting homeowner</span>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
 
-      {/* Job Detail Dialog */}
-      <Dialog open={!!detailJob} onOpenChange={open => !open && setDetailJob(null)}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="leading-snug">{detailJob?.title}</DialogTitle>
-            {detailJob && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                <Badge variant="outline" className="capitalize text-xs">
-                  {detailJob.trade}
-                </Badge>
-                {detailJob.category && (
-                  <Badge variant="outline" className="text-xs bg-violet-50 text-violet-700 border-violet-200">
-                    {detailJob.category}
-                  </Badge>
-                )}
-                {urgencyConfig[detailJob.urgency] && (
-                  <Badge variant="outline" className={`text-xs ${urgencyConfig[detailJob.urgency].color}`}>
-                    {urgencyConfig[detailJob.urgency].label}
-                  </Badge>
-                )}
-                {priorityConfig[detailJob.priority] && (
-                  <Badge variant="outline" className={`text-xs ${priorityConfig[detailJob.priority].color}`}>
-                    {priorityConfig[detailJob.priority].label} Priority
-                  </Badge>
-                )}
-              </div>
-            )}
-          </DialogHeader>
-
+      {/* Job detail — right-side sheet */}
+      <Sheet open={!!detailJob} onOpenChange={open => !open && setDetailJob(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[480px]">
           {detailJob && (
-            <div className="space-y-5 py-2">
-              {/* Description */}
-              {detailJob.description && (
+            <>
+              <div className="flex items-start gap-3.5 border-b border-gray-100 p-6 pb-5 pr-12">
+                <MatchRing value={deriveMatchScore(detailJob, profile ?? undefined)} size={48} />
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Description</p>
-                  <p className="text-xs text-slate-700 leading-relaxed">{detailJob.description}</p>
-                </div>
-              )}
-
-              {/* Key info row */}
-              <div className="grid grid-cols-2 gap-3">
-                {detailJob.distance_km !== null && detailJob.distance_km !== undefined && (
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      Distance
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800">{detailJob.distance_km} km away</p>
+                  <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
+                    {detailJob.title}
+                  </h2>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge tone="neutral" size="sm" className="capitalize">
+                      {detailJob.trade}
+                    </Badge>
+                    {detailJob.category && (
+                      <Badge tone="violet" size="sm">
+                        {detailJob.category}
+                      </Badge>
+                    )}
+                    <Badge tone={urgencyBadgeTone(detailJob.urgency)} size="sm">
+                      {urgencyLabel(detailJob.urgency)}
+                    </Badge>
+                    {priorityTone[detailJob.priority] && (
+                      <Badge tone={priorityTone[detailJob.priority]} size="sm" className="capitalize">
+                        {detailJob.priority} priority
+                      </Badge>
+                    )}
                   </div>
-                )}
-                {detailJob.preferred_date && (
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Preferred date
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800">{new Date(detailJob.preferred_date).toLocaleDateString('en-GB')}</p>
-                  </div>
-                )}
-                <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Posted
-                  </p>
-                  <p className="text-sm font-semibold text-slate-800">{timeAgo(detailJob.created_at)}</p>
                 </div>
               </div>
 
-              {/* Property detail (type / beds / baths only — homeowner's location stays private until bid is accepted) */}
-              {detailJob.property_detail && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Property</p>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex flex-wrap gap-3">
-                      <span className="flex capitalize items-center gap-1 text-xs text-slate-600">
-                        <Home className="h-3.5 w-3.5" />
+              <div className="flex flex-1 flex-col gap-5 p-6">
+                {detailJob.description && (
+                  <div>
+                    <SectionLabel className="mb-2">Description</SectionLabel>
+                    <p className="text-sm leading-relaxed text-gray-700">{detailJob.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  {detailJob.distance_km != null && (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        Distance
+                      </div>
+                      <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                        {detailJob.distance_km} km
+                      </div>
+                    </div>
+                  )}
+                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Wallet className="h-3 w-3" />
+                      Est. value
+                    </div>
+                    <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                      £{deriveValueRange(detailJob).low}–{deriveValueRange(detailJob).high}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Posted
+                    </div>
+                    <div className="text-[13px] font-semibold text-foreground">
+                      {timeAgo(detailJob.created_at)}
+                    </div>
+                  </div>
+                  {detailJob.preferred_date && (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Preferred
+                      </div>
+                      <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                        {new Date(detailJob.preferred_date).toLocaleDateString('en-GB')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {detailJob.property_detail && (
+                  <div>
+                    <SectionLabel className="mb-2">Property</SectionLabel>
+                    <div className="flex flex-wrap gap-4 rounded-lg bg-gray-50 px-3.5 py-3 text-[13px] text-gray-700">
+                      <span className="inline-flex items-center gap-1.5 capitalize">
+                        <Home className="h-[15px] w-[15px]" />
                         {detailJob.property_detail.property_type.replace('_', ' ')}
                       </span>
                       {detailJob.property_detail.bedrooms > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-slate-600">
-                          <BedDouble className="h-3.5 w-3.5" />
-                          {detailJob.property_detail.bedrooms} bed
+                        <span className="inline-flex items-center gap-1.5">
+                          <BedDouble className="h-[15px] w-[15px]" />
+                          <span className="font-mono tabular-nums">{detailJob.property_detail.bedrooms}</span> bed
                         </span>
                       )}
                       {detailJob.property_detail.bathrooms > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-slate-600">
-                          <Bath className="h-3.5 w-3.5" />
-                          {detailJob.property_detail.bathrooms} bath
+                        <span className="inline-flex items-center gap-1.5">
+                          <Bath className="h-[15px] w-[15px]" />
+                          <span className="font-mono tabular-nums">{detailJob.property_detail.bathrooms}</span> bath
                         </span>
                       )}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Q&A answers */}
-              {detailJob.answers && Object.keys(detailJob.answers).filter(k => detailJob.answers[k] && k !== 'description').length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Additional Details</p>
-                  <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                    {Object.entries(detailJob.answers)
-                      .filter(([key, val]) => val && key !== 'description')
-                      .map(([key, val]) => (
-                        <div key={key} className="flex gap-3 px-3 py-2">
-                          <span className="text-xs text-slate-500 min-w-[120px] shrink-0 pt-0.5">
-                            {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
+                {detailJob.answers &&
+                  Object.keys(detailJob.answers).filter(k => detailJob.answers[k] && k !== 'description').length > 0 && (
+                    <div>
+                      <SectionLabel className="mb-2">Additional details</SectionLabel>
+                      <div className="divide-y divide-gray-100 rounded-lg border">
+                        {Object.entries(detailJob.answers)
+                          .filter(([key, val]) => val && key !== 'description')
+                          .map(([key, val]) => (
+                            <div key={key} className="flex gap-3 px-3 py-2">
+                              <span className="min-w-[120px] shrink-0 pt-0.5 text-xs text-muted-foreground">
+                                {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-xs font-medium text-foreground">{String(val)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Briefcase className="h-[13px] w-[13px]" />
+                    <span className="font-mono tabular-nums">{detailJob.bids_count}</span> bid
+                    {detailJob.bids_count !== 1 ? 's' : ''} so far
+                  </span>
+                </div>
+
+                {detailJob.files.length > 0 && (
+                  <div>
+                    <SectionLabel className="mb-2">Attachments</SectionLabel>
+                    <div className="space-y-2">
+                      {detailJob.files.map(f => (
+                        <a
+                          key={f.id}
+                          href={f.presigned_url ?? '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                          <span className="flex-1 truncate text-gray-700">{f.file_name}</span>
+                          <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                            {(f.file_size / 1024).toFixed(0)} KB
                           </span>
-                          <span className="text-xs text-slate-800 font-medium">{String(val)}</span>
-                        </div>
+                        </a>
                       ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Briefcase className="h-3.5 w-3.5" />
-                  {detailJob.bids_count} bid{detailJob.bids_count !== 1 ? 's' : ''} so far
-                </span>
+                {/* Homeowner contact — unlocked after bidding */}
+                <div>
+                  <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
+                  {detailJob.unlocked_info ? (
+                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        Bid placed — contact &amp; location unlocked
+                      </div>
+
+                      {(detailJob.unlocked_info.address || detailJob.unlocked_info.postcode) && (
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                          <div>
+                            {detailJob.unlocked_info.address && (
+                              <p className="font-medium leading-snug">{detailJob.unlocked_info.address}</p>
+                            )}
+                            {detailJob.unlocked_info.postcode && (
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {detailJob.unlocked_info.postcode}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {detailJob.unlocked_info.latitude !== null && detailJob.unlocked_info.longitude !== null && (
+                        <JobLocationMap
+                          lat={detailJob.unlocked_info.latitude!}
+                          lng={detailJob.unlocked_info.longitude!}
+                        />
+                      )}
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <UserAvatar
+                          name={`${detailJob.unlocked_info.homeowner.first_name} ${detailJob.unlocked_info.homeowner.last_name}`}
+                          size="sm"
+                        />
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {detailJob.unlocked_info.homeowner.first_name}{' '}
+                            {detailJob.unlocked_info.homeowner.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Homeowner</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {detailJob.unlocked_info.homeowner.email && (
+                          <a
+                            href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
+                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                          >
+                            <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                            <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
+                          </a>
+                        )}
+                        {detailJob.unlocked_info.homeowner.phone && (
+                          <a
+                            href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
+                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                          >
+                            <Phone className="h-4 w-4 shrink-0 text-gray-400" />
+                            <span className="font-mono tabular-nums">
+                              {detailJob.unlocked_info.homeowner.phone}
+                            </span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative overflow-hidden rounded-xl border">
+                      <div className="select-none space-y-2.5 p-4 blur-sm" aria-hidden="true">
+                        <div className="flex items-center gap-2.5">
+                          <span className="h-9 w-9 rounded-full bg-gray-200" />
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">John D.</p>
+                            <p className="text-xs text-gray-400">Homeowner</p>
+                          </div>
+                        </div>
+                        <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
+                        <div className="text-[13px] text-muted-foreground">j••••@gmail.com</div>
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/55">
+                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm">
+                          <Lock className="h-4 w-4" />
+                        </span>
+                        <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                          Place a bid to unlock contact &amp; location
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {detailJob.files.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Attachments</p>
-                  <div className="space-y-2">
-                    {detailJob.files.map(f => (
-                      <a
-                        key={f.id}
-                        href={f.presigned_url ?? '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm hover:bg-slate-100 transition-colors"
-                      >
-                        <FileText className="h-4 w-4 text-slate-400 shrink-0" />
-                        <span className="flex-1 truncate text-slate-700">{f.file_name}</span>
-                        <span className="text-xs text-slate-400 shrink-0">{(f.file_size / 1024).toFixed(0)} KB</span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Contact + location — revealed after bid */}
-              {detailJob.unlocked_info ? (
-                <div className="space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                  <div className="flex items-center gap-2 text-primary text-xs font-semibold">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    Bid placed — contact &amp; location unlocked
-                  </div>
-
-                  {(detailJob.unlocked_info.address || detailJob.unlocked_info.postcode) && (
-                    <div className="flex items-start gap-2 text-sm text-slate-700">
-                      <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                      <div>
-                        {detailJob.unlocked_info.address && (
-                          <p className="font-medium leading-snug">{detailJob.unlocked_info.address}</p>
-                        )}
-                        {detailJob.unlocked_info.postcode && (
-                          <p className="text-xs text-slate-500 mt-0.5">{detailJob.unlocked_info.postcode}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {detailJob.unlocked_info.latitude !== null && detailJob.unlocked_info.longitude !== null && (
-                    <JobLocationMap lat={detailJob.unlocked_info.latitude!} lng={detailJob.unlocked_info.longitude!} />
-                  )}
-
-                  <div className="flex items-center gap-3 pt-1">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {detailJob.unlocked_info.homeowner.first_name} {detailJob.unlocked_info.homeowner.last_name}
-                      </p>
-                      <p className="text-xs text-slate-500">Homeowner</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {detailJob.unlocked_info.homeowner.email && (
-                      <a
-                        href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
-                        className="flex items-center gap-2 p-2.5 bg-white border border-primary/20 rounded-lg text-sm text-slate-700 hover:bg-primary/5 transition-colors"
-                      >
-                        <Mail className="h-4 w-4 text-slate-400 shrink-0" />
-                        <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
-                      </a>
-                    )}
-                    {detailJob.unlocked_info.homeowner.phone && (
-                      <a
-                        href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
-                        className="flex items-center gap-2 p-2.5 bg-white border border-primary/20 rounded-lg text-sm text-slate-700 hover:bg-primary/5 transition-colors"
-                      >
-                        <Phone className="h-4 w-4 text-slate-400 shrink-0" />
-                        <span>{detailJob.unlocked_info.homeowner.phone}</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="relative rounded-xl overflow-hidden border border-slate-200">
-                  <div className="p-4 space-y-3 select-none blur-sm pointer-events-none" aria-hidden="true">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-slate-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">John D.</p>
-                        <p className="text-xs text-slate-400">Homeowner</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Phone className="h-4 w-4 text-slate-400 shrink-0" />
-                      <span>+44 7700 ••• •••</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Mail className="h-4 w-4 text-slate-400 shrink-0" />
-                      <span>j••••@gmail.com</span>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 backdrop-blur-[2px]">
-                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Phone className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700 text-center px-4">Place bid to see contact details &amp; location</p>
-                  </div>
-                </div>
-              )}
-            </div>
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Coins className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to bid
+                </span>
+                {detailJob.already_bid ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Bid already sent
+                  </span>
+                ) : (
+                  <Button
+                    disabled={creditBalance < detailJob.bid_credits}
+                    onClick={() => openBidDialog(detailJob)}
+                  >
+                    Place bid
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </>
           )}
+        </SheetContent>
+      </Sheet>
 
-          {detailJob && !detailJob.already_bid && detailJob.bid_credits_note && (
-            <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mx-6 mb-2">
-              <Coins className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              <span>
-                {detailJob.bid_credits} credits — {detailJob.bid_credits_note}
-              </span>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDetailJob(null)}>
-              Close
-            </Button>
-            {detailJob &&
-              (detailJob.already_bid ? (
-                <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium px-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Bid already sent
-                </div>
-              ) : (
-                <Button disabled={creditBalance < detailJob.bid_credits} onClick={() => openBidDialog(detailJob)}>
-                  Place Bid · {detailJob.bid_credits} credits
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              ))}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Homeowner Contact Dialog */}
+      {/* Homeowner contact dialog */}
       <Dialog open={!!contactBid} onOpenChange={open => !open && setContactBid(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Homeowner Contact</DialogTitle>
-            {contactBid && <p className="text-sm text-slate-500 mt-1">{contactBid.job_title}</p>}
+            <DialogTitle>Homeowner contact</DialogTitle>
+            {contactBid && <p className="mt-1 text-sm text-muted-foreground">{contactBid.job_title}</p>}
           </DialogHeader>
           {contactBid?.homeowner && (
             <div className="space-y-4 py-2">
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
+              <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3">
+                <UserAvatar
+                  name={`${contactBid.homeowner.first_name} ${contactBid.homeowner.last_name}`}
+                  size="md"
+                />
                 <div>
-                  <p className="font-semibold text-slate-800">
+                  <p className="font-semibold text-foreground">
                     {contactBid.homeowner.first_name} {contactBid.homeowner.last_name}
                   </p>
-                  <p className="text-xs text-slate-500">Homeowner</p>
+                  <p className="text-xs text-muted-foreground">Homeowner</p>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {contactBid.homeowner.email && (
                   <a
                     href={`mailto:${contactBid.homeowner.email}`}
-                    className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-slate-50 transition-colors group"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
                   >
-                    <Mail className="h-4 w-4 text-slate-400 group-hover:text-primary shrink-0" />
-                    <span className="text-sm text-slate-700 truncate">{contactBid.homeowner.email}</span>
+                    <Mail className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-teal-600" />
+                    <span className="truncate text-sm text-gray-700">{contactBid.homeowner.email}</span>
                   </a>
                 )}
                 {contactBid.homeowner.phone && (
                   <a
                     href={`tel:${contactBid.homeowner.phone}`}
-                    className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-slate-50 transition-colors group"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
                   >
-                    <Phone className="h-4 w-4 text-slate-400 group-hover:text-primary shrink-0" />
-                    <span className="text-sm text-slate-700">{contactBid.homeowner.phone}</span>
+                    <Phone className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-teal-600" />
+                    <span className="font-mono text-sm tabular-nums text-gray-700">
+                      {contactBid.homeowner.phone}
+                    </span>
                   </a>
                 )}
                 {!contactBid.homeowner.phone && !contactBid.homeowner.email && (
-                  <p className="text-sm text-slate-400 text-center py-2">No contact details available.</p>
+                  <p className="py-2 text-center text-sm text-gray-400">No contact details available.</p>
                 )}
               </div>
             </div>
@@ -1058,20 +1247,20 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Search Area Settings Dialog */}
+      {/* Search-area settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Search Area Settings</DialogTitle>
+            <DialogTitle>Search area</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
-              <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Work Coverage Area</span>
+            <div className="overflow-hidden rounded-xl border bg-gray-25">
+              <div className="flex items-center gap-2 border-b px-4 py-3">
+                <MapPin className="h-4 w-4 text-teal-600" />
+                <span className="text-sm font-medium">Work coverage area</span>
                 <span className="ml-auto text-xs text-muted-foreground">Drag pin or search to set location</span>
               </div>
-              <div className="p-4 space-y-4">
+              <div className="space-y-4 p-4">
                 <TradeAreaMap
                   lat={settingsLat}
                   lng={settingsLng}
@@ -1087,12 +1276,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">Job Search Radius</p>
+                      <p className="text-sm font-medium">Job search radius</p>
                       <p className="text-xs text-muted-foreground">Only see jobs within this distance</p>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-primary/10 text-primary rounded-lg px-3 py-1.5">
+                    <div className="flex items-center gap-1.5 rounded-lg bg-teal-50 px-3 py-1.5 text-teal-700">
                       <MapPin className="h-3.5 w-3.5" />
-                      <span className="text-sm font-bold">{settingsRadiusKm} km</span>
+                      <span className="font-mono text-sm font-bold tabular-nums">{settingsRadiusKm} km</span>
                     </div>
                   </div>
                   <Slider
@@ -1118,7 +1307,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             <Button onClick={handleSaveSettings} disabled={saveSettingsMutation.isPending}>
               {saveSettingsMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Saving…
                 </>
               ) : (
@@ -1129,100 +1318,148 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Bid Dialog */}
-      <Dialog open={!!selectedJob} onOpenChange={open => !open && setSelectedJob(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Submit a Bid</DialogTitle>
-            {selectedJob && <p className="text-sm text-slate-500 mt-1">{selectedJob.title}</p>}
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Job details summary */}
-            {selectedJob && (selectedJob.category || (selectedJob.answers && Object.keys(selectedJob.answers).length > 0)) && (
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Job Details</p>
-                {selectedJob.category && (
-                  <div className="flex gap-2 text-xs">
-                    <span className="text-slate-500 min-w-[96px]">Category</span>
-                    <span className="text-slate-800 font-medium">{selectedJob.category}</span>
-                  </div>
+      {/* Bid dialog */}
+      <Dialog
+        open={!!selectedJob}
+        onOpenChange={open => {
+          if (!open) {
+            setSelectedJob(null);
+            setBidSuccess(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[460px]">
+          {bidSuccess ? (
+            <div className="px-2 py-8 text-center">
+              <span className="mb-3.5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
+                <Check className="h-7 w-7" strokeWidth={2.4} />
+              </span>
+              <h2 className="mb-1.5 text-h2 font-semibold text-foreground">Bid submitted</h2>
+              <p className="mb-5 text-[13px] text-muted-foreground">
+                Contact details and location are now unlocked. The homeowner will be notified.
+              </p>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setSelectedJob(null);
+                  setBidSuccess(false);
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Place a bid</DialogTitle>
+                {selectedJob && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedJob.title} · est.{' '}
+                    <span className="font-mono tabular-nums">
+                      £{deriveValueRange(selectedJob).low}–{deriveValueRange(selectedJob).high}
+                    </span>
+                  </p>
                 )}
-                {selectedJob.answers &&
-                  Object.entries(selectedJob.answers)
-                    .filter(([key, val]) => val && key !== 'description')
-                    .map(([key, val]) => (
-                      <div key={key} className="flex gap-2 text-xs">
-                        <span className="text-slate-500 min-w-[96px]">{QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}</span>
-                        <span className="text-slate-800">{String(val)}</span>
-                      </div>
-                    ))}
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                {selectedJob &&
+                  (selectedJob.category ||
+                    (selectedJob.answers && Object.keys(selectedJob.answers).length > 0)) && (
+                    <div className="space-y-2 rounded-lg border bg-gray-50 p-3">
+                      <SectionLabel>Job details</SectionLabel>
+                      {selectedJob.category && (
+                        <div className="flex gap-2 text-xs">
+                          <span className="min-w-[96px] text-muted-foreground">Category</span>
+                          <span className="font-medium text-foreground">{selectedJob.category}</span>
+                        </div>
+                      )}
+                      {selectedJob.answers &&
+                        Object.entries(selectedJob.answers)
+                          .filter(([key, val]) => val && key !== 'description')
+                          .map(([key, val]) => (
+                            <div key={key} className="flex gap-2 text-xs">
+                              <span className="min-w-[96px] text-muted-foreground">
+                                {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-foreground">{String(val)}</span>
+                            </div>
+                          ))}
+                    </div>
+                  )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="bid-amount">Your quote (£) *</Label>
+                  <Input
+                    id="bid-amount"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 250"
+                    className="font-mono tabular-nums"
+                    value={bidAmount}
+                    onChange={e => setBidAmount(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bid-description">Message to homeowner</Label>
+                  <Textarea
+                    id="bid-description"
+                    placeholder="Introduce yourself, your experience and when you can attend."
+                    rows={3}
+                    value={bidDescription}
+                    onChange={e => setBidDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bid-availability">Available from (optional)</Label>
+                  <Input
+                    id="bid-availability"
+                    type="date"
+                    value={bidAvailability}
+                    onChange={e => setBidAvailability(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2.5 text-xs text-orange-600">
+                  <Coins className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    This bid costs{' '}
+                    <strong className="font-mono tabular-nums">
+                      {selectedJob?.bid_credits ?? MIN_BID_COST} credits
+                    </strong>{' '}
+                    · balance after:{' '}
+                    <span className="font-mono tabular-nums">
+                      {creditBalance - (selectedJob?.bid_credits ?? MIN_BID_COST)}
+                    </span>
+                    {selectedJob?.bid_credits_note ? ` — ${selectedJob.bid_credits_note}` : ''}
+                  </span>
+                </div>
               </div>
-            )}
 
-            <div className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg">
-              <span className="text-slate-600">Bid cost</span>
-              <div className="text-right">
-                <span className="font-semibold text-slate-800 flex items-center gap-1 justify-end">
-                  <Coins className="h-4 w-4 text-amber-500" />
-                  {selectedJob?.bid_credits ?? MIN_BID_COST} credits (balance: {creditBalance} →{' '}
-                  {creditBalance - (selectedJob?.bid_credits ?? MIN_BID_COST)})
-                </span>
-                {selectedJob?.bid_credits_note && <p className="text-xs text-muted-foreground mt-0.5">{selectedJob.bid_credits_note}</p>}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bid-amount">Your quote (£) *</Label>
-              <Input
-                id="bid-amount"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="e.g. 250"
-                value={bidAmount}
-                onChange={e => setBidAmount(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bid-description">Message to homeowner</Label>
-              <Textarea
-                id="bid-description"
-                placeholder="Describe your approach, experience, or ask a question..."
-                rows={3}
-                value={bidDescription}
-                onChange={e => setBidDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bid-availability">Available from (optional)</Label>
-              <Input
-                id="bid-availability"
-                type="date"
-                value={bidAvailability}
-                onChange={e => setBidAvailability(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedJob(null)} disabled={bidMutation.isPending}>
-              Cancel
-            </Button>
-            <Button onClick={handleBidSubmit} disabled={!bidAmount || bidMutation.isPending}>
-              {bidMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Submitting…
-                </>
-              ) : (
-                <>Submit Bid</>
-              )}
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedJob(null)} disabled={bidMutation.isPending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleBidSubmit} disabled={!bidAmount || bidMutation.isPending}>
+                  {bidMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Submitting…
+                    </>
+                  ) : (
+                    <>
+                      Submit bid ·{' '}
+                      <span className="font-mono tabular-nums">{selectedJob?.bid_credits ?? MIN_BID_COST} cr</span>
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

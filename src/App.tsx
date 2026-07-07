@@ -1,7 +1,6 @@
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
@@ -23,14 +22,11 @@ import TradeCRMProfile from './pages/trade-crm/TradeCRMProfile';
 import TradeSupport from './pages/trade-crm/TradeSupport';
 import AccountSettings from './pages/trade-crm/AccountSettings';
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+  <TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/dashboard" element={<CustomerDashboard />} />
@@ -56,9 +52,8 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </BrowserRouter>
+  </TooltipProvider>
 );
 
 export default App;

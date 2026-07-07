@@ -14,22 +14,37 @@ import {
 } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
+import { PageTitle } from '@/components/trade-pilot/PageTitle';
+import { SectionCard } from '@/components/trade-pilot/SectionCard';
+import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
+import { ProgressRing } from '@/components/trade-pilot/ProgressRing';
+import { EmptyState } from '@/components/trade-pilot/EmptyState';
+import { profileStrength } from '@/lib/profileStrength';
 import {
   FileText, Trash2, ExternalLink, Plus, Pencil, MapPin,
-  User, Building2, ShieldCheck, Wrench, Coins, Calendar,
-  Phone, Mail, AlertCircle, CheckCircle2, Clock, BadgeCheck,
+  User, Building2, ShieldCheck, Wrench, Coins, Clock,
+  Phone, Mail, CheckCircle2, BadgeCheck, Map as MapIcon,
 } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
-import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   insurance: 'Public Liability Insurance',
@@ -40,9 +55,23 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
-const inputCls = 'w-full px-3 py-2.5 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow';
-const labelCls = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide';
-const sectionCls = 'bg-card rounded-2xl border border-border shadow-sm overflow-hidden';
+const TRADE_SPECIALTIES = [
+  'Plumber',
+  'Electrician',
+  'Builder',
+  'Roofer',
+  'Painter',
+  'Kitchen Installer',
+  'Gas Engineer',
+  'Carpenter',
+  'Tiler',
+  'Plasterer',
+];
+
+const TRADE_LABELS: Record<string, string> = {
+  Painter: 'Painter/Decorator',
+  Carpenter: 'Carpenter/Joiner',
+};
 
 const TradeCRMProfile = () => {
   const { profile } = useAuth();
@@ -75,6 +104,7 @@ const TradeCRMProfile = () => {
 
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
+  const [deletingService, setDeletingService] = useState<any>(null);
   const [serviceName, setServiceName] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [servicePrice, setServicePrice] = useState('');
@@ -209,234 +239,225 @@ const TradeCRMProfile = () => {
 
   const servicePending = createServiceMutation.isPending || updateServiceMutation.isPending;
   const saving = updateProfileMutation.isPending;
-  const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || '??';
+  const fullName = `${firstName} ${lastName}`.trim();
+  const strength = profileStrength(profile, profile?.credit_balance ?? 0);
+  const hasVerifiedDoc = (documents as any[]).some((d: any) => d.is_verified);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+    <div className="space-y-4 pb-8">
+      <PageTitle title="My Profile" subtitle="How homeowners see you across TradePilot." />
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #1A9D8F, #14b8a6)' }} />
-        <div className="px-6 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <Avatar className="h-16 w-16 shrink-0 ring-2 ring-offset-2 ring-primary/30">
-            <AvatarImage src="" />
-            <AvatarFallback className="text-lg font-bold bg-primary/10 text-primary">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-semibold text-foreground truncate">
-                {businessName || `${firstName} ${lastName}`.trim() || 'Your Profile'}
-              </h1>
+      {/* Header card */}
+      <SectionCard>
+        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+          <UserAvatar
+            name={fullName || businessName}
+            size="xl"
+            verified={!!profile?.is_verified || hasVerifiedDoc}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-h2 font-semibold text-foreground">
+                {businessName || fullName || 'Your profile'}
+              </h2>
               {profile?.is_verified && (
-                <TooltipProvider delayDuration={150}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <BadgeCheck className="h-4 w-4 text-blue-500 shrink-0 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="p-0 bg-transparent border-0 shadow-none">
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden w-56">
-                        <div className="bg-primary px-3 py-2.5 flex items-center gap-2">
-                          <BadgeCheck className="h-4 w-4 text-white shrink-0" />
-                          <span className="text-sm font-semibold text-white">Verified Account</span>
-                        </div>
-                        <div className="px-3 py-2.5 space-y-1.5">
-                          <p className="text-xs text-slate-500 leading-relaxed">
-                            Your identity and business credentials have been reviewed and confirmed by the HomePlus team.
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-slate-700 pt-0.5">
-                            <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
-                            <span>Homeowners can trust your profile</span>
-                          </div>
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Badge tone="success" size="sm">
+                  <BadgeCheck className="h-3 w-3" />
+                  Verified
+                </Badge>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {tradeSpecialty && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-                  {tradeSpecialty}
-                </span>
-              )}
-              {businessType && (
-                <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                  {businessType === 'sole-trader' ? 'Sole Trader' : businessType === 'limited-company' ? 'Ltd Company' : 'Partnership'}
+            <p className="mt-1 text-sm text-muted-foreground">
+              {[fullName, tradeSpecialty && (TRADE_LABELS[tradeSpecialty] ?? tradeSpecialty)]
+                .filter(Boolean)
+                .join(' · ') || 'Complete your details below'}
+            </p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+              {postcode && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {postcode} · <span className="font-mono tabular-nums">{radiusKm}</span> km radius
                 </span>
               )}
               {yearsExperience && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" /> {yearsExperience} yrs
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {yearsExperience} yrs experience
                 </span>
               )}
+              <span className="inline-flex items-center gap-1">
+                <Coins className="h-3.5 w-3.5" />
+                <span className="font-mono tabular-nums">{profile?.credit_balance ?? '—'}</span> credits
+              </span>
+              {hasInsurance && (
+                <Badge tone="success" size="sm">
+                  <ShieldCheck className="h-3 w-3" />
+                  Insured
+                </Badge>
+              )}
+              {hasLicense && (
+                <Badge tone="brand" size="sm">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Licensed
+                </Badge>
+              )}
             </div>
-            {address && (
-              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 truncate">
-                <MapPin className="h-3 w-3 shrink-0" /> {address}
-              </p>
-            )}
           </div>
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <ProgressRing value={strength.percent} size={82} stroke={7} />
+            <span className="text-overline font-semibold uppercase text-muted-foreground">
+              Profile strength
+            </span>
+          </div>
+        </div>
+      </SectionCard>
 
-          <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
-            <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 bg-muted/50">
-              <Coins className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-none">Credits</p>
-                <p className="font-bold text-base leading-tight text-foreground">{profile?.credit_balance ?? '—'}</p>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.7fr_1fr]">
+        {/* LEFT column */}
+        <div className="flex flex-col gap-4">
+          {/* Personal information */}
+          <SectionCard title="Personal information" subtitle="Your account details" icon={User}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>First name</Label>
+                  <Input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Last name</Label>
+                  <Input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email address</Label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input readOnly disabled className="pl-9" value={email} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Phone number</Label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    className="pl-9 font-mono tabular-nums"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+44 7700 000000"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button onClick={handleSavePersonalInfo} disabled={saving} size="sm">
+                  {saving ? 'Saving…' : 'Save changes'}
+                </Button>
               </div>
             </div>
-            {(hasInsurance || hasLicense) && (
-              <div className="flex gap-1.5">
-                {hasInsurance && (
-                  <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <ShieldCheck className="h-3 w-3" /> Insured
-                  </span>
-                )}
-                {hasLicense && (
-                  <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                    <CheckCircle2 className="h-3 w-3" /> Licensed
-                  </span>
-                )}
+          </SectionCard>
+
+          {/* Business details */}
+          <SectionCard title="Business details" subtitle="Manage your trade profile" icon={Building2}>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Business name</Label>
+                <Input
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  placeholder="e.g. Smith Plumbing Ltd"
+                />
               </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Personal Information ─────────────────────────────────────────── */}
-      <div className={sectionCls}>
-        <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <User className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-sm">Personal Information</h2>
-            <p className="text-xs text-muted-foreground">Your account details</p>
-          </div>
-        </div>
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className={labelCls}>First Name</label>
-              <input className={inputCls} value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Primary trade</Label>
+                  <Select value={tradeSpecialty} onValueChange={setTradeSpecialty}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select trade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRADE_SPECIALTIES.map(t => (
+                        <SelectItem key={t} value={t}>
+                          {TRADE_LABELS[t] ?? t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Business type</Label>
+                  <Select value={businessType} onValueChange={setBusinessType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sole-trader">Sole Trader</SelectItem>
+                      <SelectItem value="limited-company">Limited Company</SelectItem>
+                      <SelectItem value="partnership">Partnership</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Years of experience</Label>
+                <Select value={yearsExperience} onValueChange={setYearsExperience}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select experience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1-2">1–2 years</SelectItem>
+                    <SelectItem value="3-5">3–5 years</SelectItem>
+                    <SelectItem value="6-10">6–10 years</SelectItem>
+                    <SelectItem value="10+">10+ years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Address</Label>
+                  <Input
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    placeholder="Auto-filled from map, or type manually"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Postcode</Label>
+                  <Input
+                    className="uppercase"
+                    value={postcode}
+                    onChange={e => setPostcode(e.target.value.toUpperCase())}
+                    placeholder="e.g. SW1A 1AA"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Business description</Label>
+                <Textarea
+                  rows={4}
+                  placeholder="Describe your services, experience, and what makes you stand out…"
+                  value={profileDescription}
+                  onChange={e => setProfileDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button onClick={handleSaveBusinessInfo} disabled={saving} size="sm">
+                  {saving ? 'Saving…' : 'Save business details'}
+                </Button>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className={labelCls}>Last Name</label>
-              <input className={inputCls} value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelCls}>Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input readOnly disabled className={`${inputCls} pl-9 opacity-60 cursor-not-allowed`} value={email} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className={labelCls}>Phone Number</label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input className={`${inputCls} pl-9`} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44 7700 000000" />
-            </div>
-          </div>
-          <div className="flex justify-end pt-1">
-            <Button onClick={handleSavePersonalInfo} disabled={saving} size="sm" className="px-6">
-              {saving ? 'Saving…' : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-      </div>
+          </SectionCard>
 
-      {/* ── Business Information ─────────────────────────────────────────── */}
-      <div className={sectionCls}>
-        <div className="px-6 py-4 border-b border-border flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-sm">Business Information</h2>
-            <p className="text-xs text-muted-foreground">Manage your trade profile</p>
-          </div>
-        </div>
-        <div className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <label className={labelCls}>Business Name</label>
-            <input className={inputCls} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Smith Plumbing Ltd" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className={labelCls}>Primary Trade</label>
-              <select className={inputCls} value={tradeSpecialty} onChange={e => setTradeSpecialty(e.target.value)}>
-                <option value="">Select trade</option>
-                <option value="Plumber">Plumber</option>
-                <option value="Electrician">Electrician</option>
-                <option value="Builder">Builder</option>
-                <option value="Roofer">Roofer</option>
-                <option value="Painter">Painter/Decorator</option>
-                <option value="Kitchen Installer">Kitchen Installer</option>
-                <option value="Gas Engineer">Gas Engineer</option>
-                <option value="Carpenter">Carpenter/Joiner</option>
-                <option value="Tiler">Tiler</option>
-                <option value="Plasterer">Plasterer</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className={labelCls}>Business Type</label>
-              <select className={inputCls} value={businessType} onChange={e => setBusinessType(e.target.value)}>
-                <option value="">Select type</option>
-                <option value="sole-trader">Sole Trader</option>
-                <option value="limited-company">Limited Company</option>
-                <option value="partnership">Partnership</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={labelCls}>Years of Experience</label>
-            <select className={inputCls} value={yearsExperience} onChange={e => setYearsExperience(e.target.value)}>
-              <option value="">Select experience</option>
-              <option value="1-2">1–2 years</option>
-              <option value="3-5">3–5 years</option>
-              <option value="6-10">6–10 years</option>
-              <option value="10+">10+ years</option>
-            </select>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-1.5">
-            <label className={labelCls}>Address</label>
-            <input
-              className={inputCls}
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="Auto-filled from map, or type manually"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className={labelCls}>Postcode</label>
-            <input
-              className={`${inputCls} uppercase`}
-              value={postcode}
-              onChange={e => setPostcode(e.target.value.toUpperCase())}
-              placeholder="e.g. SW1A 1AA"
-            />
-          </div>
-
-          {/* Work Area Map */}
-          <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Work Coverage Area</span>
-              <span className="ml-auto text-xs text-muted-foreground">Drag pin or search to set location</span>
-            </div>
-            <div className="p-4 space-y-4">
+          {/* Service area */}
+          <SectionCard
+            title="Service area"
+            subtitle="Drag the pin or search to set your location"
+            icon={MapIcon}
+          >
+            <div className="space-y-4">
               <TradeAreaMap
                 lat={lat}
                 lng={lng}
@@ -452,12 +473,12 @@ const TradeCRMProfile = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Job Search Radius</p>
+                    <p className="text-sm font-medium">Coverage radius</p>
                     <p className="text-xs text-muted-foreground">Only see jobs within this distance</p>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary rounded-lg px-3 py-1.5">
+                  <div className="flex items-center gap-1.5 rounded-lg bg-teal-50 px-3 py-1.5 text-teal-700">
                     <MapPin className="h-3.5 w-3.5" />
-                    <span className="text-sm font-bold">{radiusKm} km</span>
+                    <span className="font-mono text-sm font-bold tabular-nums">{radiusKm} km</span>
                   </div>
                 </div>
                 <Slider
@@ -473,197 +494,213 @@ const TradeCRMProfile = () => {
                   <span>100 km — Nationwide</span>
                 </div>
               </div>
+              <div className="flex justify-end">
+                <Button onClick={handleSaveBusinessInfo} disabled={saving} size="sm">
+                  {saving ? 'Saving…' : 'Save service area'}
+                </Button>
+              </div>
             </div>
-          </div>
+          </SectionCard>
 
-          <Separator />
-
-          <div className="space-y-1.5">
-            <label className={labelCls}>Business Description</label>
-            <textarea
-              className={`${inputCls} h-28 resize-none`}
-              placeholder="Describe your services, experience, and what makes you stand out…"
-              value={profileDescription}
-              onChange={e => setProfileDescription(e.target.value)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <p className={labelCls}>Compliance & Trust</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${hasInsurance ? 'bg-emerald-100' : 'bg-muted'}`}>
-                    <ShieldCheck className={`h-4 w-4 ${hasInsurance ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+          {/* Services & pricing */}
+          <SectionCard
+            title="Services & pricing"
+            subtitle="What you offer and at what rates"
+            icon={Wrench}
+            action={
+              <Button size="sm" onClick={openAddService}>
+                <Plus className="h-3.5 w-3.5" />
+                Add service
+              </Button>
+            }
+            bodyClassName="p-0"
+          >
+            {servicesLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">Loading services…</div>
+            ) : services.length === 0 ? (
+              <EmptyState
+                icon={Wrench}
+                title="No services listed"
+                description="Add your services and prices to attract more jobs."
+                action={
+                  <Button variant="outline" size="sm" onClick={openAddService}>
+                    Add your first service
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {services.map((svc: any) => (
+                  <div key={svc.id} className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50">
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-foreground">{svc.name}</div>
+                      {svc.description && (
+                        <div className="truncate text-xs text-muted-foreground">{svc.description}</div>
+                      )}
+                    </div>
+                    <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-teal-600">
+                      {svc.price_type === 'from' && <span className="font-sans text-xs font-normal text-muted-foreground">from </span>}
+                      £{Number(svc.price).toLocaleString('en-GB')}
+                      {svc.price_type === 'hourly' && <span className="font-sans text-xs font-normal text-muted-foreground">/hr</span>}
+                    </span>
+                    <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditService(svc)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                        onClick={() => setDeletingService(svc)}
+                        disabled={deleteServiceMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        </div>
+
+        {/* RIGHT column */}
+        <div className="flex flex-col gap-4">
+          {/* Certifications & documents */}
+          <SectionCard
+            title="Certifications"
+            subtitle="Documents homeowners can trust"
+            icon={ShieldCheck}
+            action={
+              <Button size="sm" variant="outline" onClick={() => setDocUploadOpen(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Upload
+              </Button>
+            }
+            bodyClassName="p-0"
+          >
+            {docsLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">Loading documents…</div>
+            ) : documents.length === 0 ? (
+              <EmptyState
+                icon={FileText}
+                title="No documents yet"
+                description="Upload your insurance, certifications and other credentials."
+              />
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {documents.map((doc: any) => (
+                  <div key={doc.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50">
+                    <span
+                      className={cn(
+                        'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                        doc.is_expired ? 'bg-red-50 text-red-500' : 'bg-teal-50 text-teal-600'
+                      )}
+                    >
+                      <BadgeCheck className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-[13px] font-semibold text-foreground">{doc.name}</span>
+                        {doc.is_verified && (
+                          <Badge tone="success" size="sm">
+                            Verified
+                          </Badge>
+                        )}
+                        {doc.is_expired && (
+                          <Badge tone="danger" size="sm">
+                            Expired
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {DOC_TYPE_LABELS[doc.doc_type] ?? doc.doc_type}
+                        {doc.expires_at
+                          ? ` · ${new Date(doc.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                          : ''}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {doc.file_url && (
+                        <a href={doc.file_url} target="_blank" rel="noreferrer">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                        onClick={() => deleteDocMutation.mutate(doc.id)}
+                        disabled={deleteDocMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Compliance & trust */}
+          <SectionCard title="Compliance & trust" subtitle="Shown on your public profile" icon={ShieldCheck}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border bg-white px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      'inline-flex h-9 w-9 items-center justify-center rounded-lg',
+                      hasInsurance ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+                    )}
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                  </span>
                   <div>
-                    <p className="text-sm font-medium">Public Liability</p>
+                    <p className="text-sm font-medium">Public liability</p>
                     <p className="text-xs text-muted-foreground">Insurance held</p>
                   </div>
                 </div>
                 <Switch checked={hasInsurance} onCheckedChange={setHasInsurance} />
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg border bg-white px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${hasLicense ? 'bg-blue-100' : 'bg-muted'}`}>
-                    <CheckCircle2 className={`h-4 w-4 ${hasLicense ? 'text-blue-600' : 'text-muted-foreground'}`} />
-                  </div>
+                  <span
+                    className={cn(
+                      'inline-flex h-9 w-9 items-center justify-center rounded-lg',
+                      hasLicense ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'
+                    )}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </span>
                   <div>
-                    <p className="text-sm font-medium">Trade License</p>
-                    <p className="text-xs text-muted-foreground">License held</p>
+                    <p className="text-sm font-medium">Trade licence</p>
+                    <p className="text-xs text-muted-foreground">Licence held</p>
                   </div>
                 </div>
                 <Switch checked={hasLicense} onCheckedChange={setHasLicense} />
               </div>
+              <div className="flex justify-end pt-1">
+                <Button onClick={handleSaveBusinessInfo} disabled={saving} size="sm" variant="outline">
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
+              </div>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-1">
-            <Button onClick={handleSaveBusinessInfo} disabled={saving} size="sm" className="px-6">
-              {saving ? 'Saving…' : 'Save Business Details'}
-            </Button>
-          </div>
+          </SectionCard>
         </div>
       </div>
 
-      {/* ── Credentials ──────────────────────────────────────────────────── */}
-      <div className={sectionCls}>
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-sm">Credentials & Documents</h2>
-              <p className="text-xs text-muted-foreground">Certifications and compliance documents</p>
-            </div>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => setDocUploadOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Upload
-          </Button>
-        </div>
-        <div className="p-4 space-y-2">
-          {docsLoading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Loading documents…</div>
-          ) : documents.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">No documents yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Upload your insurance, certifications, and other credentials</p>
-            </div>
-          ) : (
-            documents.map((doc: any) => (
-              <div key={doc.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/40 transition-colors">
-                <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center ${doc.is_expired ? 'bg-red-100' : 'bg-primary/10'}`}>
-                  <FileText className={`h-5 w-5 ${doc.is_expired ? 'text-red-500' : 'text-primary'}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-sm truncate">{doc.name}</h4>
-                    {doc.is_verified && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px] px-1.5">Verified</Badge>}
-                    {doc.is_expired && <Badge className="bg-red-100 text-red-600 border-red-200 text-[10px] px-1.5">Expired</Badge>}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {DOC_TYPE_LABELS[doc.doc_type] ?? doc.doc_type}
-                    {doc.expires_at ? ` · ${new Date(doc.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noreferrer">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                    </a>
-                  )}
-                  <Button
-                    variant="ghost" size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                    onClick={() => deleteDocMutation.mutate(doc.id)}
-                    disabled={deleteDocMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* ── Services & Pricing ───────────────────────────────────────────── */}
-      <div className={sectionCls}>
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Wrench className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-sm">Services & Pricing</h2>
-              <p className="text-xs text-muted-foreground">What you offer and at what rates</p>
-            </div>
-          </div>
-          <Button size="sm" onClick={openAddService}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add Service
-          </Button>
-        </div>
-        <div className="p-4">
-          {servicesLoading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Loading services…</div>
-          ) : services.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                <Wrench className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">No services listed</p>
-              <p className="text-xs text-muted-foreground mt-1">Add your services to attract more jobs</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {services.map((svc: any) => (
-                <div key={svc.id} className="relative rounded-xl border border-border bg-background p-4 hover:shadow-sm transition-shadow group">
-                  <div className="pr-16">
-                    <h4 className="font-semibold text-sm">{svc.name}</h4>
-                    {svc.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{svc.description}</p>}
-                    <p className="text-primary font-bold text-base mt-2">
-                      {svc.price_type === 'from' && <span className="text-sm font-normal mr-0.5">from </span>}
-                      £{Number(svc.price).toLocaleString('en-GB')}
-                      {svc.price_type === 'hourly' && <span className="text-xs font-normal text-muted-foreground">/hr</span>}
-                    </p>
-                  </div>
-                  <div className="absolute top-3 right-3 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditService(svc)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost" size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-red-500"
-                      onClick={() => deleteServiceMutation.mutate(svc.id)}
-                      disabled={deleteServiceMutation.isPending}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Upload Document Dialog ───────────────────────────────────────── */}
+      {/* Upload document dialog */}
       <Dialog open={docUploadOpen} onOpenChange={setDocUploadOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Upload Document</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Upload document</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-2">
-              <Label>Document Type *</Label>
+              <Label>Document type *</Label>
               <Select value={docType} onValueChange={setDocType}>
                 <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
@@ -677,11 +714,11 @@ const TradeCRMProfile = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Document Name *</Label>
-              <Input placeholder="e.g. Public Liability Insurance 2025" value={docName} onChange={e => setDocName(e.target.value)} />
+              <Label>Document name *</Label>
+              <Input placeholder="e.g. Public Liability Insurance 2026" value={docName} onChange={e => setDocName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Expiry Date</Label>
+              <Label>Expiry date</Label>
               <Input type="date" value={docExpiry} onChange={e => setDocExpiry(e.target.value)} />
             </div>
             <div className="space-y-2">
@@ -690,7 +727,7 @@ const TradeCRMProfile = () => {
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
-                className="w-full text-sm border border-border rounded-lg p-2 bg-background file:mr-3 file:text-xs file:font-medium file:border-0 file:bg-primary file:text-primary-foreground file:rounded file:px-3 file:py-1.5"
+                className="w-full rounded-lg border border-input bg-white p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground"
                 onChange={e => setDocFile(e.target.files?.[0] ?? null)}
               />
             </div>
@@ -704,14 +741,14 @@ const TradeCRMProfile = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Add / Edit Service Dialog ────────────────────────────────────── */}
+      {/* Add / edit service dialog */}
       <Dialog open={serviceDialogOpen} onOpenChange={setServiceDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{editingService ? 'Edit Service' : 'Add Service'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingService ? 'Edit service' : 'Add service'}</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-2">
-              <Label>Service Name *</Label>
-              <Input placeholder="e.g. Emergency Plumbing" value={serviceName} onChange={e => setServiceName(e.target.value)} />
+              <Label>Service name *</Label>
+              <Input placeholder="e.g. Emergency plumbing" value={serviceName} onChange={e => setServiceName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
@@ -720,15 +757,22 @@ const TradeCRMProfile = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Price (£) *</Label>
-                <Input type="number" min="0" placeholder="0" value={servicePrice} onChange={e => setServicePrice(e.target.value)} />
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className="font-mono tabular-nums"
+                  value={servicePrice}
+                  onChange={e => setServicePrice(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Price Type</Label>
+                <Label>Price type</Label>
                 <Select value={servicePriceType} onValueChange={setServicePriceType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="fixed">Fixed Price</SelectItem>
-                    <SelectItem value="hourly">Per Hour</SelectItem>
+                    <SelectItem value="fixed">Fixed price</SelectItem>
+                    <SelectItem value="hourly">Per hour</SelectItem>
                     <SelectItem value="from">From</SelectItem>
                   </SelectContent>
                 </Select>
@@ -738,11 +782,35 @@ const TradeCRMProfile = () => {
           <DialogFooter>
             <Button variant="outline" onClick={closeServiceDialog}>Cancel</Button>
             <Button onClick={handleServiceSubmit} disabled={servicePending}>
-              {servicePending ? 'Saving…' : editingService ? 'Update' : 'Add Service'}
+              {servicePending ? 'Saving…' : editingService ? 'Update' : 'Add service'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete service confirmation */}
+      <AlertDialog open={!!deletingService} onOpenChange={open => !open && setDeletingService(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove service?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{deletingService?.name}” will be removed from your profile. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 text-white hover:bg-red-600"
+              onClick={() => {
+                if (deletingService) deleteServiceMutation.mutate(deletingService.id);
+                setDeletingService(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

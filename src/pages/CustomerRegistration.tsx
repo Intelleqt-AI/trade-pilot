@@ -257,7 +257,7 @@ const CustomerRegistration = () => {
             alt="Happy customer with tradesperson"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-blue-900/20"></div>
+          <div className="absolute inset-0 bg-navy-900/30"></div>
           <div className="relative z-10 flex flex-col justify-center px-12 text-white">
             <div className="max-w-md mx-auto lg:mx-0">
               <h1 className="text-3xl lg:text-4xl font-bold mb-6">Find trusted tradespeople with confidence</h1>

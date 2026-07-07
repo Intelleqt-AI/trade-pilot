@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { Mail, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/apiClient';
+import { Logo } from '@/components/trade-pilot/Logo';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -38,21 +39,17 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen w-full flex">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-[#002B45] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-navy-800 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#1A9D8F] translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-[#FF6B00] -translate-x-1/2 translate-y-1/2" />
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-teal-500 translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-orange-500 -translate-x-1/2 translate-y-1/2" />
         </div>
         <div className="relative z-10">
-          <img
-            src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
-            alt="Trade Pilot"
-            className="h-16 w-auto brightness-0 invert"
-          />
+          <Logo onDark />
         </div>
         <div className="relative z-10 space-y-4">
           <h2 className="text-4xl font-bold text-white leading-tight">
-            Reset your <span className="text-[#1A9D8F]">password</span>
+            Reset your <span className="text-teal-400">password</span>
           </h2>
           <p className="text-white/60 text-lg leading-relaxed">
             Enter your email and we'll send you a secure link to reset your password.
@@ -67,11 +64,7 @@ const ForgotPassword = () => {
       <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
         <div className="w-full max-w-md mx-auto">
           <div className="lg:hidden mb-10">
-            <img
-              src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png"
-              alt="Trade Pilot"
-              className="h-12 w-auto"
-            />
+            <Logo onDark={false} />
           </div>
 
           {sent ? (
@@ -80,7 +73,7 @@ const ForgotPassword = () => {
                 <CheckCircle2 className="h-7 w-7 text-green-600" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-[#002B45]">Check your inbox</h1>
+                <h1 className="text-2xl font-bold text-navy-800">Check your inbox</h1>
                 <p className="text-gray-500 text-sm">
                   If <span className="font-medium text-gray-800">{email}</span> is registered,
                   you'll receive a reset link shortly.
@@ -90,7 +83,7 @@ const ForgotPassword = () => {
                 Didn't get it? Check your spam folder or{' '}
                 <button
                   type="button"
-                  className="text-[#1A9D8F] hover:underline font-medium"
+                  className="text-teal-600 hover:underline font-medium"
                   onClick={() => setSent(false)}
                 >
                   try again
@@ -106,7 +99,7 @@ const ForgotPassword = () => {
           ) : (
             <>
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-[#002B45]">Forgot password?</h1>
+                <h1 className="text-3xl font-bold text-navy-800">Forgot password?</h1>
                 <p className="text-gray-500 mt-2">Enter your email and we'll send you a reset link.</p>
               </div>
 
@@ -134,7 +127,7 @@ const ForgotPassword = () => {
                       autoFocus
                       disabled={loading}
                       required
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1A9D8F]/30 focus:border-[#1A9D8F] transition-all duration-200 text-sm disabled:opacity-60"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -142,7 +135,7 @@ const ForgotPassword = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[#1A9D8F] hover:bg-[#157a6e] text-white font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                  className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-primary hover:bg-teal-600 text-white font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                 >
                   {loading ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
@@ -154,7 +147,7 @@ const ForgotPassword = () => {
 
               <p className="mt-6 text-center text-sm text-gray-500">
                 Remember it?{' '}
-                <Link to="/login" className="font-medium text-[#1A9D8F] hover:text-[#157a6e] transition-colors">
+                <Link to="/login" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
                   Sign in
                 </Link>
               </p>
