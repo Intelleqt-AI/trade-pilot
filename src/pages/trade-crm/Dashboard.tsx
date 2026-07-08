@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import type { TradeCRMOutletContext } from '@/layouts/TradeCRMLayout';
 import { cn } from '@/lib/utils';
+import { getTradeLabel } from '@/lib/jobCategories';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -312,7 +313,7 @@ const Dashboard = () => {
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                           <Wrench className="h-3 w-3" />
-                          {job.trade || job.category}
+                          {getTradeLabel(job.trade) || job.category}
                         </span>
                         {job.distance_km != null && (
                           <span className="inline-flex items-center gap-1">

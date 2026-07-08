@@ -56,7 +56,7 @@ import { toast } from '@/lib/toast';
 import { useAuth } from '@/hooks/useAuth';
 import { updateTradePilotMe } from '@/lib/api';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
-import { getCategoriesForSpecialty } from '@/lib/jobCategories';
+import { getCategoriesForSpecialty, getTradeLabel } from '@/lib/jobCategories';
 import { cn } from '@/lib/utils';
 
 const _jobMarkerIcon = L.icon({
@@ -126,6 +126,7 @@ const JOBS_URL = '/api/v1/tradepilot/jobs/';
 const MY_BIDS_URL = '/api/v1/tradepilot/jobs/my-bids/';
 const ME_URL = '/api/v1/tradepilot/auth/me/';
 const MIN_BID_COST = 10;
+const MAX_BIDS_PER_JOB = 4;
 
 const QUESTION_LABELS: Record<string, string> = {
   // Plumbing – Boilers
@@ -300,12 +301,13 @@ interface UnlockedInfo {
   postcode: string;
   latitude: number | null;
   longitude: number | null;
+  contact_unlocked: boolean;
   homeowner: {
     first_name: string;
     last_name: string;
     email: string;
     phone: string;
-  };
+  } | null;
 }
 
 interface JobFile {
@@ -327,6 +329,7 @@ interface Job {
   preferred_date: string | null;
   property_detail: PropertyDetail | null;
   already_bid: boolean;
+  is_full: boolean;
   files_count: number;
   bids_count: number;
   bid_credits: number;
@@ -360,6 +363,10 @@ interface MyBid {
   rated_at: string | null;
   created_at: string;
   homeowner: Homeowner | null;
+}
+
+function formatAnswerKey(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function timeAgo(dateStr: string): string {
@@ -420,6 +427,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [bidAvailability, setBidAvailability] = useState('');
   const [bidSuccess, setBidSuccess] = useState(false);
   const [contactBid, setContactBid] = useState<MyBid | null>(null);
+  const [detailBid, setDetailBid] = useState<MyBid | null>(null);
 
   useEffect(() => {
     if (settingsOpen && profile) {
@@ -605,10 +613,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             )}
             <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="h-8 w-40 rounded-lg bg-white text-[13px]">
-                <span className="inline-flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
                   <ArrowDownUp className="h-3.5 w-3.5 text-gray-400" />
                   <SelectValue />
-                </span>
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">Newest</SelectItem>
@@ -668,8 +676,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           </Badge>
                         </div>
                         <div className="mb-2.5 flex flex-wrap gap-1.5">
-                          <Badge tone="neutral" size="sm" className="capitalize">
-                            {job.trade}
+                          <Badge tone="neutral" size="sm">
+                            {getTradeLabel(job.trade)}
                           </Badge>
                           {job.category && (
                             <Badge tone="violet" size="sm">
@@ -690,8 +698,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         )}
                         <span className="inline-flex items-center gap-1">
                           <Briefcase className="h-[13px] w-[13px]" />
-                          <span className="font-mono tabular-nums">{job.bids_count}</span> bid
-                          {job.bids_count !== 1 ? 's' : ''}
+                          <span className="font-mono tabular-nums">
+                            {job.bids_count}/{MAX_BIDS_PER_JOB}
+                          </span>{' '}
+                          bids
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className={cn('h-1.5 w-1.5 rounded-full', toneDot[comp.tone])} />
@@ -713,6 +723,11 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-green-600">
                             <CheckCircle2 className="h-4 w-4" />
                             Bid placed
+                          </span>
+                        ) : job.is_full ? (
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-gray-400">
+                            <Lock className="h-3.5 w-3.5" />
+                            Bidding closed
                           </span>
                         ) : (
                           <Button
@@ -825,13 +840,19 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             </div>
           ) : (
             myBids.map(bid => (
-              <div key={bid.id} className="rounded-xl border bg-card p-5 shadow-xs">
+              <div
+                key={bid.id}
+                onClick={() => setDetailBid(bid)}
+                className="cursor-pointer rounded-xl border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+              >
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                      <span className="text-h3 font-semibold text-foreground">{bid.job_title}</span>
-                      <Badge tone="neutral" size="sm" className="capitalize">
-                        {bid.job_trade}
+                      <span className="text-h3 font-semibold text-foreground capitalize">
+                        {bid.job_title}
+                      </span>
+                      <Badge tone="neutral" size="sm">
+                        {getTradeLabel(bid.job_trade)}
                       </Badge>
                       <Badge tone={bidStatusTone[bid.status] ?? 'neutral'} size="sm" dot>
                         {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
@@ -878,7 +899,14 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     )}
                   </div>
                   {bid.status === 'accepted' && bid.homeowner ? (
-                    <Button variant="outline" size="sm" onClick={() => setContactBid(bid)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setContactBid(bid);
+                      }}
+                    >
                       <User className="h-[15px] w-[15px]" />
                       View contact
                     </Button>
@@ -903,8 +931,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     {detailJob.title}
                   </h2>
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge tone="neutral" size="sm" className="capitalize">
-                      {detailJob.trade}
+                    <Badge tone="neutral" size="sm">
+                      {getTradeLabel(detailJob.trade)}
                     </Badge>
                     {detailJob.category && (
                       <Badge tone="violet" size="sm">
@@ -999,7 +1027,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           .map(([key, val]) => (
                             <div key={key} className="flex gap-3 px-3 py-2">
                               <span className="min-w-[120px] shrink-0 pt-0.5 text-xs text-muted-foreground">
-                                {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
+                                {QUESTION_LABELS[key] ?? formatAnswerKey(key)}
                               </span>
                               <span className="text-xs font-medium text-foreground">{String(val)}</span>
                             </div>
@@ -1011,8 +1039,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Briefcase className="h-[13px] w-[13px]" />
-                    <span className="font-mono tabular-nums">{detailJob.bids_count}</span> bid
-                    {detailJob.bids_count !== 1 ? 's' : ''} so far
+                    <span className="font-mono tabular-nums">
+                      {detailJob.bids_count}/{MAX_BIDS_PER_JOB}
+                    </span>{' '}
+                    bids so far
                   </span>
                 </div>
 
@@ -1039,14 +1069,16 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   </div>
                 )}
 
-                {/* Homeowner contact — unlocked after bidding */}
+                {/* Homeowner contact — location unlocks on bid, contact unlocks on acceptance */}
                 <div>
                   <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
                   {detailJob.unlocked_info ? (
                     <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
                       <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
                         <CheckCircle2 className="h-4 w-4 shrink-0" />
-                        Bid placed — contact &amp; location unlocked
+                        {detailJob.unlocked_info.contact_unlocked
+                          ? 'Bid accepted — contact & location unlocked'
+                          : 'Bid placed — location unlocked'}
                       </div>
 
                       {(detailJob.unlocked_info.address || detailJob.unlocked_info.postcode) && (
@@ -1072,39 +1104,244 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         />
                       )}
 
-                      <div className="flex items-center gap-3 pt-1">
+                      {detailJob.unlocked_info.contact_unlocked && detailJob.unlocked_info.homeowner ? (
+                        <>
+                          <div className="flex items-center gap-3 pt-1">
+                            <UserAvatar
+                              name={`${detailJob.unlocked_info.homeowner.first_name} ${detailJob.unlocked_info.homeowner.last_name}`}
+                              size="sm"
+                            />
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {detailJob.unlocked_info.homeowner.first_name}{' '}
+                                {detailJob.unlocked_info.homeowner.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Homeowner</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {detailJob.unlocked_info.homeowner.email && (
+                              <a
+                                href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
+                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                              >
+                                <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                                <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
+                              </a>
+                            )}
+                            {detailJob.unlocked_info.homeowner.phone && (
+                              <a
+                                href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
+                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                              >
+                                <Phone className="h-4 w-4 shrink-0 text-gray-400" />
+                                <span className="font-mono tabular-nums">
+                                  {detailJob.unlocked_info.homeowner.phone}
+                                </span>
+                              </a>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="relative overflow-hidden rounded-lg border border-teal-200/70">
+                          <div className="select-none space-y-2.5 bg-white/70 p-3.5 blur-sm" aria-hidden="true">
+                            <div className="flex items-center gap-2.5">
+                              <span className="h-9 w-9 rounded-full bg-gray-200" />
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">John D.</p>
+                                <p className="text-xs text-gray-400">Homeowner</p>
+                              </div>
+                            </div>
+                            <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
+                          </div>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/60">
+                            <Lock className="h-4 w-4 text-muted-foreground" />
+                            <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                              Contact unlocks once the homeowner accepts your bid
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="relative overflow-hidden rounded-xl border">
+                      <div className="select-none space-y-2.5 p-4 blur-sm" aria-hidden="true">
+                        <div className="flex items-center gap-2.5">
+                          <span className="h-9 w-9 rounded-full bg-gray-200" />
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">John D.</p>
+                            <p className="text-xs text-gray-400">Homeowner</p>
+                          </div>
+                        </div>
+                        <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
+                        <div className="text-[13px] text-muted-foreground">j••••@gmail.com</div>
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/55">
+                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm">
+                          <Lock className="h-4 w-4" />
+                        </span>
+                        <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                          Place a bid to unlock location
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Coins className="h-3.5 w-3.5 text-orange-500" />
+                  <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to bid
+                </span>
+                {detailJob.already_bid ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Bid already sent
+                  </span>
+                ) : detailJob.is_full ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
+                    <Lock className="h-4 w-4" />
+                    Bidding closed — {MAX_BIDS_PER_JOB} bids received
+                  </span>
+                ) : (
+                  <Button
+                    disabled={creditBalance < detailJob.bid_credits}
+                    onClick={() => openBidDialog(detailJob)}
+                  >
+                    Place bid
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Bid detail — right-side sheet */}
+      <Sheet open={!!detailBid} onOpenChange={open => !open && setDetailBid(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[480px]">
+          {detailBid && (
+            <>
+              <div className="flex items-start gap-3.5 border-b border-gray-100 p-6 pb-5 pr-12">
+                <div>
+                  <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
+                    {detailBid.job_title}
+                  </h2>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge tone="neutral" size="sm">
+                      {getTradeLabel(detailBid.job_trade)}
+                    </Badge>
+                    <Badge tone={bidStatusTone[detailBid.status] ?? 'neutral'} size="sm" dot>
+                      {detailBid.status.charAt(0).toUpperCase() + detailBid.status.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-5 p-6">
+                {detailBid.description && (
+                  <div>
+                    <SectionLabel className="mb-2">Your bid message</SectionLabel>
+                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Coins className="h-3 w-3" />
+                      Your bid
+                    </div>
+                    <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                      £{parseFloat(detailBid.amount).toFixed(0)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Submitted
+                    </div>
+                    <div className="text-[13px] font-semibold text-foreground">
+                      {timeAgo(detailBid.created_at)}
+                    </div>
+                  </div>
+                  {detailBid.availability && (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Available
+                      </div>
+                      <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                        {new Date(detailBid.availability).toLocaleDateString('en-GB')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    Job status:{' '}
+                    <span
+                      className={cn(
+                        'font-medium capitalize',
+                        detailBid.job_status === 'completed' ? 'text-green-600' : 'text-gray-600'
+                      )}
+                    >
+                      {detailBid.job_status.replace('_', ' ')}
+                    </span>
+                  </span>
+                </div>
+
+                {detailBid.rating != null && (
+                  <div>
+                    <SectionLabel className="mb-2">Homeowner rating</SectionLabel>
+                    <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3.5 py-3 text-[13px] text-amber-700">
+                      <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                      <span className="font-mono font-semibold tabular-nums">{detailBid.rating}/5</span>
+                      {detailBid.rating_comment && (
+                        <span className="text-amber-600">— {detailBid.rating_comment}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Homeowner contact — unlocked once the bid is accepted */}
+                <div>
+                  <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
+                  {detailBid.status === 'accepted' && detailBid.homeowner ? (
+                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+                      <div className="flex items-center gap-3">
                         <UserAvatar
-                          name={`${detailJob.unlocked_info.homeowner.first_name} ${detailJob.unlocked_info.homeowner.last_name}`}
+                          name={`${detailBid.homeowner.first_name} ${detailBid.homeowner.last_name}`}
                           size="sm"
                         />
                         <div>
                           <p className="text-sm font-semibold text-foreground">
-                            {detailJob.unlocked_info.homeowner.first_name}{' '}
-                            {detailJob.unlocked_info.homeowner.last_name}
+                            {detailBid.homeowner.first_name} {detailBid.homeowner.last_name}
                           </p>
                           <p className="text-xs text-muted-foreground">Homeowner</p>
                         </div>
                       </div>
-
                       <div className="space-y-2">
-                        {detailJob.unlocked_info.homeowner.email && (
+                        {detailBid.homeowner.email && (
                           <a
-                            href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
+                            href={`mailto:${detailBid.homeowner.email}`}
                             className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
                           >
                             <Mail className="h-4 w-4 shrink-0 text-gray-400" />
-                            <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
+                            <span className="truncate">{detailBid.homeowner.email}</span>
                           </a>
                         )}
-                        {detailJob.unlocked_info.homeowner.phone && (
+                        {detailBid.homeowner.phone && (
                           <a
-                            href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
+                            href={`tel:${detailBid.homeowner.phone}`}
                             className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
                           >
                             <Phone className="h-4 w-4 shrink-0 text-gray-400" />
-                            <span className="font-mono tabular-nums">
-                              {detailJob.unlocked_info.homeowner.phone}
-                            </span>
+                            <span className="font-mono tabular-nums">{detailBid.homeowner.phone}</span>
                           </a>
                         )}
                       </div>
@@ -1127,33 +1364,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <Lock className="h-4 w-4" />
                         </span>
                         <span className="px-4 text-center text-xs font-semibold text-gray-700">
-                          Place a bid to unlock contact &amp; location
+                          Contact unlocks once the homeowner accepts your bid
                         </span>
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Coins className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to bid
-                </span>
-                {detailJob.already_bid ? (
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Bid already sent
-                  </span>
-                ) : (
-                  <Button
-                    disabled={creditBalance < detailJob.bid_credits}
-                    onClick={() => openBidDialog(detailJob)}
-                  >
-                    Place bid
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             </>
           )}
@@ -1344,7 +1560,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           .map(([key, val]) => (
                             <div key={key} className="flex gap-2 text-xs">
                               <span className="min-w-[96px] text-muted-foreground">
-                                {QUESTION_LABELS[key] ?? key.replace(/_/g, ' ')}
+                                {QUESTION_LABELS[key] ?? formatAnswerKey(key)}
                               </span>
                               <span className="text-foreground">{String(val)}</span>
                             </div>
