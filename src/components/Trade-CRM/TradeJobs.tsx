@@ -23,6 +23,7 @@ import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
 import { Briefcase, CalendarDays, Clock, Lock, MapPin, Star, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTradeLabel } from '@/lib/jobCategories';
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -87,7 +88,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
         </div>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <span className="capitalize">{bid.job_trade}</span>
+          <span>{getTradeLabel(bid.job_trade)}</span>
           {bid.job_category && (
             <>
               <span className="text-gray-300">·</span>
@@ -326,6 +327,7 @@ export default function TradeJobs() {
   };
 
   const activeItem = activeID ? tasks.flatMap(col => col.items).find((item: any) => item.id === activeID) : null;
+  const hasJobs = tasks.some(col => col.items.length > 0);
 
   const pipelineValue = tasks
     .flatMap(col => col.items)
@@ -346,7 +348,7 @@ export default function TradeJobs() {
         {isLoading && <span className="text-sm text-muted-foreground">Loading…</span>}
       </PageTitle>
 
-      {!isLoading && tasks.every(col => col.items.length === 0) && (
+      {!isLoading && !hasJobs && (
         <div className="rounded-xl border border-dashed bg-card">
           <EmptyState
             icon={Briefcase}
@@ -356,39 +358,41 @@ export default function TradeJobs() {
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {tasks.map(col => (
-            <DroppableColumn
-              key={col.id}
-              column={col}
-              visibleCount={visibleCounts[col.id] || 10}
-              onLoadMore={handleLoadMore}
-              isDraggingOver={overID === col.id}
-            >
-              <SortableContext items={col.items.map((item: any) => item.id)} strategy={verticalListSortingStrategy}>
-                {col.items.slice(0, visibleCounts[col.id] || 10).map((bid: any) => (
-                  <SortableBidCard key={bid.id} bid={bid} />
-                ))}
-              </SortableContext>
-            </DroppableColumn>
-          ))}
-        </div>
+      {hasJobs && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {tasks.map(col => (
+              <DroppableColumn
+                key={col.id}
+                column={col}
+                visibleCount={visibleCounts[col.id] || 10}
+                onLoadMore={handleLoadMore}
+                isDraggingOver={overID === col.id}
+              >
+                <SortableContext items={col.items.map((item: any) => item.id)} strategy={verticalListSortingStrategy}>
+                  {col.items.slice(0, visibleCounts[col.id] || 10).map((bid: any) => (
+                    <SortableBidCard key={bid.id} bid={bid} />
+                  ))}
+                </SortableContext>
+              </DroppableColumn>
+            ))}
+          </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activeItem && (
-            <div className="rotate-1 scale-105 cursor-grabbing shadow-2xl">
-              <BidCardContent bid={activeItem} isDragging />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activeItem && (
+              <div className="rotate-1 scale-105 cursor-grabbing shadow-2xl">
+                <BidCardContent bid={activeItem} isDragging />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
     </div>
   );
 }

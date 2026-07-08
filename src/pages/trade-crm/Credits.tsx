@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -34,7 +33,6 @@ import {
   History,
   Loader2,
   PieChart,
-  Settings,
   ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -98,8 +96,6 @@ const Credits = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [ledgerFilter, setLedgerFilter] = useState('all');
-  // TODO(backend): auto top-up is a local mock until the backend supports it
-  const [autoTopUp, setAutoTopUp] = useState(() => localStorage.getItem('tp_auto_topup') === '1');
 
   const balance = jobMarketCredits ?? (user as any)?.credit_balance ?? 0;
   const pkg = CREDIT_PACKAGES.find(p => p.id === selectedPkg)!;
@@ -113,12 +109,6 @@ const Credits = () => {
     queryKey: ['credit-history'],
     queryFn: () => fetchData('/api/v1/tradepilot/jobs/credit-history/').then((res: any) => res?.data ?? res),
   });
-
-  const handleAutoTopUp = (next: boolean) => {
-    setAutoTopUp(next);
-    localStorage.setItem('tp_auto_topup', next ? '1' : '0');
-    toast(next ? 'Auto top-up enabled (saved on this device)' : 'Auto top-up disabled');
-  };
 
   const handlePay = async () => {
     setPaying(true);
@@ -205,15 +195,10 @@ const Credits = () => {
       <PageTitle
         title="Credits & billing"
         subtitle="Buy credits, track spending and manage your billing."
-      >
-        <Button variant="outline" onClick={() => toast('Billing settings are coming soon')}>
-          <Settings className="h-4 w-4" />
-          Billing settings
-        </Button>
-      </PageTitle>
+      />
 
       {/* Row 1: balance + buy credits */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.35fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.35fr]">
         {/* Navy balance panel */}
         <div className="rounded-xl bg-navy-800 p-6 text-white shadow-sm">
           <div className="mb-4 flex items-center justify-between">
@@ -240,16 +225,6 @@ const Credits = () => {
                 'Top up to start bidding'
               )}
             </span>
-          </div>
-          <div className="my-5 h-px bg-white/10" />
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-[13px] font-semibold text-white">Auto top-up</div>
-              <div className="text-[11px] text-white/55">
-                +50 credits when you drop below 20
-              </div>
-            </div>
-            <Switch checked={autoTopUp} onCheckedChange={handleAutoTopUp} />
           </div>
         </div>
 
@@ -311,7 +286,7 @@ const Credits = () => {
       </div>
 
       {/* Row 2: usage analytics */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr]">
         <SectionCard
           title="Credit usage"
           subtitle="Credits spent per month"

@@ -11,7 +11,9 @@ import {
   createTradeService,
   updateTradeService,
   deleteTradeService,
+  uploadTraderPhoto,
 } from '@/lib/api';
+import { ME_URL } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +43,7 @@ import { profileStrength } from '@/lib/profileStrength';
 import {
   FileText, Trash2, ExternalLink, Plus, Pencil, MapPin,
   User, Building2, ShieldCheck, Wrench, Coins, Clock,
-  Phone, Mail, CheckCircle2, BadgeCheck, Map as MapIcon,
+  Phone, Mail, CheckCircle2, BadgeCheck, Map as MapIcon, Camera,
 } from 'lucide-react';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { cn } from '@/lib/utils';
@@ -160,6 +162,25 @@ const TradeCRMProfile = () => {
       has_license: hasLicense,
     });
 
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const uploadPhotoMutation = useMutation({
+    mutationFn: uploadTraderPhoto,
+    onSuccess: (res: any) => {
+      queryClient.setQueryData([ME_URL], res);
+      toast({ title: 'Profile photo updated' });
+    },
+    onError: () => toast({ title: 'Photo upload failed', variant: 'destructive' } as any),
+  });
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('file', file);
+    uploadPhotoMutation.mutate(fd);
+  };
+
   const { data: documents = [], isLoading: docsLoading } = useQuery({
     queryKey: ['tradeDocuments'],
     queryFn: fetchTradeDocuments,
@@ -254,11 +275,30 @@ const TradeCRMProfile = () => {
       {/* Header card */}
       <SectionCard>
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-          <UserAvatar
-            name={fullName || businessName}
-            size="xl"
-            verified={!!profile?.is_verified || hasVerifiedDoc}
-          />
+          <div className="relative shrink-0">
+            <UserAvatar
+              name={fullName || businessName}
+              src={profile?.profile_photo_url}
+              size="xl"
+              verified={!!profile?.is_verified || hasVerifiedDoc}
+            />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadPhotoMutation.isPending}
+              className="absolute -bottom-1 -right-1 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-navy-700 text-white shadow-sm hover:bg-navy-800 disabled:opacity-60"
+              aria-label="Change profile photo"
+            >
+              <Camera className="h-3 w-3" />
+            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-h2 font-semibold text-foreground">

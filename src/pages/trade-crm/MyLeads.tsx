@@ -37,6 +37,7 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTradeLabel } from '@/lib/jobCategories';
 
 const STATUS_META: Record<string, { label: string; tone: 'neutral' | 'info' | 'success' }> = {
   todo: { label: 'To Do', tone: 'neutral' },
@@ -87,7 +88,6 @@ function toCsv(rows: LeadRow[]): string {
 
 export default function MyLeads() {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
 
   const { data: jobs = [], isLoading: jobsLoading, isError } = useQuery({
@@ -121,26 +121,17 @@ export default function MyLeads() {
     });
   }, [jobs, myBids]);
 
-  const counts = useMemo(
-    () => ({
-      all: rows.length,
-      todo: rows.filter(r => r.status === 'todo').length,
-      in_progress: rows.filter(r => r.status === 'in_progress').length,
-      completed: rows.filter(r => r.status === 'completed').length,
-    }),
-    [rows]
-  );
+  const counts = useMemo(() => ({ all: rows.length }), [rows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter(r => {
-      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (!q) return true;
       return (
         (r.customerName ?? '').toLowerCase().includes(q) || r.jobTitle.toLowerCase().includes(q)
       );
     });
-  }, [rows, statusFilter, query]);
+  }, [rows, query]);
 
   const handleExport = () => {
     const blob = new Blob([toCsv(filtered)], { type: 'text/csv;charset=utf-8' });
@@ -175,14 +166,9 @@ export default function MyLeads() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
-          value={statusFilter}
-          onChange={setStatusFilter}
-          items={[
-            { value: 'all', label: 'All', count: counts.all },
-            { value: 'todo', label: 'To Do', count: counts.todo },
-            { value: 'in_progress', label: 'In Progress', count: counts.in_progress },
-            { value: 'completed', label: 'Completed', count: counts.completed },
-          ]}
+          value="all"
+          onChange={() => {}}
+          items={[{ value: 'all', label: 'All', count: counts.all }]}
         />
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -275,7 +261,7 @@ export default function MyLeads() {
                             </Badge>
                           )}
                           {row.trade && (
-                            <span className="text-xs capitalize text-muted-foreground">{row.trade}</span>
+                            <span className="text-xs text-muted-foreground">{getTradeLabel(row.trade)}</span>
                           )}
                         </span>
                       </div>
