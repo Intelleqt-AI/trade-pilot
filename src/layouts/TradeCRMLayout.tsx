@@ -1,26 +1,28 @@
 import { useState } from 'react';
 import NotificationPanel from '@/components/Trade-CRM/NotificationPanel';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Logo } from '@/components/trade-pilot/Logo';
+import { SidebarItem } from '@/components/trade-pilot/SidebarItem';
+import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
+import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   Search,
   Briefcase,
   Users,
-  FileText,
+  UserCircle,
   Coins,
-  Settings,
-  HelpCircle,
+  LifeBuoy,
   LogOut,
-
   CreditCard,
-  Home,
   Menu,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
 } from 'lucide-react';
-
-
 
 const mainNavItems = [
   { path: '/trades-crm/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -30,11 +32,22 @@ const mainNavItems = [
 ];
 
 const secondaryNavItems = [
-  { path: '/trades-crm/profile', label: 'My Profile', icon: FileText },
+  { path: '/trades-crm/profile', label: 'My Profile', icon: UserCircle },
   { path: '/trades-crm/credits', label: 'Credits', icon: Coins },
-  // { path: '/trades-crm/profile', label: 'Settings', icon: Settings },
-  { path: '/trades-crm/support', label: 'Help Centre', icon: HelpCircle },
+  { path: '/trades-crm/support', label: 'Help Centre', icon: LifeBuoy },
 ];
+
+const pageTitles: Record<string, string> = {
+  '/trades-crm/dashboard': 'Dashboard',
+  '/trades-crm/job-market': 'Job Market',
+  '/trades-crm/jobs': 'My Jobs',
+  '/trades-crm/leads': 'My Leads',
+  '/trades-crm/profile': 'My Profile',
+  '/trades-crm/credits': 'Credits',
+  '/trades-crm/credits/success': 'Credits',
+  '/trades-crm/account-settings': 'Account settings',
+  '/trades-crm/support': 'Help Centre',
+};
 
 export type TradeCRMOutletContext = {
   jobMarketCredits: number | null;
@@ -42,16 +55,17 @@ export type TradeCRMOutletContext = {
 };
 
 const TradeCRMLayout = () => {
-  const { isAuthenticated, loading, isTrade, user, signOut } = useAuth();
+  const { isAuthenticated, loading, isTrade, user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('tp_collapsed') === '1');
   const [jobMarketCredits, setJobMarketCredits] = useState<number | null>(null);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
@@ -64,164 +78,183 @@ const TradeCRMLayout = () => {
     navigate('/');
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
+  const toggleCollapsed = () => {
+    setCollapsed(c => {
+      localStorage.setItem('tp_collapsed', !c ? '1' : '0');
+      return !c;
+    });
+  };
 
-      <aside
-        className={`w-64 bg-white border-r border-slate-200 flex flex-col min-h-screen fixed left-0 top-0 z-50 transition-transform duration-300 ease-in-out ${
-          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+  const creditBalance =
+    jobMarketCredits ?? (user as any)?.credit_balance ?? (profile as any)?.credit ?? 0;
+
+  const businessName =
+    (user as any)?.business_name || (user as any)?.company_name || user?.email || '';
+  const fullName = [user?.first_name, (user as any)?.last_name].filter(Boolean).join(' ') || 'User';
+
+  const sidebarInner = (isCollapsed: boolean) => (
+    <div className="flex h-full flex-col bg-navy-800">
+      <div
+        className={cn(
+          'flex h-16 shrink-0 items-center',
+          isCollapsed ? 'justify-center px-0' : 'px-5'
+        )}
       >
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-baseline">
-            <span className="text-xl font-bold text-secondary tracking-tight">Trade </span>
-            <span className="relative">
-              <span
-                className="text-accent absolute -top-2.5 left-0 text-xs font-bold"
-                style={{ transform: 'rotate(-15deg)' }}
-              >
-                ✓
-              </span>
-              <span className="text-xl font-bold text-secondary tracking-tight">Pilot</span>
-            </span>
-          </div>
-          <button
-            className="lg:hidden p-1 rounded-md hover:bg-slate-100"
+        <Logo collapsed={isCollapsed} onDark />
+      </div>
+
+      <nav className={cn('flex flex-1 flex-col gap-[3px] overflow-y-auto py-2', isCollapsed ? 'px-3' : 'px-3.5')}>
+        {mainNavItems.map(item => (
+          <SidebarItem
+            key={item.path}
+            to={item.path}
+            icon={item.icon}
+            label={item.label}
+            active={location.pathname === item.path}
+            collapsed={isCollapsed}
             onClick={() => setMobileSidebarOpen(false)}
-          >
-            <X className="h-5 w-5 text-slate-500" />
-          </button>
-        </div>
+          />
+        ))}
+        <div className={cn('my-2.5 h-px bg-white/10', isCollapsed ? 'mx-1' : 'mx-2')} />
+        {secondaryNavItems.map(item => (
+          <SidebarItem
+            key={item.path}
+            to={item.path}
+            icon={item.icon}
+            label={item.label}
+            active={location.pathname === item.path}
+            collapsed={isCollapsed}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        ))}
+      </nav>
 
-        <nav className="flex-1 p-4 flex flex-col">
-          <ul className="space-y-1">
-            {mainNavItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    location.pathname === item.path
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <div className="my-4 border-t border-slate-200" />
-
-          <ul className="space-y-1">
-            {secondaryNavItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    location.pathname === item.path
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex-1" />
-        </nav>
-
-        <div className="p-4 border-t border-slate-200">
+      <div className={cn('shrink-0 border-t border-white/10', isCollapsed ? 'px-3 py-2.5' : 'px-3.5 py-3')}>
+        {!isCollapsed && (
           <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+            type="button"
+            onClick={() => {
+              setMobileSidebarOpen(false);
+              navigate('/trades-crm/credits');
+            }}
+            className="mb-2.5 flex w-full items-center gap-2.5 rounded-lg bg-white/5 px-3 py-2.5 text-left transition-colors hover:bg-white/10"
           >
-            <LogOut className="h-5 w-5" />
-            <span>Sign Out</span>
+            <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-primary/30 text-teal-200">
+              <Coins className="h-[15px] w-[15px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] text-white/55">Credits</span>
+              <span className="block font-mono text-sm font-semibold tabular-nums text-white">
+                {creditBalance}
+              </span>
+            </span>
+            <Plus className="h-[15px] w-[15px] text-white/60" />
           </button>
+        )}
+        <div className={cn('flex items-center gap-2.5', isCollapsed && 'justify-center')}>
+          <UserAvatar name={fullName} tone="brand" size="sm" verified />
+          {!isCollapsed && (
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-semibold text-white">{fullName}</div>
+                <div className="truncate text-[11px] text-white/50">{businessName}</div>
+              </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                title="Sign out"
+                className="inline-flex shrink-0 rounded p-1 text-white/55 transition-colors hover:text-white"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
+      </div>
+    </div>
+  );
+
+  const pageTitle = pageTitles[location.pathname] ?? 'Dashboard';
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 hidden overflow-hidden transition-all duration-300 lg:block',
+          collapsed ? 'w-[72px]' : 'w-[264px]'
+        )}
+      >
+        {sidebarInner(collapsed)}
       </aside>
 
-      <main className="flex-1 lg:ml-64">
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 -ml-1"
-                onClick={() => setMobileSidebarOpen(true)}
-              >
-                <Menu className="h-5 w-5 text-slate-700" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center hidden sm:flex">
-                  <Home className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-slate-500">Welcome back</p>
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-800">{user?.first_name || 'User'}</h1>
-                </div>
-              </div>
+      {/* Mobile sidebar */}
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent side="left" className="w-[280px] border-0 p-0 lg:hidden">
+          {sidebarInner(false)}
+        </SheetContent>
+      </Sheet>
+
+      <div
+        className={cn(
+          'flex min-h-screen flex-col transition-all duration-300',
+          collapsed ? 'lg:pl-[72px]' : 'lg:pl-[264px]'
+        )}
+      >
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/85 px-4 backdrop-blur sm:px-6">
+          <div className="flex items-center gap-3.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:inline-flex"
+              onClick={toggleCollapsed}
+              aria-label="Toggle sidebar"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-[18px] w-[18px]" />
+              ) : (
+                <PanelLeftClose className="h-[18px] w-[18px]" />
+              )}
+            </Button>
+            <div>
+              <div className="text-xs text-gray-400">TradePilot CRM</div>
+              <div className="text-h3 font-semibold leading-tight text-foreground">{pageTitle}</div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                className="hidden md:inline-flex border-2 border-secondary text-secondary hover:bg-secondary hover:text-white font-semibold px-5 py-2"
-                onClick={() => navigate('/trades-crm/leads')}
-              >
-                View Leads
-              </Button>
-              <Button
-                className="hidden md:inline-flex bg-secondary hover:bg-secondary/90 text-white font-semibold px-5 py-2 shadow-md"
-                onClick={() => navigate('/trades-crm/credits')}
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Buy Credits
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="md:hidden border-slate-300"
-                onClick={() => navigate('/trades-crm/leads')}
-              >
-                <Users className="h-4 w-4 text-slate-600" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="md:hidden border-slate-300"
-                onClick={() => navigate('/trades-crm/credits')}
-              >
-                <CreditCard className="h-4 w-4 text-slate-600" />
-              </Button>
-              <NotificationPanel />
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-slate-300 hidden sm:inline-flex"
-                onClick={() => navigate('/trades-crm/profile')}
-              >
-                <Settings className="h-4 w-4 text-slate-600" />
-              </Button>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <div className="relative hidden md:block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                placeholder="Search jobs, leads…"
+                className="h-10 w-60 rounded-lg border border-input bg-white pl-9 pr-3 text-sm text-foreground placeholder:text-gray-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+              />
             </div>
+            <Button
+              variant="secondary"
+              className="hidden sm:inline-flex"
+              onClick={() => navigate('/trades-crm/credits')}
+            >
+              <CreditCard className="h-4 w-4" />
+              Buy credits
+            </Button>
+            <NotificationPanel />
           </div>
         </header>
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-[1360px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet context={{ jobMarketCredits, setJobMarketCredits } satisfies TradeCRMOutletContext} />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

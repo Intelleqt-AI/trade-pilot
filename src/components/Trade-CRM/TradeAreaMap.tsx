@@ -262,7 +262,7 @@ const TradeAreaMap = ({ lat, lng, radiusKm, postcode, onLocationChange }: Props)
               <Circle
                 center={[lat, lng]}
                 radius={radiusKm * 1000}
-                pathOptions={{ color: '#6366f1', fillColor: '#6366f1', fillOpacity: 0.12, weight: 2 }}
+                pathOptions={{ color: '#0f8b7d', fillColor: '#0f8b7d', fillOpacity: 0.1, weight: 2 }}
               />
               <Marker
                 draggable

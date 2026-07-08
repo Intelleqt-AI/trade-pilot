@@ -1,11 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, Trash2, BellOff, Briefcase, XCircle, Star } from 'lucide-react';
+import { Bell, BellOff, Briefcase, CheckCheck, Star, Trash2, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { deleteData, fetchData, postData, patchData } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Notification {
   id: string;
@@ -24,33 +24,14 @@ interface NotificationsResponse {
 }
 
 const typeConfig = {
-  bid_accepted: {
-    icon: Briefcase,
-    iconCls: 'text-emerald-600 bg-emerald-50',
-    dotCls: 'bg-emerald-500',
-  },
-  bid_rejected: {
-    icon: XCircle,
-    iconCls: 'text-red-500 bg-red-50',
-    dotCls: 'bg-red-500',
-  },
-  job_status: {
-    icon: Briefcase,
-    iconCls: 'text-blue-600 bg-blue-50',
-    dotCls: 'bg-blue-500',
-  },
-  new_review: {
-    icon: Star,
-    iconCls: 'text-yellow-500 bg-yellow-50',
-    dotCls: 'bg-yellow-500',
-  },
+  bid_accepted: { icon: Briefcase, iconCls: 'bg-green-50 text-green-600', dotCls: 'bg-green-500' },
+  bid_rejected: { icon: XCircle, iconCls: 'bg-red-50 text-red-600', dotCls: 'bg-red-500' },
+  job_status: { icon: Briefcase, iconCls: 'bg-blue-50 text-blue-600', dotCls: 'bg-blue-500' },
+  new_review: { icon: Star, iconCls: 'bg-amber-50 text-amber-600', dotCls: 'bg-amber-500' },
 };
 
 export const NotificationPanel = () => {
   const [open, setOpen] = useState(false);
-  const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -80,153 +61,109 @@ export const NotificationPanel = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tp-notifications'] }),
   });
 
-  // Compute dropdown position from button rect
-  useLayoutEffect(() => {
-    if (open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setPanelPos({
-        top: rect.bottom + window.scrollY + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
-  }, [open]);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        buttonRef.current && !buttonRef.current.contains(target) &&
-        panelRef.current && !panelRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
-    };
-    if (open) document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
   const handleNotifClick = (n: Notification) => {
     if (!n.is_read) markRead.mutate(n.id);
     setOpen(false);
     navigate('/trades-crm/jobs');
   };
 
-  const panel = open ? (
-    <div
-      ref={panelRef}
-      style={{ position: 'fixed', top: panelPos.top, right: panelPos.right, zIndex: 9999 }}
-      className="w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-slate-700" />
-          <span className="font-semibold text-slate-900 text-sm">Notifications</span>
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="icon" className="relative" aria-label="Notifications">
+          <Bell className="h-[18px] w-[18px] text-gray-600" />
           {unreadCount > 0 && (
-            <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {unreadCount} new
-            </span>
+            <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full border-2 border-white bg-orange-500" />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" sideOffset={8} className="w-80 overflow-hidden rounded-xl p-0 shadow-lg">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-foreground">Notifications</span>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-teal-50 px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums text-teal-700">
+                {unreadCount > 99 ? '99+' : unreadCount} new
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllRead.mutate()}
+              className="flex items-center gap-1 text-xs font-medium text-teal-600 transition-colors hover:text-teal-700"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Mark all read
+            </button>
           )}
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={() => markAllRead.mutate()}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-primary transition-colors font-medium"
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Mark all read
-          </button>
-        )}
-      </div>
 
-      {/* List */}
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-50">
-        {notifications.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center">
-            <div className="bg-slate-100 p-4 rounded-full mb-3">
-              <BellOff className="w-6 h-6 text-slate-400" />
+        <div className="max-h-[420px] divide-y divide-gray-100 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
+                <BellOff className="h-5 w-5" />
+              </span>
+              <p className="text-sm font-semibold text-foreground">All caught up</p>
+              <p className="mt-1 text-xs text-muted-foreground">No notifications yet.</p>
             </div>
-            <p className="text-sm font-medium text-slate-600">All caught up</p>
-            <p className="text-xs text-slate-400 mt-1">No notifications yet.</p>
-          </div>
-        ) : (
-          notifications.map(n => {
-            const cfg = typeConfig[n.type] ?? typeConfig.job_status;
-            const Icon = cfg.icon;
-            return (
-              <div
-                key={n.id}
-                onClick={() => handleNotifClick(n)}
-                className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer group relative ${
-                  !n.is_read ? 'bg-primary/[0.03]' : ''
-                }`}
-              >
-                {!n.is_read && (
-                  <span className={`absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${cfg.dotCls}`} />
-                )}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${cfg.iconCls}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-snug ${!n.is_read ? 'font-semibold text-slate-900' : 'font-medium text-slate-700'}`}>
-                    {n.title}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{n.body}</p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                <button
-                  onClick={e => { e.stopPropagation(); deleteNotif.mutate(n.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 shrink-0"
-                  aria-label="Delete notification"
+          ) : (
+            notifications.map(n => {
+              const cfg = typeConfig[n.type] ?? typeConfig.job_status;
+              const Icon = cfg.icon;
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => handleNotifClick(n)}
+                  className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${
+                    !n.is_read ? 'bg-teal-50/40' : ''
+                  }`}
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-slate-400 hover:text-red-500 transition-colors" />
-                </button>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {notifications.length > 0 && (
-        <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
-          <button
-            onClick={() => {
-              if (window.confirm('Delete all notifications?')) {
-                notifications.forEach(n => deleteNotif.mutate(n.id));
-              }
-            }}
-            className="text-xs text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
-          >
-            <Trash2 className="h-3 w-3" />
-            Clear all
-          </button>
+                  {!n.is_read && (
+                    <span className={`absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full ${cfg.dotCls}`} />
+                  )}
+                  <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${cfg.iconCls}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`text-[13px] leading-snug ${!n.is_read ? 'font-semibold text-foreground' : 'font-medium text-gray-700'}`}>
+                      {n.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{n.body}</p>
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteNotif.mutate(n.id); }}
+                    className="shrink-0 rounded p-1 opacity-0 transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                    aria-label="Delete notification"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-gray-400 transition-colors hover:text-red-500" />
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
-      )}
-    </div>
-  ) : null;
 
-  return (
-    <>
-      <Button
-        ref={buttonRef}
-        variant="outline"
-        size="icon"
-        className={`relative border-slate-300 ${open ? 'bg-slate-100' : ''}`}
-        onClick={() => setOpen(v => !v)}
-        aria-label="Notifications"
-      >
-        <Bell className="h-4 w-4 text-slate-600" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
+        {notifications.length > 0 && (
+          <div className="border-t border-gray-100 bg-gray-25 px-4 py-2.5">
+            <button
+              onClick={() => {
+                if (window.confirm('Delete all notifications?')) {
+                  notifications.forEach(n => deleteNotif.mutate(n.id));
+                }
+              }}
+              className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-red-500"
+            >
+              <Trash2 className="h-3 w-3" />
+              Clear all
+            </button>
+          </div>
         )}
-      </Button>
-      {createPortal(panel, document.body)}
-    </>
+      </PopoverContent>
+    </Popover>
   );
 };
 
