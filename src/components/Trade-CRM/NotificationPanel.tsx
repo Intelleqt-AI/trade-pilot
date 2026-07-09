@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, Briefcase, CheckCheck, Star, Trash2, XCircle } from 'lucide-react';
+import { BadgeCheck, Bell, BellOff, Briefcase, CheckCheck, FileCheck, Star, Trash2, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { deleteData, fetchData, postData, patchData } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 interface Notification {
   id: string;
-  type: 'bid_accepted' | 'bid_rejected' | 'job_status' | 'new_review';
+  type: 'bid_accepted' | 'bid_rejected' | 'job_status' | 'new_review' | 'document_reviewed' | 'account_verified';
   title: string;
   body: string;
   is_read: boolean;
@@ -28,6 +28,8 @@ const typeConfig = {
   bid_rejected: { icon: XCircle, iconCls: 'bg-red-50 text-red-600', dotCls: 'bg-red-500' },
   job_status: { icon: Briefcase, iconCls: 'bg-blue-50 text-blue-600', dotCls: 'bg-blue-500' },
   new_review: { icon: Star, iconCls: 'bg-amber-50 text-amber-600', dotCls: 'bg-amber-500' },
+  document_reviewed: { icon: FileCheck, iconCls: 'bg-teal-50 text-teal-600', dotCls: 'bg-teal-500' },
+  account_verified: { icon: BadgeCheck, iconCls: 'bg-teal-50 text-teal-600', dotCls: 'bg-teal-500' },
 };
 
 export const NotificationPanel = () => {
@@ -64,7 +66,11 @@ export const NotificationPanel = () => {
   const handleNotifClick = (n: Notification) => {
     if (!n.is_read) markRead.mutate(n.id);
     setOpen(false);
-    navigate('/trades-crm/jobs');
+    if (n.type === 'document_reviewed' || n.type === 'account_verified') {
+      navigate('/trades-crm/profile');
+    } else {
+      navigate('/trades-crm/jobs');
+    }
   };
 
   return (

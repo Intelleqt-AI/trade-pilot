@@ -649,9 +649,17 @@ const TradeCRMProfile = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate text-[13px] font-semibold text-foreground">{doc.name}</span>
-                        {doc.is_verified && (
+                        {doc.review_status === 'approved' || doc.is_verified ? (
                           <Badge tone="success" size="sm">
                             Verified
+                          </Badge>
+                        ) : doc.review_status === 'rejected' ? (
+                          <Badge tone="danger" size="sm">
+                            Rejected
+                          </Badge>
+                        ) : (
+                          <Badge tone="neutral" size="sm">
+                            Pending review
                           </Badge>
                         )}
                         {doc.is_expired && (
@@ -666,6 +674,11 @@ const TradeCRMProfile = () => {
                           ? ` · ${new Date(doc.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                           : ''}
                       </p>
+                      {doc.review_status === 'rejected' && doc.rejection_reason && (
+                        <p className="mt-0.5 text-xs text-red-600" title={doc.rejection_reason}>
+                          Reason: {doc.rejection_reason} — please upload an updated document.
+                        </p>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       {doc.file_url && (
