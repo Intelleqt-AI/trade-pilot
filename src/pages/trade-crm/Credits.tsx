@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchData, postData } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +20,8 @@ import { SectionLabel } from '@/components/trade-pilot/SectionLabel';
 import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
 import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { CreditUsageBarChart } from '@/components/trade-pilot/charts/CreditUsageBarChart';
-import { CREDIT_PACKAGES } from '@/lib/creditPackages';
+import { useCreditProducts } from '@/hooks/useCreditProducts';
+import { formatMoney, formatPerCredit, formatMajor } from '@/lib/format';
 import type { TradeCRMOutletContext } from '@/layouts/TradeCRMLayout';
 import {
   ArrowDownLeft,
@@ -39,14 +40,16 @@ import { cn } from '@/lib/utils';
 
 interface Transaction {
   id: number;
-  package_name: string;
+  package_name?: string;
   amount_total: string;
   currency: string;
   credits_added: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'expired' | 'refunded';
   payment_method: string;
   last4: string;
   receipt_url: string;
+  hosted_invoice_url?: string;
+  invoice_pdf?: string;
   created_at: string;
 }
 
@@ -70,8 +73,11 @@ type LedgerEntry = {
   sub: string;
   credits: number; // positive = added, negative = spent
   amount: number;
+  currency: string;
   statusLabel: string;
   statusTone: 'success' | 'warning' | 'danger' | 'neutral';
+  invoiceUrl?: string;
+  invoicePdf?: string;
   receiptUrl?: string;
 };
 
@@ -81,10 +87,12 @@ const outcomeMeta: Record<string, { label: string; tone: 'success' | 'danger' | 
   pending: { label: 'Pending', tone: 'warning' },
 };
 
-const txStatusMeta: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
+const txStatusMeta: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'neutral' }> = {
   completed: { label: 'Success', tone: 'success' },
   pending: { label: 'Pending', tone: 'warning' },
   failed: { label: 'Failed', tone: 'danger' },
+  expired: { label: 'Expired', tone: 'neutral' },
+  refunded: { label: 'Refunded', tone: 'neutral' },
 };
 
 const SHARE_COLORS = ['bg-teal-500', 'bg-blue-500', 'bg-violet-500', 'bg-gray-400', 'bg-orange-500'];
@@ -92,13 +100,38 @@ const SHARE_COLORS = ['bg-teal-500', 'bg-blue-500', 'bg-violet-500', 'bg-gray-40
 const Credits = () => {
   const { user } = useAuth();
   const { jobMarketCredits } = useOutletContext<TradeCRMOutletContext>();
-  const [selectedPkg, setSelectedPkg] = useState(CREDIT_PACKAGES.find(p => p.popular)!.id);
+  const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [ledgerFilter, setLedgerFilter] = useState('all');
 
   const balance = jobMarketCredits ?? (user as any)?.credit_balance ?? 0;
-  const pkg = CREDIT_PACKAGES.find(p => p.id === selectedPkg)!;
+
+  const { data: products, isLoading: productsLoading, isError: productsError } = useCreditProducts();
+
+  // Data-driven default: Stripe metadata.popular, else best per-credit value.
+  // Resolved via `??` (no useEffect) so no flash / extra render when products arrive.
+  const popularPriceId = useMemo(() => {
+    if (!products?.length) return null;
+    const flagged = products.find(p => p.metadata?.popular === 'true');
+    if (flagged) return flagged.price_id;
+    return products.reduce((best, p) =>
+      p.unit_amount / p.credits < best.unit_amount / best.credits ? p : best
+    ).price_id;
+  }, [products]);
+
+  const activePriceId = selectedPriceId ?? popularPriceId;
+  const selectedProduct = products?.find(p => p.price_id === activePriceId) ?? null;
+
+  // One-shot notice when returning from a cancelled Stripe checkout.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('canceled')) {
+      toast('Checkout canceled — no charge was made.');
+      searchParams.delete('canceled');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: transactions, isLoading: txLoading } = useQuery<Transaction[]>({
     queryKey: ['transaction-history'],
@@ -111,16 +144,19 @@ const Credits = () => {
   });
 
   const handlePay = async () => {
+    if (!selectedProduct) {
+      toast.error('Please select a package');
+      return;
+    }
     setPaying(true);
     try {
-      const successUrl = `${window.location.origin}/trades-crm/credits/success?session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${window.location.origin}/trades-crm/credits`;
+      // Send only price_id — backend owns redirect URLs, amount and credits.
       const response = await postData<{ url: string }>({
         url: '/api/v1/payments/create-checkout-session/',
-        data: { package_id: pkg.id, success_url: successUrl, cancel_url: cancelUrl },
+        data: { price_id: selectedProduct.price_id },
       });
-      if (response.url) {
-        window.location.href = response.url;
+      if (response?.url) {
+        window.location.href = response.url; // hosted Stripe checkout
       } else {
         toast.error('Failed to create payment session');
         setPaying(false);
@@ -167,8 +203,11 @@ const Credits = () => {
       sub: tx.payment_method ? `${tx.payment_method} ···· ${tx.last4}` : 'Card payment',
       credits: tx.credits_added,
       amount: parseFloat(tx.amount_total),
+      currency: tx.currency || 'gbp',
       statusLabel: txStatusMeta[tx.status]?.label ?? tx.status,
       statusTone: txStatusMeta[tx.status]?.tone ?? 'neutral',
+      invoiceUrl: tx.hosted_invoice_url || undefined,
+      invoicePdf: tx.invoice_pdf || undefined,
       receiptUrl: tx.receipt_url || undefined,
     }));
     const bids: LedgerEntry[] = (bidCredits ?? []).map(b => ({
@@ -179,6 +218,7 @@ const Credits = () => {
       sub: [b.job_trade, b.job_category].filter(Boolean).join(' · ') || 'Job bid',
       credits: -b.credits_spent,
       amount: parseFloat(b.amount),
+      currency: 'gbp',
       statusLabel: outcomeMeta[b.outcome]?.label ?? b.outcome,
       statusTone: outcomeMeta[b.outcome]?.tone ?? 'neutral',
     }));
@@ -230,58 +270,89 @@ const Credits = () => {
 
         {/* Buy credits */}
         <SectionCard title="Buy credits" subtitle="One-time packs · secure Stripe checkout" icon={CreditCard}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {CREDIT_PACKAGES.map(p => {
-              const selected = p.id === selectedPkg;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setSelectedPkg(p.id)}
-                  className={cn(
-                    'relative flex flex-col items-start gap-1 overflow-hidden rounded-xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25',
-                    selected
-                      ? 'border-primary bg-teal-50/60 shadow-xs'
-                      : 'border-border bg-card hover:border-gray-300 hover:shadow-xs'
-                  )}
-                >
-                  {p.popular && (
-                    <span className="absolute right-0 top-0 rounded-bl-lg bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-white">
-                      Best value
-                    </span>
-                  )}
-                  <span
-                    className={cn(
-                      'mb-1 inline-flex h-8 w-8 items-center justify-center rounded-lg',
-                      selected ? 'bg-teal-100 text-teal-700' : 'bg-gray-50 text-gray-500'
-                    )}
-                  >
-                    <p.icon className="h-4 w-4" />
-                  </span>
-                  <span className="text-[13px] font-semibold text-foreground">{p.name}</span>
-                  <span className="font-mono text-h2 font-semibold tabular-nums text-foreground">
-                    {p.credits} <span className="text-xs font-medium text-muted-foreground">credits</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    <span className="font-mono font-semibold tabular-nums text-foreground">£{p.price}</span>{' '}
-                    · <span className="font-mono tabular-nums">£{p.perCredit}</span>/cr
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Coins className="h-4 w-4 text-teal-600" />
-              After Payment New Balance:{' '}
-              <span className="font-mono font-semibold tabular-nums text-foreground">
-                {balance + pkg.credits}
-              </span>
+          {productsError ? (
+            <div className="p-4 text-sm text-muted-foreground">
+              Couldn't load packages. Please refresh or try again shortly.
             </div>
-            <Button onClick={() => setConfirmOpen(true)}>
-              Pay <span className="font-mono tabular-nums">£{pkg.price}</span>
-            </Button>
-          </div>
+          ) : productsLoading ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-[132px] w-full rounded-xl" />
+              ))}
+            </div>
+          ) : !products?.length ? (
+            <EmptyState
+              icon={Coins}
+              title="No packages available"
+              description="Credit packages aren't available right now — please contact support."
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {products.map(p => {
+                  const selected = p.price_id === activePriceId;
+                  const isPopular = p.price_id === popularPriceId;
+                  return (
+                    <button
+                      key={p.price_id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setSelectedPriceId(p.price_id)}
+                      className={cn(
+                        'relative flex flex-col items-start gap-1 overflow-hidden rounded-xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25',
+                        selected
+                          ? 'border-primary bg-teal-50/60 shadow-xs'
+                          : 'border-border bg-card hover:border-gray-300 hover:shadow-xs'
+                      )}
+                    >
+                      {isPopular && (
+                        <span className="absolute right-0 top-0 rounded-bl-lg bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-white">
+                          Best value
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          'mb-1 inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg',
+                          selected ? 'bg-teal-100 text-teal-700' : 'bg-gray-50 text-gray-500'
+                        )}
+                      >
+                        {p.images?.[0] ? (
+                          <img src={p.images[0]} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <Coins className="h-4 w-4" />
+                        )}
+                      </span>
+                      <span className="text-[13px] font-semibold text-foreground">{p.name}</span>
+                      <span className="font-mono text-h2 font-semibold tabular-nums text-foreground">
+                        {p.credits} <span className="text-xs font-medium text-muted-foreground">credits</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        <span className="font-mono font-semibold tabular-nums text-foreground">
+                          {formatMoney(p.unit_amount, p.currency)}
+                        </span>{' '}
+                        · <span className="font-mono tabular-nums">{formatPerCredit(p.unit_amount, p.credits, p.currency)}</span>/cr
+                      </span>
+                      {p.description && (
+                        <span className="line-clamp-2 text-[11px] text-muted-foreground">{p.description}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Coins className="h-4 w-4 text-teal-600" />
+                  After Payment New Balance:{' '}
+                  <span className="font-mono font-semibold tabular-nums text-foreground">
+                    {balance + (selectedProduct?.credits ?? 0)}
+                  </span>
+                </div>
+                <Button onClick={() => setConfirmOpen(true)} disabled={!selectedProduct}>
+                  Pay {selectedProduct ? formatMoney(selectedProduct.unit_amount, selectedProduct.currency) : ''}
+                </Button>
+              </div>
+            </>
+          )}
         </SectionCard>
       </div>
 
@@ -421,7 +492,7 @@ const Credits = () => {
                   <span className="ml-0.5 text-[10px] text-gray-400">cr</span>
                 </div>
                 <div className="hidden w-16 shrink-0 text-right font-mono text-[13px] font-semibold tabular-nums text-foreground md:block">
-                  £{entry.amount.toFixed(entry.kind === 'purchase' ? 2 : 0)}
+                  {formatMajor(entry.amount, entry.currency)}
                 </div>
                 <div className="w-20 shrink-0 text-right">
                   <Badge tone={entry.statusTone} size="sm" dot>
@@ -429,17 +500,24 @@ const Credits = () => {
                   </Badge>
                 </div>
                 <div className="w-8 shrink-0 text-right">
-                  {entry.receiptUrl && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Download receipt"
-                      onClick={() => window.open(entry.receiptUrl, '_blank')}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  )}
+                  {(() => {
+                    const docUrl = entry.invoiceUrl || entry.invoicePdf || entry.receiptUrl;
+                    if (!docUrl) return null;
+                    const isInvoice = Boolean(entry.invoiceUrl || entry.invoicePdf);
+                    const label = isInvoice ? 'Download invoice' : 'Download receipt';
+                    return (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title={label}
+                        aria-label={label}
+                        onClick={() => window.open(docUrl, '_blank', 'noopener,noreferrer')}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
@@ -455,23 +533,27 @@ const Credits = () => {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-              <span className="text-sm text-gray-700">{pkg.name} pack</span>
+              <span className="text-sm text-gray-700">{selectedProduct?.name} pack</span>
               <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                {pkg.credits} credits
+                {selectedProduct?.credits} credits
               </span>
             </div>
             <div className="space-y-2 px-1 text-[13px]">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Price per credit</span>
-                <span className="font-mono tabular-nums text-foreground">£{pkg.perCredit}</span>
+                <span className="font-mono tabular-nums text-foreground">
+                  {selectedProduct && formatPerCredit(selectedProduct.unit_amount, selectedProduct.credits, selectedProduct.currency)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">New balance</span>
-                <span className="font-mono tabular-nums text-foreground">{balance + pkg.credits}</span>
+                <span className="font-mono tabular-nums text-foreground">{balance + (selectedProduct?.credits ?? 0)}</span>
               </div>
               <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
                 <span className="text-foreground">Total</span>
-                <span className="font-mono tabular-nums text-foreground">£{pkg.price}</span>
+                <span className="font-mono tabular-nums text-foreground">
+                  {selectedProduct && formatMoney(selectedProduct.unit_amount, selectedProduct.currency)}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-muted-foreground">
@@ -483,7 +565,7 @@ const Credits = () => {
             <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={paying}>
               Cancel
             </Button>
-            <Button onClick={handlePay} disabled={paying}>
+            <Button onClick={handlePay} disabled={paying || !selectedProduct}>
               {paying ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -492,7 +574,7 @@ const Credits = () => {
               ) : (
                 <>
                   <Check className="h-4 w-4" />
-                  Pay <span className="font-mono tabular-nums">£{pkg.price}</span>
+                  Pay {selectedProduct && formatMoney(selectedProduct.unit_amount, selectedProduct.currency)}
                 </>
               )}
             </Button>
