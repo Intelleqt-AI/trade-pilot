@@ -3,7 +3,7 @@ import useFetch from './useFetch';
 import { usePost } from './usePost';
 import { apiRequest, BASE_URL } from '@/lib/apiClient';
 
-const ME_URL = '/api/v1/tradepilot/auth/me/';
+export const ME_URL = '/api/v1/tradepilot/auth/me/';
 
 export interface TradePilotUser {
   id: string;
@@ -31,6 +31,7 @@ export interface TradePilotUser {
   has_license: boolean;
   is_verified: boolean;
   profile_description: string;
+  profile_photo_url: string | null;
 }
 
 interface MeResponse {

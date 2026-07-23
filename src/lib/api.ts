@@ -43,6 +43,10 @@ export const deleteData = <T = any>({ url }: { url: string }): Promise<T> =>
 export const updateTradePilotMe = (data: Record<string, any>) =>
   patchData({ url: 'api/v1/tradepilot/auth/me/', data });
 
+// Profile photo
+export const uploadTraderPhoto = (formData: FormData) =>
+  postData<any>({ url: 'api/v1/tradepilot/profile/photo/', data: formData });
+
 // My Bids (accepted HomePlus bids)
 export const fetchMyBids = () =>
   fetchData<any>('/api/v1/tradepilot/jobs/my-bids/').then(r => r?.data ?? []);

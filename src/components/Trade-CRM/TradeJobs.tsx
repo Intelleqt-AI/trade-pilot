@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fetchMyBids, updateTradeJobStatus } from '@/lib/api';
@@ -17,7 +16,14 @@ import {
   DragOverlay,
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { Briefcase, Coins, Clock, Lock, MapPin, Star, User, CalendarDays, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { PageTitle } from '@/components/trade-pilot/PageTitle';
+import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
+import { EmptyState } from '@/components/trade-pilot/EmptyState';
+import { urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
+import { Briefcase, CalendarDays, Clock, Lock, MapPin, Star, Wallet } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { getTradeLabel } from '@/lib/jobCategories';
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -28,109 +34,117 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const URGENCY_COLOR: Record<string, string> = {
-  emergency: 'bg-red-50 text-red-700',
-  urgent: 'bg-orange-50 text-orange-700',
-  normal: 'bg-blue-50 text-blue-700',
-  flexible: 'bg-gray-100 text-gray-600',
-};
-
 const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: boolean }) => {
   const isRated = bid.rating !== null && bid.rating !== undefined;
+  const isCompleted = bid.job_status === 'completed';
   const locationStr = [bid.job_location, bid.job_postcode].filter(Boolean).join(' · ');
+
+  const dateLine = bid.job_completed_at
+    ? {
+        label: `Completed ${new Date(bid.job_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+        cls: 'text-green-600',
+      }
+    : bid.job_started_at
+      ? {
+          label: `Started ${new Date(bid.job_started_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+          cls: 'text-blue-600',
+        }
+      : bid.job_todo_at
+        ? {
+            label: `Booked ${new Date(bid.job_todo_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+            cls: 'text-muted-foreground',
+          }
+        : null;
+
   return (
     <div
-      className={`rounded-xl border bg-white overflow-hidden ${
-        isRated ? 'border-amber-200' : isDragging ? 'shadow-xl border-gray-300' : 'border-gray-200'
-      }`}
+      className={cn(
+        'overflow-hidden rounded-lg border bg-card shadow-xs',
+        isRated ? 'border-amber-500/30' : isDragging ? 'border-gray-300 shadow-xl' : ''
+      )}
     >
       {isRated && (
-        <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 flex items-center gap-1.5">
-          <Lock className="h-3 w-3 text-amber-600 shrink-0" />
-          <span className="text-[10px] font-semibold text-amber-700">Owner rated · locked</span>
+        <div className="flex items-center gap-1.5 border-b border-amber-500/25 bg-amber-50 px-3 py-1.5">
+          <Lock className="h-3 w-3 shrink-0 text-amber-600" />
+          <span className="text-[10px] font-semibold text-amber-600">Owner rated · locked</span>
         </div>
       )}
 
-      <div className="p-3 space-y-2.5">
+      <div className="space-y-2.5 p-3.5">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-semibold text-sm leading-snug text-gray-900">{bid.job_title}</h4>
-          <span className="shrink-0 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">HomePlus</span>
+          <h4 className="text-sm font-semibold leading-snug text-foreground">{bid.job_title}</h4>
+          {isRated ? (
+            <span className="inline-flex shrink-0 items-center gap-0.5 text-amber-500">
+              <Star className="h-3.5 w-3.5 fill-amber-500" />
+              <span className="font-mono text-xs font-semibold tabular-nums">{bid.rating}</span>
+            </span>
+          ) : (
+            bid.job_urgency && (
+              <Badge tone={urgencyBadgeTone(bid.job_urgency)} size="sm" className="shrink-0">
+                {urgencyLabel(bid.job_urgency)}
+              </Badge>
+            )
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs capitalize text-muted-foreground font-medium">{bid.job_trade}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>{getTradeLabel(bid.job_trade)}</span>
           {bid.job_category && (
             <>
               <span className="text-gray-300">·</span>
-              <span className="text-xs text-muted-foreground">{bid.job_category}</span>
+              <span>{bid.job_category}</span>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {locationStr && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3 shrink-0" />
-              {locationStr}
-            </span>
-          )}
-          {bid.job_urgency && (
-            <span
-              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${URGENCY_COLOR[bid.job_urgency] ?? 'bg-gray-100 text-gray-600'}`}
-            >
-              {bid.job_urgency}
-            </span>
-          )}
+        {locationStr && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3 shrink-0" />
+            {locationStr}
+          </span>
+        )}
+
+        {isRated && bid.rating_comment && (
+          <p className="line-clamp-2 text-xs italic text-muted-foreground">“{bid.rating_comment}”</p>
+        )}
+
+        <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-2.5">
+          <span className="flex min-w-0 items-center gap-1.5">
+            {bid.homeowner ? (
+              <>
+                <UserAvatar
+                  name={`${bid.homeowner.first_name} ${bid.homeowner.last_name}`}
+                  size="xs"
+                  tone={isCompleted ? 'brand' : 'navy'}
+                />
+                <span className="truncate text-xs font-medium text-gray-700">
+                  {bid.homeowner.first_name} {bid.homeowner.last_name}
+                </span>
+              </>
+            ) : (
+              <span className="text-xs text-gray-400">Homeowner</span>
+            )}
+          </span>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 font-mono text-[13px] font-semibold tabular-nums',
+              isCompleted ? 'text-green-600' : 'text-foreground'
+            )}
+          >
+            <Wallet className="h-3 w-3" />£{parseFloat(bid.amount).toFixed(0)}
+          </span>
         </div>
 
-        {bid.job_completed_at && (
-          <div className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 rounded-lg px-2 py-1">
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            Completed {new Date(bid.job_completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            <span className="text-green-500 font-normal ml-0.5">
-              {new Date(bid.job_completed_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+        <div className="flex items-center justify-between text-[11px] text-gray-400">
+          {dateLine ? (
+            <span className={cn('inline-flex items-center gap-1 font-medium', dateLine.cls)}>
+              <CalendarDays className="h-3 w-3 shrink-0" />
+              {dateLine.label}
             </span>
-          </div>
-        )}
-        {!bid.job_completed_at && bid.job_started_at && (
-          <div className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg px-2 py-1">
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            Started {new Date(bid.job_started_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </div>
-        )}
-        {!bid.job_completed_at && !bid.job_started_at && bid.job_todo_at && (
-          <div className="flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg px-2 py-1">
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            Booked {new Date(bid.job_todo_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </div>
-        )}
-
-        {bid.homeowner && (
-          <div className="flex items-center gap-1.5 text-xs bg-gray-50 rounded-lg px-2.5 py-1.5">
-            <User className="h-3 w-3 text-gray-400 shrink-0" />
-            <span className="font-medium text-gray-700">
-              {bid.homeowner.first_name} {bid.homeowner.last_name}
-            </span>
-            {bid.homeowner.phone && <span className="text-gray-400 ml-auto">{bid.homeowner.phone}</span>}
-          </div>
-        )}
-
-        {isRated && (
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map(n => (
-              <Star key={n} className={`h-3.5 w-3.5 ${n <= bid.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} />
-            ))}
-            {bid.rating_comment && (
-              <span className="text-[10px] text-muted-foreground ml-1 truncate max-w-[100px]">{bid.rating_comment}</span>
-            )}
-          </div>
-        )}
-
-        <div className="border-t border-gray-100 pt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1 font-semibold text-slate-800">
-            <Coins className="h-3 w-3" />£{parseFloat(bid.amount).toFixed(0)}
-          </span>
-          <span className="flex items-center gap-1">
+          ) : (
+            <span />
+          )}
+          <span className="inline-flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {bid.created_at ? timeAgo(bid.created_at) : ''}
           </span>
@@ -159,7 +173,11 @@ const SortableBidCard = React.memo(({ bid }: { bid: any }) => {
       {...attributes}
       {...(isRated ? {} : listeners)}
       className={
-        isRated ? 'cursor-not-allowed' : isDragging ? 'opacity-40 cursor-grabbing' : 'cursor-grab hover:shadow-md transition-shadow'
+        isRated
+          ? 'cursor-not-allowed'
+          : isDragging
+            ? 'cursor-grabbing opacity-40'
+            : 'cursor-grab transition-shadow hover:shadow-md active:cursor-grabbing'
       }
       title={isRated ? "Owner have already rated this Job — can't move" : undefined}
     >
@@ -168,6 +186,12 @@ const SortableBidCard = React.memo(({ bid }: { bid: any }) => {
   );
 });
 
+const COLUMN_DOT: Record<string, string> = {
+  todo: 'bg-gray-400',
+  in_progress: 'bg-blue-500',
+  completed: 'bg-green-500',
+};
+
 const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children, isDraggingOver }: any) => {
   const { setNodeRef } = useDroppable({ id: column.id });
   const isEmpty = !column.items || column.items.length === 0;
@@ -175,20 +199,31 @@ const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children
   return (
     <div
       ref={setNodeRef}
-      className={`bg-white border rounded-xl p-4 shadow-sm ${isDraggingOver ? '!border-gray-500 border-dashed !bg-[#f9f8f6]' : ''}`}
-      style={{ minHeight: '150px' }}
+      className={cn(
+        'min-h-[150px] rounded-xl border border-gray-100 bg-gray-50 p-3 transition-colors',
+        isDraggingOver && 'border-dashed border-primary/50 bg-teal-50/40'
+      )}
     >
-      <div className="flex items-center justify-between mb-4">
-        <span className="font-medium text-gray-900">{column.name}</span>
-        <Badge className="bg-black">{column.items?.length || 0}</Badge>
+      <div className="mb-3 flex items-center justify-between px-1">
+        <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-foreground">
+          <span className={cn('h-2 w-2 rounded-full', COLUMN_DOT[column.status] ?? 'bg-gray-400')} />
+          {column.name}
+        </span>
+        <span className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-gray-500 shadow-xs">
+          {column.items?.length || 0}
+        </span>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {children}
-        {isEmpty && <div className="py-10 text-center text-gray-400 text-sm select-none">Drop jobs here</div>}
+        {isEmpty && (
+          <div className="select-none rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
+            Drop jobs here
+          </div>
+        )}
         {visibleCount < (column.items?.length || 0) && (
           <button
             onClick={() => onLoadMore(column.id)}
-            className="w-full text-xs text-gray-500 hover:text-black py-2 flex justify-center items-center"
+            className="flex w-full items-center justify-center py-2 text-xs font-medium text-gray-500 transition-colors hover:text-foreground"
           >
             Load more
           </button>
@@ -292,55 +327,72 @@ export default function TradeJobs() {
   };
 
   const activeItem = activeID ? tasks.flatMap(col => col.items).find((item: any) => item.id === activeID) : null;
+  const hasJobs = tasks.some(col => col.items.length > 0);
+
+  const pipelineValue = tasks
+    .flatMap(col => col.items)
+    .reduce((sum: number, bid: any) => sum + (parseFloat(bid.amount) || 0), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Job Management</h2>
+    <div className="space-y-4">
+      <PageTitle
+        title="My Jobs"
+        subtitle="Drag jobs between stages to keep your pipeline up to date."
+      >
+        <span className="inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-[13px] font-semibold text-foreground shadow-xs">
+          Pipeline value{' '}
+          <span className="font-mono tabular-nums text-teal-600">
+            £{pipelineValue.toLocaleString('en-GB')}
+          </span>
+        </span>
         {isLoading && <span className="text-sm text-muted-foreground">Loading…</span>}
-      </div>
+      </PageTitle>
 
-      {!isLoading && tasks.every(col => col.items.length === 0) && (
-        <div className="py-16 text-center text-muted-foreground">
-          <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No accepted jobs yet</p>
-          <p className="text-sm mt-1">Accept bids from the Job Market to see jobs here</p>
+      {!isLoading && !hasJobs && (
+        <div className="rounded-xl border border-dashed bg-card">
+          <EmptyState
+            icon={Briefcase}
+            title="No accepted jobs yet"
+            description="Accept bids from the Job Market to see jobs here."
+          />
         </div>
       )}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {tasks.map(col => (
-            <DroppableColumn
-              key={col.id}
-              column={col}
-              visibleCount={visibleCounts[col.id] || 10}
-              onLoadMore={handleLoadMore}
-              isDraggingOver={overID === col.id}
-            >
-              <SortableContext items={col.items.map((item: any) => item.id)} strategy={verticalListSortingStrategy}>
-                {col.items.slice(0, visibleCounts[col.id] || 10).map((bid: any) => (
-                  <SortableBidCard key={bid.id} bid={bid} />
-                ))}
-              </SortableContext>
-            </DroppableColumn>
-          ))}
-        </div>
+      {hasJobs && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {tasks.map(col => (
+              <DroppableColumn
+                key={col.id}
+                column={col}
+                visibleCount={visibleCounts[col.id] || 10}
+                onLoadMore={handleLoadMore}
+                isDraggingOver={overID === col.id}
+              >
+                <SortableContext items={col.items.map((item: any) => item.id)} strategy={verticalListSortingStrategy}>
+                  {col.items.slice(0, visibleCounts[col.id] || 10).map((bid: any) => (
+                    <SortableBidCard key={bid.id} bid={bid} />
+                  ))}
+                </SortableContext>
+              </DroppableColumn>
+            ))}
+          </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activeItem && (
-            <div className="rotate-1 scale-105 shadow-2xl cursor-grabbing">
-              <BidCardContent bid={activeItem} isDragging />
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activeItem && (
+              <div className="rotate-1 scale-105 cursor-grabbing shadow-2xl">
+                <BidCardContent bid={activeItem} isDragging />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
     </div>
   );
 }

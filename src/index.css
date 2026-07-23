@@ -1,153 +1,113 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Trade Pilot Design System - Professional trades platform */
+/* TradePilot Design System — tokens layer.
+   Semantic shadcn variables mapped to the TradePilot palette:
+   teal #0f8b7d primary · navy #0a2430 secondary · gray-25 #f7f9fa canvas.
+   Extended raw scales (gray/teal/navy/orange/status) live in tailwind.config.ts. */
 
 @layer base {
   :root {
-    /* Trade Pilot Color Palette */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 13%; /* Charcoal #222222 */
+    --background: 200 23% 97%; /* gray-25 #f7f9fa canvas */
+    --foreground: 205 24% 10%; /* gray-900 #131a1f ink */
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 13%;
+    --card-foreground: 205 24% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 13%;
+    --popover-foreground: 205 24% 10%;
 
-    /* Teal Green for primary actions - Trade Pilot brand */
-    --primary: 174 72% 40%; /* Teal Green #1A9D8F */
+    --primary: 173 81% 30%; /* teal-500 #0f8b7d */
     --primary-foreground: 0 0% 100%;
 
-    /* Navy for secondary actions */
-    --secondary: 210 100% 12%; /* Navy #002B45 */
+    --secondary: 199 66% 11%; /* navy-800 #0a2430 */
     --secondary-foreground: 0 0% 100%;
 
-    /* Orange kept as accent for highlights */
-    --accent: 24 100% 50%; /* Orange #FF6B00 */
-    --accent-foreground: 0 0% 100%;
+    --muted: 204 22% 96%; /* gray-50 #f1f4f6 */
+    --muted-foreground: 207 9% 46%; /* gray-500 #6a7680 */
 
-    /* Light grey for section backgrounds */
-    --muted: 204 20% 97%; /* Light grey #F7F9FA */
-    --muted-foreground: 0 0% 45%;
+    /* Hover surface per shadcn convention — brand orange lives in the
+       orange-* scale, not here */
+    --accent: 204 22% 96%;
+    --accent-foreground: 205 24% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 2 66% 54%; /* red-500 #d7443e */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 174 72% 40%;
+    --border: 202 14% 85%; /* gray-200 #d3dade hairline */
+    --input: 202 14% 85%;
+    --ring: 173 81% 30%;
 
-    --radius: 0.5rem;
-
-    /* Trade Pilot Shadows */
-    --shadow-card: 0 2px 4px rgba(0,0,0,0.06);
-    --shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
-
-    /* Transitions */
-    --transition-fast: 150ms ease-out;
+    --radius: 0.5rem; /* 8px controls; cards use rounded-xl (12px) */
   }
-
-  /* Home+ Specific Styles - Completely Independent */
-  .homeplus-page {
-    font-family: 'Inter', sans-serif !important;
-  }
-  
-  .homeplus-page h1, 
-  .homeplus-page h2, 
-  .homeplus-page h3, 
-  .homeplus-page h4, 
-  .homeplus-page h5, 
-  .homeplus-page h6 {
-    color: #000000 !important;
-    font-weight: 700 !important;
-  }
-  
-  .homeplus-page .hero-title {
-    color: #000000 !important;
-  }
-  
-  .homeplus-page .hero-text {
-    color: #666666 !important;
-  }
-  
-  .homeplus-text-black { color: #000000 !important; }
-  .homeplus-text-white { color: #ffffff !important; }
-  .homeplus-text-yellow { color: #FFD533 !important; }
-  .homeplus-bg-black { background-color: #000000 !important; }
-  .homeplus-bg-white { background-color: #ffffff !important; }
-  .homeplus-bg-yellow { background-color: #FFD533 !important; }
-  .homeplus-border-black { border-color: #000000 !important; }
-  .homeplus-border-white { border-color: #ffffff !important; }
-  .homeplus-border-yellow { border-color: #FFD533 !important; }
-  .homeplus-font-inter { font-family: 'Inter', sans-serif !important; }
-  .homeplus-page .homeplus-heading-white { color: #ffffff !important; }
 
   .dark {
-    --background: 0 0% 13%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 13%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 13%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 175 100% 38%;
-    --primary-foreground: 0 0% 13%;
-    --secondary: 198 100% 13%;
+    --background: 199 67% 8%; /* navy-900 */
+    --foreground: 206 17% 92%;
+    --card: 199 66% 11%;
+    --card-foreground: 206 17% 92%;
+    --popover: 199 66% 11%;
+    --popover-foreground: 206 17% 92%;
+    --primary: 173 58% 41%; /* teal-400 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 61% 15%; /* navy-700 */
     --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 65%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --muted: 200 61% 15%;
+    --muted-foreground: 205 10% 62%;
+    --accent: 200 61% 15%;
+    --accent-foreground: 206 17% 92%;
+    --destructive: 2 66% 54%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 40% 20%;
+    --input: 200 40% 20%;
+    --ring: 173 58% 41%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground font-inter;
+    @apply bg-background text-foreground font-sans text-sm antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply text-secondary font-medium;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-[-0.01em] text-foreground;
+  }
+
+  ::selection {
+    @apply bg-teal-100 text-teal-700;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full border-2 border-solid border-transparent bg-gray-300 bg-clip-padding;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
-@layer components {
-  .trade-hero-overlay {
-    @apply relative bg-gradient-to-b from-black/20 via-transparent to-black/30;
-  }
-
-  .trade-card {
-    @apply bg-card rounded-2xl p-6 border-0;
-    box-shadow: var(--shadow-card);
-    transition: box-shadow var(--transition-fast);
-  }
-
-  .trade-card:hover {
-    box-shadow: var(--shadow-hover);
-  }
-
-  .fade-in-up {
-    @apply translate-y-4 opacity-0 transition-all duration-500;
-  }
-
-  .fade-in-up.in-view {
-    @apply translate-y-0 opacity-100;
-  }
+/* Leaflet renders its own DOM and cannot take Tailwind classes — the one
+   sanctioned non-utility block. Keeps map tiles muted per the design. */
+.leaflet-container {
+  @apply rounded-xl font-sans;
+  /* Confine Leaflet's internal z-indexes (panes/controls up to ~1000) to the
+     map's own stacking context so it can't paint over shadcn modals (z-50). */
+  isolation: isolate;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
+.leaflet-tile {
+  filter: saturate(0.82) contrast(0.95);
 }

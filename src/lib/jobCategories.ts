@@ -47,3 +47,28 @@ export function getCategoriesForSpecialty(specialty: string | undefined): string
   if (!trade) return [];
   return JOB_CATEGORIES.filter(c => c.trade === trade).map(c => c.category);
 }
+
+// mirrors backend JobLead.TRADE_CHOICES (backend/apps/jobs/models.py) — display labels for job.trade values
+const TRADE_LABELS: Record<string, string> = {
+  plumber: 'Plumber',
+  electrician: 'Electrician',
+  builder: 'Builder',
+  decorator: 'Decorator',
+  roofer: 'Roofer',
+  carpenter: 'Carpenter',
+  plasterer: 'Plasterer',
+  tiler: 'Tiler',
+  gardener: 'Gardener',
+  gas_engineer: 'Gas Engineer',
+  cleaner: 'Cleaner',
+  handyman: 'Handyman',
+  locksmith: 'Locksmith',
+  glazier: 'Glazier',
+  hvac: 'HVAC Engineer',
+  other: 'Other',
+};
+
+export function getTradeLabel(trade: string | undefined | null): string {
+  if (!trade) return '';
+  return TRADE_LABELS[trade.trim().toLowerCase()] ?? trade;
+}
