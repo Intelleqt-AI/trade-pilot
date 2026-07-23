@@ -53,7 +53,7 @@ export const SUPPORT_FAQS = [
   },
   {
     topic: 'Bidding',
-    q: 'What happens after I place a bid?',
+    q: 'What happens after I purchase lead contact details?',
     a: 'The homeowner reviews all bids and accepts one. When your bid is accepted the job moves to My Jobs and the homeowner contact details unlock.',
   },
   {

@@ -713,11 +713,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         </span>
                       </div>
                       <div className="flex items-center gap-2.5" onClick={e => e.stopPropagation()}>
-                        <span className="text-xs text-gray-400">
-                          from{' '}
-                          <span className="font-mono font-semibold tabular-nums text-teal-600">
-                            {job.bid_credits} cr
-                          </span>
+                        <span className="font-mono text-xs font-semibold tabular-nums text-teal-600">
+                          {job.bid_credits} cr
                         </span>
                         {job.already_bid ? (
                           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-green-600">
@@ -736,7 +733,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             title={creditBalance < job.bid_credits ? 'Not enough credits' : undefined}
                             onClick={() => openBidDialog(job)}
                           >
-                            Bid
+                            Purchase lead
                             <ChevronRight className="h-[15px] w-[15px]" />
                           </Button>
                         )}
@@ -1182,7 +1179,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <Lock className="h-4 w-4" />
                         </span>
                         <span className="px-4 text-center text-xs font-semibold text-gray-700">
-                          Place a bid to unlock location
+                          purchase lead contact details to unlock location
                         </span>
                       </div>
                     </div>
@@ -1210,7 +1207,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     disabled={creditBalance < detailJob.bid_credits}
                     onClick={() => openBidDialog(detailJob)}
                   >
-                    Place bid
+                    Purchase lead contact details
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 )}
@@ -1536,7 +1533,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>Place a bid</DialogTitle>
+                <DialogTitle>Purchase lead contact details</DialogTitle>
                 {selectedJob && (
                   <p className="mt-1 text-sm text-muted-foreground">{selectedJob.title}</p>
                 )}

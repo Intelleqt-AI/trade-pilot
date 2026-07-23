@@ -330,7 +330,7 @@ const Dashboard = () => {
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <span className="text-xs text-gray-400">{timeAgo(job.created_at)}</span>
                       <Button variant="outline" size="sm">
-                        Bid · <span className="font-mono tabular-nums">{job.bid_credits}</span>
+                        Purchase lead · <span className="font-mono tabular-nums">{job.bid_credits}</span>
                       </Button>
                     </div>
                   </div>
