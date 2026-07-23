@@ -38,6 +38,7 @@ const App = () => (
             <Route path="leads" element={<MyLeads />} />
             <Route path="credits" element={<Credits />} />
             <Route path="credits/success" element={<CreditSuccess />} />
+            <Route path="credits/cancel" element={<Navigate to="/trades-crm/credits?canceled=1" replace />} />
             <Route path="profile" element={<TradeCRMProfile />} />
             <Route path="account-settings" element={<AccountSettings />} />
             <Route path="support" element={<TradeSupport />} />

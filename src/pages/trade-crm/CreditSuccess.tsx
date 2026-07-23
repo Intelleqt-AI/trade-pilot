@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { ME_URL } from '@/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
+
+const MAX_ATTEMPTS = 8;
+const INTERVAL_MS = 2000;
 
 const CreditSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -11,19 +15,47 @@ const CreditSuccess = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [verifying, setVerifying] = useState(true);
+  const [status, setStatus] = useState<'verifying' | 'done' | 'timeout'>('verifying');
+
+  // Baseline balance captured once on mount — the webhook grant is detected as an increase.
+  const baselineRef = useRef<number | null>(
+    typeof (user as any)?.credit_balance === 'number' ? (user as any).credit_balance : null,
+  );
 
   useEffect(() => {
-    const complete = async () => {
-      if (sessionId) {
-        // Wait a bit for the webhook to process
-        await new Promise(r => setTimeout(r, 2000));
-        // Invalidate the 'me' query to fetch fresh credit balance
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/tradepilot/auth/me/'] });
-        setVerifying(false);
+    if (!sessionId) {
+      setStatus('done');
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts += 1;
+      await queryClient.invalidateQueries({ queryKey: [ME_URL] });
+      await queryClient.invalidateQueries({ queryKey: ['transaction-history'] });
+      if (cancelled) return;
+
+      const me: any = queryClient.getQueryData([ME_URL]);
+      const current: number | null = me?.data?.credit_balance ?? null;
+      const increased =
+        baselineRef.current == null ? current != null : (current ?? 0) > baselineRef.current;
+
+      if (increased) {
+        setStatus('done');
+        return;
       }
+      if (attempts >= MAX_ATTEMPTS) {
+        setStatus('timeout');
+        return;
+      }
+      setTimeout(poll, INTERVAL_MS);
     };
-    complete();
+
+    poll();
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId, queryClient]);
 
   return (
@@ -35,7 +67,9 @@ const CreditSuccess = () => {
 
         <h1 className="mb-2 text-h2 font-semibold text-foreground">Payment successful</h1>
         <p className="mx-auto mb-6 max-w-sm text-[13px] text-muted-foreground">
-          Your credits have been added to your account. You can now start bidding on jobs.
+          {status === 'timeout'
+            ? 'Your payment succeeded. Your balance may take a moment to update — it will appear shortly.'
+            : 'Your credits have been added to your account. You can now start bidding on jobs.'}
         </p>
 
         {typeof (user as any)?.credit_balance === 'number' && (
@@ -57,7 +91,7 @@ const CreditSuccess = () => {
           </Button>
         </div>
 
-        {verifying && (
+        {status === 'verifying' && (
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400">
             <Loader2 className="h-4 w-4 animate-spin" />
             Updating your balance…
