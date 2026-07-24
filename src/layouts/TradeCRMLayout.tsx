@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import NotificationPanel from '@/components/Trade-CRM/NotificationPanel';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchData } from '@/lib/api';
 import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -19,16 +21,20 @@ import {
   LogOut,
   CreditCard,
   Menu,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
 } from 'lucide-react';
+
+const MESSAGES_UNREAD_URL = '/api/v1/tradepilot/messaging/unread-count/';
 
 const mainNavItems = [
   { path: '/trades-crm/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/trades-crm/job-market', label: 'Job Market', icon: Search },
   { path: '/trades-crm/jobs', label: 'My Jobs', icon: Briefcase },
   { path: '/trades-crm/leads', label: 'My Leads', icon: Users },
+  { path: '/trades-crm/messages', label: 'Messages', icon: MessageSquare },
 ];
 
 const secondaryNavItems = [
@@ -42,6 +48,7 @@ const pageTitles: Record<string, string> = {
   '/trades-crm/job-market': 'Job Market',
   '/trades-crm/jobs': 'My Jobs',
   '/trades-crm/leads': 'My Leads',
+  '/trades-crm/messages': 'Messages',
   '/trades-crm/profile': 'My Profile',
   '/trades-crm/credits': 'Credits',
   '/trades-crm/credits/success': 'Credits',
@@ -61,6 +68,18 @@ const TradeCRMLayout = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('tp_collapsed') === '1');
   const [jobMarketCredits, setJobMarketCredits] = useState<number | null>(null);
+
+  const { data: msgUnread } = useQuery({
+    queryKey: [MESSAGES_UNREAD_URL],
+    queryFn: (): Promise<{ unread_count: number }> =>
+      fetchData(MESSAGES_UNREAD_URL).then(
+        (r: { data?: { unread_count: number } } & { unread_count?: number }) =>
+          r?.data ?? (r as { unread_count: number }),
+      ),
+    refetchInterval: 60 * 1000,
+    enabled: isAuthenticated && isTrade,
+  });
+  const messagesUnread: number = (msgUnread as { unread_count?: number } | undefined)?.unread_count ?? 0;
 
   if (loading) {
     return (
@@ -112,6 +131,11 @@ const TradeCRMLayout = () => {
             label={item.label}
             active={location.pathname === item.path}
             collapsed={isCollapsed}
+            badge={
+              item.path === '/trades-crm/messages' && messagesUnread > 0
+                ? messagesUnread
+                : undefined
+            }
             onClick={() => setMobileSidebarOpen(false)}
           />
         ))}

@@ -40,6 +40,7 @@ import {
   Mail,
   Map as MapIcon,
   MapPin,
+  MessageCircle,
   Phone,
   SlidersHorizontal,
   Star,
@@ -54,9 +55,11 @@ import useFetch from '@/hooks/useFetch';
 import { usePost } from '@/hooks/usePost';
 import { toast } from '@/lib/toast';
 import { useAuth } from '@/hooks/useAuth';
-import { updateTradePilotMe } from '@/lib/api';
+import { updateTradePilotMe, patchData } from '@/lib/api';
+import ChatPanel from '@/components/chat/ChatPanel';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { getCategoriesForSpecialty, getTradeLabel } from '@/lib/jobCategories';
+import { QUESTION_LABELS, formatAnswerKey } from '@/lib/jobQuestions';
 import { cn } from '@/lib/utils';
 
 const _jobMarkerIcon = L.icon({
@@ -126,144 +129,8 @@ const JOBS_URL = '/api/v1/tradepilot/jobs/';
 const MY_BIDS_URL = '/api/v1/tradepilot/jobs/my-bids/';
 const ME_URL = '/api/v1/tradepilot/auth/me/';
 const MIN_BID_COST = 10;
-const MAX_BIDS_PER_JOB = 4;
+const MAX_BIDS_PER_JOB = 3;
 
-const QUESTION_LABELS: Record<string, string> = {
-  // Plumbing – Boilers
-  boilers_q1: 'What type of boiler do you have?',
-  boilers_q2: 'What needs doing to the boiler?',
-  boilers_q3: 'Is the property domestic or commercial?',
-
-  // Plumbing – Radiators
-  radiators_q1: 'What do you need help with?',
-  radiators_q2: 'How many radiators are involved (approx)?',
-  radiators_q3: 'Is this for a domestic or commercial property?',
-
-  // Plumbing – Appliances
-  appliances_q1: 'Which appliance do you need help with?',
-  appliances_q2: 'What needs doing?',
-  appliances_q3: 'Is the property domestic or commercial?',
-
-  // Plumbing – Fixtures
-  fixtures_q1: 'Which fixture needs attention?',
-  fixtures_q2: 'What is the issue?',
-  fixtures_q3: 'Is the property domestic or commercial?',
-
-  // Plumbing – Pipework, taps & drainage
-  'pipework,_taps_and_drainage_q1': 'What best describes the job?',
-  'pipework,_taps_and_drainage_q2': 'Is this an urgent issue?',
-  'pipework,_taps_and_drainage_q3': 'Is the property domestic or commercial?',
-
-  // Gas Engineer – Boilers (gas)
-  boilers_gas_q1: 'What fuel does your boiler use?',
-  boilers_gas_q2: 'What needs doing?',
-  boilers_gas_q3: 'Property type',
-
-  // Gas Engineer – Gas hobs, cookers & ovens
-  gas_hobs_cookers_and_ovens_q1: 'Which appliance?',
-  gas_hobs_cookers_and_ovens_q2: 'What needs doing?',
-  gas_hobs_cookers_and_ovens_q3: 'Property type',
-
-  // Gas Engineer – Gas fires & flues
-  gas_fires_and_flues_q1: 'What type of unit?',
-  gas_fires_and_flues_q2: 'What needs doing?',
-  gas_fires_and_flues_q3: 'Property type',
-
-  // Gas Engineer – Gas safety certificates (CP12)
-  gas_safety_certificates_cp12_q1: 'Which certificate?',
-  gas_safety_certificates_cp12_q2: 'How many gas appliances to test?',
-  gas_safety_certificates_cp12_q3: 'Property type',
-
-  // Gas Engineer – Gas leaks & emergency
-  gas_leaks_and_emergency_q1: 'What is the issue?',
-  gas_leaks_and_emergency_q2: 'How urgent?',
-  gas_leaks_and_emergency_q3: 'Property type',
-
-  // Gas Engineer – Gas pipework
-  gas_pipework_q1: 'What best describes the job?',
-  gas_pipework_q2: 'Approximate length / scale?',
-  gas_pipework_q3: 'Property type',
-
-  // Roofing – Pitched roof repairs
-  pitched_roof_repairs_q1: "What's the issue?",
-  pitched_roof_repairs_q2: 'How big is the affected area?',
-  pitched_roof_repairs_q3: 'Property type',
-
-  // Roofing – Full or partial reroof
-  full_or_partial_reroof_q1: "What's the scope?",
-  full_or_partial_reroof_q2: 'Roof covering material?',
-  full_or_partial_reroof_q3: 'Property type',
-
-  // Roofing – Flat roof
-  flat_roof_q1: 'What needs doing?',
-  flat_roof_q2: 'Flat roof material?',
-  flat_roof_q3: 'Property type',
-
-  // Roofing – Gutters, fascias & soffits
-  gutters_fascias_and_soffits_q1: "What's the job?",
-  gutters_fascias_and_soffits_q2: 'Approximate scale?',
-  gutters_fascias_and_soffits_q3: 'Property type',
-
-  // Roofing – Chimney work
-  chimney_work_q1: "What's needed?",
-  chimney_work_q2: 'How will the chimney be accessed?',
-  chimney_work_q3: 'Property type',
-
-  // Roofing – Roof windows / skylights
-  roof_windows___skylights_q1: 'What do you need?',
-  roof_windows___skylights_q2: 'How many windows?',
-  roof_windows___skylights_q3: 'Property type',
-
-  // Roofing – Lead work & flashing
-  lead_work_and_flashing_q1: "What's the job?",
-  lead_work_and_flashing_q2: 'Where is the lead work?',
-  lead_work_and_flashing_q3: 'Property type',
-
-  // Roofing – Moss removal & roof cleaning
-  moss_removal_and_roof_cleaning_q1: "What's the job?",
-  moss_removal_and_roof_cleaning_q2: 'Scale of clean?',
-  moss_removal_and_roof_cleaning_q3: 'Property type',
-
-  // Electrical – Fuse board (Consumer unit)
-  'fuse_board_(consumer_unit)_q1': 'What needs doing?',
-  'fuse_board_(consumer_unit)_q2': 'How old is the existing unit?',
-  'fuse_board_(consumer_unit)_q3': 'Property type',
-
-  // Electrical – Lighting
-  lighting_q1: 'What do you need help with?',
-  lighting_q2: 'How many lights/fittings are involved?',
-  lighting_q3: 'Property type',
-
-  // Electrical – Sockets & switches
-  sockets_and_switches_q1: 'What do you need help with?',
-  sockets_and_switches_q2: 'How many sockets/switches?',
-  sockets_and_switches_q3: 'Property type',
-
-  // Electrical – Rewiring & cabling
-  rewiring_and_cabling_q1: 'What best describes the job?',
-  rewiring_and_cabling_q2: 'Is the power currently working?',
-  rewiring_and_cabling_q3: 'Property type',
-
-  // Electrical – EV chargers
-  ev_chargers_q1: 'What do you need?',
-  ev_chargers_q2: 'Where is it being installed?',
-  ev_chargers_q3: 'Property type',
-
-  // Electrical – Testing & certificates
-  testing_and_certificates_q1: 'Which certificate/test?',
-  testing_and_certificates_q2: 'Approximate property size?',
-  testing_and_certificates_q3: 'Property type',
-
-  // Electrical – Appliances & hardwired equipment
-  appliances_and_hardwired_equipment_q1: 'Which appliance?',
-  appliances_and_hardwired_equipment_q2: 'What needs doing?',
-  appliances_and_hardwired_equipment_q3: 'Property type',
-
-  // Electrical – Smart home & networking
-  smart_home_and_networking_q1: 'What do you need help with?',
-  smart_home_and_networking_q2: 'How many devices/points?',
-  smart_home_and_networking_q3: 'Property type',
-};
 
 const URGENCY_OPTIONS = [
   { value: 'emergency', label: 'Emergency (same day)' },
@@ -291,9 +158,25 @@ const competitionMeta = {
 };
 
 interface PropertyDetail {
+  name?: string | null;
   property_type: string;
   bedrooms: number;
   bathrooms: number;
+  year_built?: number | null;
+  epc_band?: string | null;
+  heating_type?: string | null;
+  wall_construction?: string | null;
+  tenure?: string | null;
+  council_tax_band?: string | null;
+  cover_image_url?: string | null;
+}
+
+interface MyBidSummary {
+  id: string;
+  status: string;
+  amount: string | null;
+  availability: string | null;
+  description: string;
 }
 
 interface UnlockedInfo {
@@ -308,6 +191,8 @@ interface UnlockedInfo {
     email: string;
     phone: string;
   } | null;
+  my_bid: MyBidSummary | null;
+  conversation_id: string | null;
 }
 
 interface JobFile {
@@ -346,6 +231,7 @@ interface Homeowner {
   last_name: string;
   email: string;
   phone: string;
+  avatar_url?: string;
 }
 
 interface MyBid {
@@ -354,6 +240,23 @@ interface MyBid {
   job_title: string;
   job_trade: string;
   job_status: string;
+  job_category?: string;
+  job_location?: string;
+  job_postcode?: string;
+  job_urgency?: string;
+  job_priority?: string;
+  job_description?: string;
+  job_preferred_date?: string | null;
+  job_created_at?: string;
+  job_latitude?: number | null;
+  job_longitude?: number | null;
+  answers?: Record<string, unknown>;
+  address?: string;
+  property_detail?: PropertyDetail | null;
+  files?: JobFile[];
+  bids_count?: number;
+  is_full?: boolean;
+  conversation_id?: string | null;
   amount: string;
   description: string;
   availability: string | null;
@@ -365,10 +268,6 @@ interface MyBid {
   homeowner: Homeowner | null;
 }
 
-function formatAnswerKey(key: string): string {
-  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -376,6 +275,59 @@ function timeAgo(dateStr: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// Shared property profile card used by both the available-jobs and my-bids drawers.
+function PropertyCard({ detail }: { detail: PropertyDetail }) {
+  const extras: string[] = [];
+  if (detail.year_built) extras.push(`Built ${detail.year_built}`);
+  if (detail.epc_band) extras.push(`EPC ${detail.epc_band}`);
+  if (detail.heating_type) extras.push(formatAnswerKey(detail.heating_type));
+  if (detail.wall_construction) extras.push(`${formatAnswerKey(detail.wall_construction)} walls`);
+  if (detail.tenure) extras.push(formatAnswerKey(detail.tenure));
+  if (detail.council_tax_band) extras.push(`Council tax ${detail.council_tax_band}`);
+
+  return (
+    <div className="space-y-2">
+      {detail.cover_image_url && (
+        <img
+          src={detail.cover_image_url}
+          alt="Property"
+          className="h-32 w-full rounded-lg border object-cover"
+        />
+      )}
+      <div className="flex flex-wrap gap-4 rounded-lg bg-gray-50 px-3.5 py-3 text-[13px] text-gray-700">
+        <span className="inline-flex items-center gap-1.5 capitalize">
+          <Home className="h-[15px] w-[15px]" />
+          {detail.property_type.replace('_', ' ')}
+        </span>
+        {detail.bedrooms > 0 && (
+          <span className="inline-flex items-center gap-1.5">
+            <BedDouble className="h-[15px] w-[15px]" />
+            <span className="font-mono tabular-nums">{detail.bedrooms}</span> bed
+          </span>
+        )}
+        {detail.bathrooms > 0 && (
+          <span className="inline-flex items-center gap-1.5">
+            <Bath className="h-[15px] w-[15px]" />
+            <span className="font-mono tabular-nums">{detail.bathrooms}</span> bath
+          </span>
+        )}
+      </div>
+      {extras.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {extras.map(e => (
+            <span
+              key={e}
+              className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600"
+            >
+              {e}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -422,12 +374,23 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [settingsPostcode, setSettingsPostcode] = useState('');
   const [settingsAddress, setSettingsAddress] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [bidAmount, setBidAmount] = useState('');
-  const [bidDescription, setBidDescription] = useState('');
-  const [bidAvailability, setBidAvailability] = useState('');
   const [bidSuccess, setBidSuccess] = useState(false);
   const [contactBid, setContactBid] = useState<MyBid | null>(null);
   const [detailBid, setDetailBid] = useState<MyBid | null>(null);
+  // Quote dialog (submitted after a lead is purchased). Opened from either the
+  // available-jobs drawer (a Job) or the my-bids drawer (a MyBid), so it targets a
+  // lightweight shape rather than a full Job.
+  const [quoteTarget, setQuoteTarget] = useState<
+    { jobId: string; title: string; hasQuote: boolean } | null
+  >(null);
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidDescription, setBidDescription] = useState('');
+  const [bidAvailability, setBidAvailability] = useState('');
+  // Chat panel
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatConversationId, setChatConversationId] = useState<string | null>(null);
+  const [chatTitle, setChatTitle] = useState('');
+  const [chatSubtitle, setChatSubtitle] = useState('');
 
   useEffect(() => {
     if (settingsOpen && profile) {
@@ -459,10 +422,45 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     });
   };
 
+  // Purchasing a lead keeps the detail drawer open behind the confirm dialog, so
+  // once purchased the drawer immediately reflects the unlocked contact + actions.
   const openBidDialog = (job: Job) => {
-    setDetailJob(null);
     setBidSuccess(false);
     setSelectedJob(job);
+  };
+
+  const openQuoteDialog = (job: Job) => {
+    const mb = job.unlocked_info?.my_bid;
+    setBidAmount(mb?.amount ?? '');
+    setBidDescription(mb?.description ?? '');
+    setBidAvailability(mb?.availability ?? '');
+    setQuoteTarget({ jobId: job.id, title: job.title, hasQuote: !!mb?.amount });
+  };
+
+  const openQuoteForBid = (bid: MyBid) => {
+    setBidAmount(bid.amount ?? '');
+    setBidDescription(bid.description ?? '');
+    setBidAvailability(bid.availability ?? '');
+    setQuoteTarget({ jobId: bid.job, title: bid.job_title, hasQuote: !!bid.amount });
+  };
+
+  const openChatWith = (conversationId: string | null | undefined, name: string, subtitle: string) => {
+    if (!conversationId) {
+      toast.error('Chat is not available for this lead yet.');
+      return;
+    }
+    setChatConversationId(conversationId);
+    setChatTitle(name || 'Homeowner');
+    setChatSubtitle(subtitle);
+    setChatOpen(true);
+  };
+
+  const openChat = (job: Job) => {
+    const info = job.unlocked_info;
+    const name = info?.homeowner
+      ? `${info.homeowner.first_name} ${info.homeowner.last_name}`.trim()
+      : 'Homeowner';
+    openChatWith(info?.conversation_id, name, job.title);
   };
 
   const jobsUrl = useMemo(() => {
@@ -481,6 +479,24 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const myBids: MyBid[] = bidsRes?.data ?? [];
   const marketInsights = marketRes?.data ?? {};
 
+  // Keep the open detail drawer pointed at the freshest job data (so a purchase /
+  // quote made from within the drawer immediately reflects unlocked contact + status).
+  useEffect(() => {
+    if (!detailJob) return;
+    const fresh = jobs.find(j => j.id === detailJob.id);
+    if (fresh && fresh !== detailJob) setDetailJob(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobsRes]);
+
+  // Same for the my-bids drawer, so submitting/editing a quote from within it
+  // immediately reflects the new price + status (Add bid → Edit bid).
+  useEffect(() => {
+    if (!detailBid) return;
+    const fresh = myBids.find(b => b.id === detailBid.id);
+    if (fresh && fresh !== detailBid) setDetailBid(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bidsRes]);
+
   const sortedJobs = useMemo(() => {
     const withJob = jobs.map(job => ({ job }));
     return withJob.sort((a, b) => {
@@ -492,7 +508,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
     });
   }, [jobs, sortBy]);
 
-  const bidMutation = usePost({
+  // Purchase a lead — spends credits, unlocks contact, opens a chat thread. No quote.
+  const purchaseMutation = usePost({
     onSuccess: (res: any) => {
       const newBalance = res?.data?.credit_balance;
       if (newBalance !== undefined) onCreditChange(newBalance);
@@ -500,27 +517,54 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
       queryClient.invalidateQueries({ queryKey: [MY_BIDS_URL] });
       queryClient.invalidateQueries({ queryKey: [ME_URL] });
       setBidSuccess(true);
-      setBidAmount('');
-      setBidDescription('');
-      setBidAvailability('');
     },
     onError: (err: any) => {
       const errors = err?.response?.data?.errors ?? {};
-      const msg = errors.detail || err?.response?.data?.message || 'Failed to submit bid.';
+      const msg = errors.detail || err?.response?.data?.message || 'Failed to purchase lead.';
       toast.error(msg);
     },
   });
 
-  const handleBidSubmit = () => {
-    if (!selectedJob || !bidAmount) return;
-    bidMutation.mutate({
+  const handlePurchase = () => {
+    if (!selectedJob) return;
+    purchaseMutation.mutate({
       url: `/api/v1/tradepilot/jobs/${selectedJob.id}/bid/`,
-      data: {
-        amount: parseFloat(bidAmount),
-        description: bidDescription,
-        ...(bidAvailability ? { availability: bidAvailability } : {}),
-      },
+      data: {},
     } as any);
+  };
+
+  // Submit / edit the quote on a purchased lead.
+  const quoteMutation = useMutation({
+    mutationFn: (vars: { jobId: string; amount: number; description: string; availability?: string }) =>
+      patchData({
+        url: `/api/v1/tradepilot/jobs/${vars.jobId}/bid/quote/`,
+        data: {
+          amount: vars.amount,
+          description: vars.description,
+          ...(vars.availability ? { availability: vars.availability } : {}),
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: q => (q.queryKey[0] as string)?.startsWith(JOBS_URL) });
+      queryClient.invalidateQueries({ queryKey: [MY_BIDS_URL] });
+      toast.success('Quote sent to the homeowner.');
+      setQuoteTarget(null);
+    },
+    onError: (err: any) => {
+      const errors = err?.response?.data?.errors ?? {};
+      const msg = errors.detail || err?.response?.data?.message || 'Failed to submit quote.';
+      toast.error(msg);
+    },
+  });
+
+  const handleQuoteSubmit = () => {
+    if (!quoteTarget || !bidAmount) return;
+    quoteMutation.mutate({
+      jobId: quoteTarget.jobId,
+      amount: parseFloat(bidAmount),
+      description: bidDescription,
+      availability: bidAvailability || undefined,
+    });
   };
 
   const insufficientCredits = creditBalance < MIN_BID_COST;
@@ -717,10 +761,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           {job.bid_credits} cr
                         </span>
                         {job.already_bid ? (
-                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-green-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Bid placed
-                          </span>
+                          <Button size="sm" variant="outline" onClick={() => setDetailJob(job)}>
+                            <CheckCircle2 className="h-4 w-4 text-teal-600" />
+                            Purchased — view
+                          </Button>
                         ) : job.is_full ? (
                           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-gray-400">
                             <Lock className="h-3.5 w-3.5" />
@@ -858,10 +902,16 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Coins className="h-[13px] w-[13px]" />
-                        Your bid{' '}
-                        <span className="font-mono font-semibold tabular-nums text-gray-700">
-                          £{parseFloat(bid.amount).toFixed(0)}
-                        </span>
+                        {bid.amount ? (
+                          <>
+                            Your quote{' '}
+                            <span className="font-mono font-semibold tabular-nums text-gray-700">
+                              £{parseFloat(bid.amount).toFixed(0)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-medium text-amber-600">No quote yet</span>
+                        )}
                       </span>
                       {bid.availability && (
                         <span className="inline-flex items-center gap-1">
@@ -895,7 +945,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
                     )}
                   </div>
-                  {bid.status === 'accepted' && bid.homeowner ? (
+                  {bid.homeowner ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -993,24 +1043,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {detailJob.property_detail && (
                   <div>
                     <SectionLabel className="mb-2">Property</SectionLabel>
-                    <div className="flex flex-wrap gap-4 rounded-lg bg-gray-50 px-3.5 py-3 text-[13px] text-gray-700">
-                      <span className="inline-flex items-center gap-1.5 capitalize">
-                        <Home className="h-[15px] w-[15px]" />
-                        {detailJob.property_detail.property_type.replace('_', ' ')}
-                      </span>
-                      {detailJob.property_detail.bedrooms > 0 && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <BedDouble className="h-[15px] w-[15px]" />
-                          <span className="font-mono tabular-nums">{detailJob.property_detail.bedrooms}</span> bed
-                        </span>
-                      )}
-                      {detailJob.property_detail.bathrooms > 0 && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Bath className="h-[15px] w-[15px]" />
-                          <span className="font-mono tabular-nums">{detailJob.property_detail.bathrooms}</span> bath
-                        </span>
-                      )}
-                    </div>
+                    <PropertyCard detail={detailJob.property_detail} />
                   </div>
                 )}
 
@@ -1073,9 +1106,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
                       <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
                         <CheckCircle2 className="h-4 w-4 shrink-0" />
-                        {detailJob.unlocked_info.contact_unlocked
+                        {detailJob.unlocked_info.my_bid?.status === 'accepted'
                           ? 'Bid accepted — contact & location unlocked'
-                          : 'Bid placed — location unlocked'}
+                          : 'Lead purchased — contact & location unlocked'}
                       </div>
 
                       {(detailJob.unlocked_info.address || detailJob.unlocked_info.postcode) && (
@@ -1188,28 +1221,45 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               </div>
 
               <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Coins className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to bid
-                </span>
-                {detailJob.already_bid ? (
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-600">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Bid already sent
-                  </span>
-                ) : detailJob.is_full ? (
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
-                    <Lock className="h-4 w-4" />
-                    Bidding closed — {MAX_BIDS_PER_JOB} bids received
-                  </span>
+                {detailJob.unlocked_info ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Lead purchased
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => openChat(detailJob)}>
+                        <MessageCircle className="h-4 w-4" />
+                        Message
+                      </Button>
+                      <Button size="sm" onClick={() => openQuoteDialog(detailJob)}>
+                        {detailJob.unlocked_info.my_bid?.amount
+                          ? `Edit quote · £${detailJob.unlocked_info.my_bid.amount}`
+                          : 'Add quote'}
+                      </Button>
+                    </div>
+                  </>
                 ) : (
-                  <Button
-                    disabled={creditBalance < detailJob.bid_credits}
-                    onClick={() => openBidDialog(detailJob)}
-                  >
-                    Purchase lead contact details
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Coins className="h-3.5 w-3.5 text-orange-500" />
+                      <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to unlock
+                    </span>
+                    {detailJob.is_full ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
+                        <Lock className="h-4 w-4" />
+                        Bidding closed — {MAX_BIDS_PER_JOB} bids received
+                      </span>
+                    ) : (
+                      <Button
+                        disabled={creditBalance < detailJob.bid_credits}
+                        onClick={() => openBidDialog(detailJob)}
+                      >
+                        Purchase lead contact details
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </>
@@ -1239,10 +1289,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               </div>
 
               <div className="flex flex-1 flex-col gap-5 p-6">
-                {detailBid.description && (
+                {detailBid.job_description && (
                   <div>
-                    <SectionLabel className="mb-2">Your bid message</SectionLabel>
-                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.description}</p>
+                    <SectionLabel className="mb-2">Job description</SectionLabel>
+                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.job_description}</p>
                   </div>
                 )}
 
@@ -1250,10 +1300,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   <div className="rounded-lg bg-gray-50 px-3 py-2.5">
                     <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Coins className="h-3 w-3" />
-                      Your bid
+                      Your quote
                     </div>
                     <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
-                      £{parseFloat(detailBid.amount).toFixed(0)}
+                      {detailBid.amount ? `£${parseFloat(detailBid.amount).toFixed(0)}` : '—'}
                     </div>
                   </div>
                   <div className="rounded-lg bg-gray-50 px-3 py-2.5">
@@ -1276,6 +1326,28 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
                     </div>
                   )}
+                  {detailBid.job_created_at && (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Posted
+                      </div>
+                      <div className="text-[13px] font-semibold text-foreground">
+                        {timeAgo(detailBid.job_created_at)}
+                      </div>
+                    </div>
+                  )}
+                  {detailBid.job_preferred_date && (
+                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Preferred
+                      </div>
+                      <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
+                        {new Date(detailBid.job_preferred_date).toLocaleDateString('en-GB')}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -1290,7 +1362,82 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       {detailBid.job_status.replace('_', ' ')}
                     </span>
                   </span>
+                  {detailBid.bids_count != null && (
+                    <span className="inline-flex items-center gap-1">
+                      <Briefcase className="h-[13px] w-[13px]" />
+                      <span className="font-mono tabular-nums">
+                        {detailBid.bids_count}/{MAX_BIDS_PER_JOB}
+                      </span>{' '}
+                      bids
+                    </span>
+                  )}
                 </div>
+
+                {detailBid.property_detail && (
+                  <div>
+                    <SectionLabel className="mb-2">Property</SectionLabel>
+                    <PropertyCard detail={detailBid.property_detail} />
+                  </div>
+                )}
+
+                {detailBid.answers &&
+                  Object.keys(detailBid.answers).filter(k => detailBid.answers![k] && k !== 'description').length > 0 && (
+                    <div>
+                      <SectionLabel className="mb-2">Additional details</SectionLabel>
+                      <div className="divide-y divide-gray-100 rounded-lg border">
+                        {Object.entries(detailBid.answers)
+                          .filter(([key, val]) => val && key !== 'description')
+                          .map(([key, val]) => (
+                            <div key={key} className="flex gap-3 px-3 py-2">
+                              <span className="min-w-[120px] shrink-0 pt-0.5 text-xs text-muted-foreground">
+                                {QUESTION_LABELS[key] ?? formatAnswerKey(key)}
+                              </span>
+                              <span className="text-xs font-medium text-foreground">{String(val)}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                {detailBid.files && detailBid.files.length > 0 && (
+                  <div>
+                    <SectionLabel className="mb-2">Attachments</SectionLabel>
+                    <div className="space-y-2">
+                      {detailBid.files.map(f =>
+                        f.content_type?.startsWith('image/') && f.presigned_url ? (
+                          <a key={f.id} href={f.presigned_url} target="_blank" rel="noreferrer" className="block">
+                            <img
+                              src={f.presigned_url}
+                              alt={f.file_name}
+                              className="max-h-56 w-full rounded-lg border object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a
+                            key={f.id}
+                            href={f.presigned_url ?? '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                          >
+                            <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                            <span className="flex-1 truncate text-gray-700">{f.file_name}</span>
+                            <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                              {(f.file_size / 1024).toFixed(0)} KB
+                            </span>
+                          </a>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {detailBid.description && (
+                  <div>
+                    <SectionLabel className="mb-2">Your bid message</SectionLabel>
+                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.description}</p>
+                  </div>
+                )}
 
                 {detailBid.rating != null && (
                   <div>
@@ -1305,14 +1452,37 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   </div>
                 )}
 
-                {/* Homeowner contact — unlocked once the bid is accepted */}
+                {(detailBid.address || detailBid.job_postcode) && (
+                  <div>
+                    <SectionLabel className="mb-2">Location</SectionLabel>
+                    <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                      <div className="flex items-start gap-2 text-sm text-gray-700">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                        <div>
+                          {detailBid.address && (
+                            <p className="font-medium leading-snug">{detailBid.address}</p>
+                          )}
+                          {detailBid.job_postcode && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">{detailBid.job_postcode}</p>
+                          )}
+                        </div>
+                      </div>
+                      {detailBid.job_latitude != null && detailBid.job_longitude != null && (
+                        <JobLocationMap lat={detailBid.job_latitude} lng={detailBid.job_longitude} />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Homeowner contact — unlocked once the lead is purchased */}
                 <div>
                   <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
-                  {detailBid.status === 'accepted' && detailBid.homeowner ? (
+                  {detailBid.homeowner ? (
                     <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
                       <div className="flex items-center gap-3">
                         <UserAvatar
                           name={`${detailBid.homeowner.first_name} ${detailBid.homeowner.last_name}`}
+                          src={detailBid.homeowner.avatar_url}
                           size="sm"
                         />
                         <div>
@@ -1365,6 +1535,39 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         </span>
                       </div>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Lead purchased
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!detailBid.conversation_id}
+                    onClick={() =>
+                      openChatWith(
+                        detailBid.conversation_id,
+                        detailBid.homeowner
+                          ? `${detailBid.homeowner.first_name} ${detailBid.homeowner.last_name}`.trim()
+                          : 'Homeowner',
+                        detailBid.job_title
+                      )
+                    }
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message
+                  </Button>
+                  {(detailBid.status === 'purchased' || detailBid.status === 'pending') && (
+                    <Button size="sm" onClick={() => openQuoteForBid(detailBid)}>
+                      {detailBid.amount
+                        ? `Edit bid · £${parseFloat(detailBid.amount).toFixed(0)}`
+                        : 'Add bid'}
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1500,7 +1703,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         </DialogContent>
       </Dialog>
 
-      {/* Bid dialog */}
+      {/* Purchase lead dialog — confirm-only, no quote. Unlocks contact + opens chat. */}
       <Dialog
         open={!!selectedJob}
         onOpenChange={open => {
@@ -1516,9 +1719,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <span className="mb-3.5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
                 <Check className="h-7 w-7" strokeWidth={2.4} />
               </span>
-              <h2 className="mb-1.5 text-h2 font-semibold text-foreground">Bid submitted</h2>
+              <h2 className="mb-1.5 text-h2 font-semibold text-foreground">Lead unlocked</h2>
               <p className="mb-5 text-[13px] text-muted-foreground">
-                Contact details and location are now unlocked. The homeowner will be notified.
+                Contact details and location are now visible. Add your quote and message the
+                homeowner from the job.
               </p>
               <Button
                 className="w-full"
@@ -1565,46 +1769,15 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     </div>
                   )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="bid-amount">Your quote (£) *</Label>
-                  <Input
-                    id="bid-amount"
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="e.g. 250"
-                    className="font-mono tabular-nums"
-                    value={bidAmount}
-                    onChange={e => setBidAmount(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bid-description">Message to homeowner</Label>
-                  <Textarea
-                    id="bid-description"
-                    placeholder="Introduce yourself, your experience and when you can attend."
-                    rows={3}
-                    value={bidDescription}
-                    onChange={e => setBidDescription(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bid-availability">Available from (optional)</Label>
-                  <Input
-                    id="bid-availability"
-                    type="date"
-                    value={bidAvailability}
-                    onChange={e => setBidAvailability(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
+                <p className="text-[13px] text-muted-foreground">
+                  Purchasing unlocks the homeowner's contact details and opens a direct chat. You
+                  can add your quote afterwards — there's no obligation to quote.
+                </p>
 
                 <div className="flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2.5 text-xs text-orange-600">
                   <Coins className="h-3.5 w-3.5 shrink-0" />
                   <span>
-                    This bid costs{' '}
+                    This lead costs{' '}
                     <strong className="font-mono tabular-nums">
                       {selectedJob?.bid_credits ?? MIN_BID_COST} credits
                     </strong>{' '}
@@ -1618,18 +1791,18 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedJob(null)} disabled={bidMutation.isPending}>
+                <Button variant="outline" onClick={() => setSelectedJob(null)} disabled={purchaseMutation.isPending}>
                   Cancel
                 </Button>
-                <Button onClick={handleBidSubmit} disabled={!bidAmount || bidMutation.isPending}>
-                  {bidMutation.isPending ? (
+                <Button onClick={handlePurchase} disabled={purchaseMutation.isPending}>
+                  {purchaseMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Submitting…
+                      Purchasing…
                     </>
                   ) : (
                     <>
-                      Submit bid ·{' '}
+                      Confirm ·{' '}
                       <span className="font-mono tabular-nums">{selectedJob?.bid_credits ?? MIN_BID_COST} cr</span>
                     </>
                   )}
@@ -1639,6 +1812,80 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Quote dialog — submitted/edited after a lead is purchased */}
+      <Dialog open={!!quoteTarget} onOpenChange={open => !open && setQuoteTarget(null)}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>
+              {quoteTarget?.hasQuote ? 'Edit your quote' : 'Add your quote'}
+            </DialogTitle>
+            {quoteTarget && <p className="mt-1 text-sm text-muted-foreground">{quoteTarget.title}</p>}
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="quote-amount">Your quote (£) *</Label>
+              <Input
+                id="quote-amount"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 250"
+                className="font-mono tabular-nums"
+                value={bidAmount}
+                onChange={e => setBidAmount(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-description">Message to homeowner</Label>
+              <Textarea
+                id="quote-description"
+                placeholder="Introduce yourself, your experience and when you can attend."
+                rows={3}
+                value={bidDescription}
+                onChange={e => setBidDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quote-availability">Available from (optional)</Label>
+              <Input
+                id="quote-availability"
+                type="date"
+                value={bidAvailability}
+                onChange={e => setBidAvailability(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuoteTarget(null)} disabled={quoteMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuoteSubmit} disabled={!bidAmount || quoteMutation.isPending}>
+              {quoteMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                'Send quote'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ChatPanel
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        conversationId={chatConversationId}
+        title={chatTitle}
+        subtitle={chatSubtitle}
+      />
     </div>
   );
 };

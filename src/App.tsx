@@ -16,6 +16,7 @@ import Dashboard from './pages/trade-crm/Dashboard';
 import JobMarket from './pages/trade-crm/JobMarket';
 import MyJobs from './pages/trade-crm/MyJobs';
 import MyLeads from './pages/trade-crm/MyLeads';
+import Messages from './pages/trade-crm/Messages';
 import Credits from './pages/trade-crm/Credits';
 import CreditSuccess from './pages/trade-crm/CreditSuccess';
 import TradeCRMProfile from './pages/trade-crm/TradeCRMProfile';
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="job-market" element={<JobMarket />} />
             <Route path="jobs" element={<MyJobs />} />
             <Route path="leads" element={<MyLeads />} />
+            <Route path="messages" element={<Messages />} />
             <Route path="credits" element={<Credits />} />
             <Route path="credits/success" element={<CreditSuccess />} />
             <Route path="credits/cancel" element={<Navigate to="/trades-crm/credits?canceled=1" replace />} />
