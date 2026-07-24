@@ -39,10 +39,14 @@ import {
 import { cn } from '@/lib/utils';
 import { getTradeLabel } from '@/lib/jobCategories';
 
-const STATUS_META: Record<string, { label: string; tone: 'neutral' | 'info' | 'success' }> = {
+const STATUS_META: Record<string, { label: string; tone: 'neutral' | 'info' | 'success' | 'warning' }> = {
+  // Accepted-job statuses (All tab)
   todo: { label: 'To Do', tone: 'neutral' },
   in_progress: { label: 'In Progress', tone: 'info' },
   completed: { label: 'Completed', tone: 'success' },
+  // Bid statuses (Pending tab)
+  purchased: { label: 'Awaiting quote', tone: 'neutral' },
+  pending: { label: 'Awaiting decision', tone: 'warning' },
 };
 
 const PRIORITY_TONE: Record<string, 'danger' | 'warning' | 'neutral'> = {
@@ -89,6 +93,7 @@ function toCsv(rows: LeadRow[]): string {
 export default function MyLeads() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'all' | 'pending'>('all');
 
   const { data: jobs = [], isLoading: jobsLoading, isError } = useQuery({
     queryKey: ['myJobs'],
@@ -96,7 +101,8 @@ export default function MyLeads() {
   });
   const { data: myBids = [] } = useQuery({ queryKey: ['MyBids'], queryFn: fetchMyBids });
 
-  const rows: LeadRow[] = useMemo(() => {
+  // All tab — accepted jobs (homeowner accepted this trader for the job).
+  const allRows: LeadRow[] = useMemo(() => {
     const acceptedByJob = new Map<string, any>();
     (myBids as any[])
       .filter(b => b.status === 'accepted')
@@ -121,7 +127,33 @@ export default function MyLeads() {
     });
   }, [jobs, myBids]);
 
-  const counts = useMemo(() => ({ all: rows.length }), [rows]);
+  // Pending tab — leads purchased but not yet accepted (bid still purchased/pending).
+  const pendingRows: LeadRow[] = useMemo(() => {
+    return (myBids as any[])
+      .filter(b => b.status === 'purchased' || b.status === 'pending')
+      .map(b => {
+        const homeowner = b.homeowner ?? null;
+        return {
+          id: String(b.id),
+          customerName: homeowner ? `${homeowner.first_name} ${homeowner.last_name}`.trim() : null,
+          phone: homeowner?.phone ?? null,
+          email: homeowner?.email ?? null,
+          jobTitle: b.job_title,
+          priority: b.job_priority?.toLowerCase() ?? null,
+          trade: b.job_trade ?? null,
+          location: b.job_location ?? null,
+          status: b.status,
+          amount: b.amount != null ? Number(b.amount) : null,
+          date: b.created_at ?? null,
+        };
+      });
+  }, [myBids]);
+
+  const rows = tab === 'all' ? allRows : pendingRows;
+  const counts = useMemo(
+    () => ({ all: allRows.length, pending: pendingRows.length }),
+    [allRows, pendingRows],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -156,7 +188,7 @@ export default function MyLeads() {
     <div className="space-y-4">
       <PageTitle
         title="My Leads"
-        subtitle="Customers from your accepted jobs — contact details unlock when a bid is accepted."
+        subtitle="All = jobs you've been accepted for. Pending = leads you've purchased that are awaiting acceptance."
       >
         <Button variant="outline" onClick={handleExport} disabled={filtered.length === 0}>
           <Download className="h-4 w-4" />
@@ -166,9 +198,12 @@ export default function MyLeads() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl
-          value="all"
-          onChange={() => {}}
-          items={[{ value: 'all', label: 'All', count: counts.all }]}
+          value={tab}
+          onChange={v => setTab(v as 'all' | 'pending')}
+          items={[
+            { value: 'all', label: 'All', count: counts.all },
+            { value: 'pending', label: 'Pending', count: counts.pending },
+          ]}
         />
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -191,11 +226,19 @@ export default function MyLeads() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={rows.length === 0 ? Briefcase : Users}
-            title={rows.length === 0 ? 'No leads yet' : 'No leads match your filters'}
+            title={
+              rows.length === 0
+                ? tab === 'pending'
+                  ? 'No pending leads'
+                  : 'No leads yet'
+                : 'No leads match your filters'
+            }
             description={
               rows.length === 0
-                ? 'Accept a bid from the Job Market — your customers will appear here.'
-                : 'Try a different status or search term.'
+                ? tab === 'pending'
+                  ? "Purchase a lead from the Job Market — it'll appear here until the homeowner accepts you."
+                  : 'Get accepted for a job from the Job Market — your customers will appear here.'
+                : 'Try a different search term.'
             }
             action={
               rows.length === 0 ? (
@@ -329,10 +372,17 @@ export default function MyLeads() {
                               </span>
                             )}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate('/trades-crm/jobs')}>
-                            <Briefcase className="mr-2 h-4 w-4" />
-                            View in pipeline
-                          </DropdownMenuItem>
+                          {tab === 'pending' ? (
+                            <DropdownMenuItem onClick={() => navigate('/trades-crm/messages')}>
+                              <Briefcase className="mr-2 h-4 w-4" />
+                              Open messages
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => navigate('/trades-crm/jobs')}>
+                              <Briefcase className="mr-2 h-4 w-4" />
+                              View in pipeline
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
