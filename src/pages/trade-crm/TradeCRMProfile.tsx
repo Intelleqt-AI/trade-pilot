@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +13,7 @@ import {
   updateTradeService,
   deleteTradeService,
   uploadTraderPhoto,
+  deleteTradePilotAccount,
 } from '@/lib/api';
 import { ME_URL } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -75,10 +77,13 @@ const TRADE_LABELS: Record<string, string> = {
   Carpenter: 'Carpenter/Joiner',
 };
 
+const DELETE_CONFIRMATION_TEXT = 'DELETE';
+
 const TradeCRMProfile = () => {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState(profile?.first_name || '');
   const [lastName, setLastName] = useState(profile?.last_name || '');
@@ -111,6 +116,11 @@ const TradeCRMProfile = () => {
   const [serviceDescription, setServiceDescription] = useState('');
   const [servicePrice, setServicePrice] = useState('');
   const [servicePriceType, setServicePriceType] = useState('fixed');
+
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -235,6 +245,31 @@ const TradeCRMProfile = () => {
   const deleteServiceMutation = useMutation({
     mutationFn: deleteTradeService,
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tradeServices'] }); toast({ title: 'Service removed' }); },
+  });
+
+  const isDeleteAccountValid =
+    deleteAccountPassword.length > 0 && deleteAccountConfirmText.trim() === DELETE_CONFIRMATION_TEXT;
+
+  const resetDeleteAccountState = () => {
+    setDeleteAccountPassword('');
+    setDeleteAccountConfirmText('');
+    setDeleteAccountError(null);
+  };
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => deleteTradePilotAccount(deleteAccountPassword),
+    onSuccess: async () => {
+      await signOut();
+      toast({ title: 'Your account has been deleted.' });
+      navigate('/login', { replace: true });
+    },
+    onError: (err: any) => {
+      const message =
+        err?.response?.data?.errors?.password?.[0] ??
+        err?.response?.data?.message ??
+        'Failed to delete account.';
+      setDeleteAccountError(message);
+    },
   });
 
   const openAddService = () => {
@@ -751,6 +786,26 @@ const TradeCRMProfile = () => {
         </div>
       </div>
 
+      {/* Danger zone */}
+      <SectionCard title="Danger Zone" bodyClassName="p-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Permanently delete your account and all associated data — leads, bids, messages,
+            documents, and credit history. This cannot be undone.
+          </p>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              resetDeleteAccountState();
+              setDeleteAccountOpen(true);
+            }}
+          >
+            Delete Account
+          </Button>
+        </div>
+      </SectionCard>
+
       {/* Upload document dialog */}
       <Dialog open={docUploadOpen} onOpenChange={setDocUploadOpen}>
         <DialogContent className="max-w-md">
@@ -864,6 +919,74 @@ const TradeCRMProfile = () => {
               }}
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete account confirmation */}
+      <AlertDialog
+        open={deleteAccountOpen}
+        onOpenChange={open => {
+          if (!deleteAccountMutation.isPending) {
+            setDeleteAccountOpen(open);
+            if (!open) resetDeleteAccountState();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes your account and all associated data. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="delete-account-password">Confirm your password</Label>
+              <Input
+                id="delete-account-password"
+                type="password"
+                value={deleteAccountPassword}
+                onChange={e => setDeleteAccountPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={deleteAccountMutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-sm text-gray-700">
+                To confirm deletion, please type{' '}
+                <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-red-600">
+                  {DELETE_CONFIRMATION_TEXT}
+                </code>{' '}
+                below:
+              </p>
+              <Input
+                type="text"
+                value={deleteAccountConfirmText}
+                onChange={e => setDeleteAccountConfirmText(e.target.value)}
+                placeholder={`Type "${DELETE_CONFIRMATION_TEXT}" to confirm`}
+                disabled={deleteAccountMutation.isPending}
+              />
+            </div>
+
+            {deleteAccountError && <p className="text-xs text-destructive">{deleteAccountError}</p>}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAccountMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 text-white hover:bg-red-600"
+              disabled={!isDeleteAccountValid || deleteAccountMutation.isPending}
+              onClick={e => {
+                e.preventDefault();
+                deleteAccountMutation.mutate();
+              }}
+            >
+              {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Account'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

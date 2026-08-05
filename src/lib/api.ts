@@ -36,12 +36,19 @@ export const patchData = <T = any>({ url, data }: { url: string; data?: any }): 
   });
 };
 
-export const deleteData = <T = any>({ url }: { url: string }): Promise<T> =>
-  apiRequest<T>(url, { method: 'DELETE' });
+export const deleteData = <T = any>({ url, data }: { url: string; data?: any }): Promise<T> =>
+  apiRequest<T>(url, {
+    method: 'DELETE',
+    ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+  });
 
 // Update TradePilot user + TradePilotProfile via Django /me/ endpoint
 export const updateTradePilotMe = (data: Record<string, any>) =>
   patchData({ url: 'api/v1/tradepilot/auth/me/', data });
+
+// Permanently delete the authenticated TradePilot account (requires password confirmation)
+export const deleteTradePilotAccount = (password: string) =>
+  deleteData({ url: 'api/v1/tradepilot/auth/delete-account/', data: { password } });
 
 // Profile photo
 export const uploadTraderPhoto = (formData: FormData) =>
