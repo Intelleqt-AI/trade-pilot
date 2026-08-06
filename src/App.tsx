@@ -2,6 +2,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useMessagingSocket } from '@/hooks/useMessagingSocket';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -23,8 +24,17 @@ import TradeCRMProfile from './pages/trade-crm/TradeCRMProfile';
 import TradeSupport from './pages/trade-crm/TradeSupport';
 import AccountSettings from './pages/trade-crm/AccountSettings';
 
+// Non-visual — connects the real-time chat push socket once a user is
+// logged in (useAuth is a standalone hook here, no provider needed). Must
+// render inside QueryClientProvider (mounted in main.tsx), which it is.
+const MessagingSocket = () => {
+  useMessagingSocket();
+  return null;
+};
+
 const App = () => (
   <TooltipProvider>
+    <MessagingSocket />
     <Toaster />
     <Sonner />
     <BrowserRouter>

@@ -6,8 +6,7 @@ import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
 import useFetch from '@/hooks/useFetch';
 import ChatPanel from '@/components/chat/ChatPanel';
 import { cn } from '@/lib/utils';
-
-const CONVERSATIONS_URL = '/api/v1/tradepilot/messaging/conversations/';
+import { CONVERSATIONS_URL } from '@/lib/messaging';
 
 interface Conversation {
   id: string;

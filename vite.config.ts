@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => ({
         target: 'http://127.0.0.1:8030',
         changeOrigin: true,
       },
+      // Real-time chat push (Django Channels) — same backend, ws:// upgrade.
+      '/ws': {
+        target: 'http://127.0.0.1:8030',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
   plugins: [

@@ -3,25 +3,60 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Info, Loader2, Mail, MapPin, Phone, Send } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Ban, Check, Info, Loader2, Mail, MapPin, Phone, Send, Unlock } from 'lucide-react';
 import useFetch from '@/hooks/useFetch';
 import { postData } from '@/lib/api';
 import { toast } from '@/lib/toast';
-import { cn } from '@/lib/utils';
 import JobDetailsDialog, { type JobDetail } from '@/components/chat/JobDetailsDialog';
+import MessageBubble, { type ChatMessage } from '@/components/chat/MessageBubble';
+import ReportMessageDialog from '@/components/chat/ReportMessageDialog';
+import EditHistoryDialog from '@/components/chat/EditHistoryDialog';
+import {
+  blockConversation,
+  deleteMessage,
+  editMessage,
+  getMessagesUrl,
+  reportMessage,
+  unblockConversation,
+  type DeleteScope,
+  type ReportReason,
+} from '@/lib/messaging';
 
 // Trader-side chat panel (TradePilot). Talks to the trader messaging mount.
 const BASE = '/api/v1/tradepilot/messaging';
+const CONVERSATIONS_URL = `${BASE}/conversations/`;
 const UNREAD_URL = `${BASE}/unread-count/`;
 
-interface ChatMessage {
+interface OtherParty {
   id: string;
-  sender: string;
-  sender_name: string;
-  body: string;
-  created_at: string;
-  read_at: string | null;
-  is_mine: boolean;
+  name: string;
+  role: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  postcode?: string;
+  business_name?: string;
+}
+
+interface ConversationDetail {
+  id: string;
+  other_party: OtherParty;
+  job_title?: string;
+  job_detail?: JobDetail;
+  is_blocked: boolean;
+  blocked_by_me: boolean;
+  blocked_by_name: string;
+  can_send: boolean;
 }
 
 interface ChatPanelProps {
@@ -32,21 +67,21 @@ interface ChatPanelProps {
   subtitle?: string;
 }
 
-const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
-
 const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: ChatPanelProps) => {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [reportingMessage, setReportingMessage] = useState<ChatMessage | null>(null);
+  const [historyMessage, setHistoryMessage] = useState<ChatMessage | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const messagesUrl =
-    open && conversationId ? `${BASE}/conversations/${conversationId}/messages/` : null;
+  const messagesUrl = open && conversationId ? getMessagesUrl(conversationId) : null;
 
   const { data, isLoading } = useFetch<any>(messagesUrl, { refetchInterval: 8000 });
   const messages: ChatMessage[] = data?.data?.messages ?? [];
-  const conversation = data?.data?.conversation;
+  const conversation: ConversationDetail | undefined = data?.data?.conversation;
   const other = conversation?.other_party;
   const homeowner = other?.role === 'homeowner' ? other : null;
   const jobDetail: JobDetail | undefined = conversation?.job_detail;
@@ -62,12 +97,23 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
     }
   }, [open, conversationId, data, queryClient]);
 
+  // Reset conversation-scoped local UI state whenever the thread changes.
+  useEffect(() => {
+    setEditingMessageId(null);
+    setDraft('');
+    setReportingMessage(null);
+    setHistoryMessage(null);
+  }, [conversationId]);
+
+  const invalidateThread = () => {
+    if (messagesUrl) queryClient.invalidateQueries({ queryKey: [messagesUrl] });
+  };
+
   const sendMutation = useMutation({
-    mutationFn: (body: string) =>
-      postData({ url: `${BASE}/conversations/${conversationId}/messages/`, data: { body } }),
+    mutationFn: (body: string) => postData({ url: getMessagesUrl(conversationId as string), data: { body } }),
     onSuccess: () => {
       setDraft('');
-      if (messagesUrl) queryClient.invalidateQueries({ queryKey: [messagesUrl] });
+      invalidateThread();
       queryClient.invalidateQueries({ queryKey: [UNREAD_URL] });
     },
     onError: (err: any) => {
@@ -75,11 +121,96 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
+      editMessage(conversationId as string, messageId, body),
+    onSuccess: () => {
+      setDraft('');
+      setEditingMessageId(null);
+      invalidateThread();
+      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to update message.');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ messageId, scope }: { messageId: string; scope: DeleteScope }) =>
+      deleteMessage(conversationId as string, messageId, scope),
+    onSuccess: () => {
+      invalidateThread();
+      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
+      queryClient.invalidateQueries({ queryKey: [UNREAD_URL] });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to delete message.');
+    },
+  });
+
+  const reportMutation = useMutation({
+    mutationFn: (payload: { reason: ReportReason; details?: string }) =>
+      reportMessage(conversationId as string, (reportingMessage as ChatMessage).id, payload),
+    onSuccess: () => {
+      toast.success('Message reported.');
+      setReportingMessage(null);
+      invalidateThread();
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to report message.');
+    },
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: () => blockConversation(conversationId as string),
+    onSuccess: () => {
+      setBlockConfirmOpen(false);
+      invalidateThread();
+      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
+      toast.success('Conversation blocked.');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to block conversation.');
+    },
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: () => unblockConversation(conversationId as string),
+    onSuccess: () => {
+      invalidateThread();
+      queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
+      toast.success('Conversation unblocked.');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to unblock conversation.');
+    },
+  });
+
   const handleSend = () => {
     const body = draft.trim();
     if (!body || !conversationId) return;
-    sendMutation.mutate(body);
+    if (editingMessageId) {
+      editMutation.mutate({ messageId: editingMessageId, body });
+    } else {
+      sendMutation.mutate(body);
+    }
   };
+
+  const handleEditRequest = (message: ChatMessage) => {
+    setEditingMessageId(message.id);
+    setDraft(message.body);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setDraft('');
+  };
+
+  const handleDelete = (messageId: string, scope: DeleteScope) => {
+    deleteMutation.mutate({ messageId, scope });
+  };
+
+  const isComposerBusy = sendMutation.isPending || editMutation.isPending;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -96,17 +227,46 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                 </p>
               )}
             </div>
-            {jobDetail && (
-              <button
-                type="button"
-                onClick={() => setDetailsOpen(true)}
-                title="View job details"
-                aria-label="View job details"
-                className="mr-6 mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-gray-100 hover:text-teal-700"
-              >
-                <Info className="h-4 w-4" />
-              </button>
-            )}
+            <div className="mr-6 flex shrink-0 items-center gap-0.5">
+              {conversation && !conversation.is_blocked && (
+                <button
+                  type="button"
+                  onClick={() => setBlockConfirmOpen(true)}
+                  title="Block conversation"
+                  aria-label="Block conversation"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                >
+                  <Ban className="h-4 w-4" />
+                </button>
+              )}
+              {conversation?.is_blocked && conversation.blocked_by_me && (
+                <button
+                  type="button"
+                  onClick={() => unblockMutation.mutate()}
+                  disabled={unblockMutation.isPending}
+                  title="Unblock conversation"
+                  aria-label="Unblock conversation"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-gray-100 hover:text-teal-700 disabled:opacity-50"
+                >
+                  {unblockMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unlock className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+              {jobDetail && (
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(true)}
+                  title="View job details"
+                  aria-label="View job details"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-gray-100 hover:text-teal-700"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {homeowner && (
@@ -150,55 +310,115 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
             </p>
           ) : (
             messages.map(m => (
-              <div key={m.id} className={cn('flex', m.is_mine ? 'justify-end' : 'justify-start')}>
-                <div
-                  className={cn(
-                    'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
-                    m.is_mine
-                      ? 'bg-teal-600 text-white'
-                      : 'border border-gray-200 bg-white text-gray-800',
-                  )}
-                >
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                  <p
-                    className={cn(
-                      'mt-1 text-[10px]',
-                      m.is_mine ? 'text-teal-100' : 'text-gray-400',
-                    )}
-                  >
-                    {fmtTime(m.created_at)}
-                  </p>
-                </div>
-              </div>
+              <MessageBubble
+                key={m.id}
+                message={m}
+                onEdit={handleEditRequest}
+                onDelete={handleDelete}
+                onReport={setReportingMessage}
+                onViewHistory={setHistoryMessage}
+              />
             ))
           )}
           <div ref={bottomRef} />
         </div>
 
-        <div className="flex items-end gap-2 border-t border-gray-100 px-4 py-3">
-          <Textarea
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder="Type a message…"
-            rows={1}
-            className="max-h-32 min-h-[40px] resize-none"
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-          <Button size="icon" onClick={handleSend} disabled={!draft.trim() || sendMutation.isPending}>
-            {sendMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
+        {conversation && !conversation.can_send ? (
+          <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3.5">
+            <p className="text-sm text-muted-foreground">
+              {conversation.blocked_by_me
+                ? `You blocked ${other?.name || 'this user'}.`
+                : "You can't reply to this conversation."}
+            </p>
+            {conversation.blocked_by_me && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => unblockMutation.mutate()}
+                disabled={unblockMutation.isPending}
+              >
+                {unblockMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Unblock
+              </Button>
             )}
-          </Button>
-        </div>
+          </div>
+        ) : (
+          <div className="border-t border-gray-100 px-4 py-3">
+            {editingMessageId && (
+              <div className="mb-2 flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1.5 text-xs text-teal-700">
+                <span className="font-medium">Editing message</span>
+                <button type="button" onClick={handleCancelEdit} className="text-teal-600 hover:text-teal-800">
+                  Cancel
+                </button>
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <Textarea
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                placeholder={editingMessageId ? 'Edit message…' : 'Type a message…'}
+                rows={1}
+                className="max-h-32 min-h-[40px] resize-none"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                  if (e.key === 'Escape' && editingMessageId) {
+                    handleCancelEdit();
+                  }
+                }}
+              />
+              <Button size="icon" onClick={handleSend} disabled={!draft.trim() || isComposerBusy}>
+                {isComposerBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingMessageId ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <JobDetailsDialog job={jobDetail} open={detailsOpen} onOpenChange={setDetailsOpen} />
+
+        <AlertDialog open={blockConfirmOpen} onOpenChange={setBlockConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Block {other?.name || 'this user'}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                They won&apos;t be able to send you messages until you unblock them.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={blockMutation.isPending}
+                onClick={() => blockMutation.mutate()}
+              >
+                {blockMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Block
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <ReportMessageDialog
+          open={!!reportingMessage}
+          onOpenChange={o => !o && setReportingMessage(null)}
+          onSubmit={payload => reportMutation.mutate(payload)}
+          isSubmitting={reportMutation.isPending}
+        />
+
+        <EditHistoryDialog
+          open={!!historyMessage}
+          onOpenChange={o => !o && setHistoryMessage(null)}
+          conversationId={conversationId}
+          messageId={historyMessage?.id ?? null}
+        />
       </SheetContent>
     </Sheet>
   );
