@@ -260,7 +260,7 @@ const TradeCRMLayout = () => {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 placeholder="Search jobs, leads…"
-                className="h-10 w-60 rounded-lg border border-input bg-white pl-9 pr-3 text-sm text-foreground placeholder:text-gray-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                className="h-10 w-60 rounded-lg border border-input bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-gray-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
               />
             </div>
             <Button

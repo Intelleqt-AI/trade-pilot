@@ -299,8 +299,8 @@ const Dashboard = () => {
                     key={job.id}
                     onClick={() => navigate('/trades-crm/job-market')}
                     className={cn(
-                      'flex cursor-pointer items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-gray-50',
-                      i > 0 && 'border-t border-gray-100'
+                      'flex cursor-pointer items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-muted',
+                      i > 0 && 'border-t border-border'
                     )}
                   >
                     <div className="min-w-0 flex-1">
@@ -328,7 +328,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
-                      <span className="text-xs text-gray-400">{timeAgo(job.created_at)}</span>
+                      <span className="text-xs text-muted-foreground">{timeAgo(job.created_at)}</span>
                       <Button variant="outline" size="sm">
                         Purchase lead · <span className="font-mono tabular-nums">{job.bid_credits}</span>
                       </Button>
@@ -368,7 +368,7 @@ const Dashboard = () => {
               labels={revenuePoints.map(p => p.label)}
               className="h-40 w-full"
             />
-            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-gray-100 pt-4">
+            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4">
               {revenueFooter.map(stat => (
                 <div key={stat.label}>
                   <div className="mb-0.5 text-xs text-muted-foreground">{stat.label}</div>
@@ -437,7 +437,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="mb-4">
-              <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5">
                 <span
                   className={cn(
                     'inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg',
@@ -445,7 +445,7 @@ const Dashboard = () => {
                       ? 'bg-green-50 text-green-600'
                       : hasUploadedDoc
                         ? 'bg-amber-50 text-amber-600'
-                        : 'bg-gray-100 text-gray-400'
+                        : 'bg-muted text-muted-foreground'
                   )}
                 >
                   <BadgeCheck className="h-[15px] w-[15px]" />
@@ -466,7 +466,7 @@ const Dashboard = () => {
                   <span
                     className={cn(
                       'inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-white',
-                      check.done ? 'bg-primary' : 'border-[1.5px] border-gray-300 bg-white'
+                      check.done ? 'bg-primary' : 'border-[1.5px] border-border bg-background'
                     )}
                   >
                     {check.done && <Check className="h-[11px] w-[11px]" strokeWidth={3} />}
@@ -474,7 +474,7 @@ const Dashboard = () => {
                   <span
                     className={cn(
                       'text-[13px]',
-                      check.done ? 'text-muted-foreground line-through' : 'text-gray-700'
+                      check.done ? 'text-muted-foreground line-through' : 'text-foreground'
                     )}
                   >
                     {check.label}
@@ -508,12 +508,12 @@ const Dashboard = () => {
               />
             ) : (
               scheduleItems.map(item => (
-                <div key={item.id} className="flex gap-3 px-5 py-2.5 transition-colors hover:bg-gray-50">
+                <div key={item.id} className="flex gap-3 px-5 py-2.5 transition-colors hover:bg-muted">
                   <div className="w-14 shrink-0 text-right">
                     <div className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
                       {item.distance_km != null ? item.distance_km : '—'}
                     </div>
-                    <div className="text-[10px] text-gray-400">
+                    <div className="text-[10px] text-muted-foreground">
                       {item.distance_km != null ? 'km away' : ''}
                     </div>
                   </div>
@@ -524,7 +524,7 @@ const Dashboard = () => {
                       {item.customer ? ` — ${item.customer}` : ''}
                     </div>
                     {item.location && (
-                      <div className="inline-flex items-center gap-1 text-xs text-gray-400">
+                      <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-[11px] w-[11px]" />
                         {item.location}
                       </div>

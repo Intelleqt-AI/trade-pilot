@@ -9,7 +9,7 @@ const Footer = () => {
           {/* Brand Column */}
           <div className="space-y-4 lg:col-span-2">
             <img 
-              src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png" 
+              src="/tradepilot-darkmood-icon.jpg"
               alt="Trade Pilot logo" 
               className="h-24 w-auto"
             />

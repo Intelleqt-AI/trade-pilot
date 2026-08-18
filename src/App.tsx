@@ -3,6 +3,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useMessagingSocket } from '@/hooks/useMessagingSocket';
+import { useFaviconTheme } from '@/hooks/useFaviconTheme';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -32,7 +33,9 @@ const MessagingSocket = () => {
   return null;
 };
 
-const App = () => (
+const App = () => {
+  useFaviconTheme();
+  return (
   <TooltipProvider>
     <MessagingSocket />
     <Toaster />
@@ -67,6 +70,7 @@ const App = () => (
         </Routes>
     </BrowserRouter>
   </TooltipProvider>
-);
+  );
+};
 
 export default App;

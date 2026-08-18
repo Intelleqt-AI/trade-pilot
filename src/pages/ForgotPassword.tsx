@@ -61,7 +61,7 @@ const ForgotPassword = () => {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-background">
         <div className="w-full max-w-md mx-auto">
           <div className="lg:hidden mb-10">
             <Logo onDark={false} />
@@ -73,17 +73,17 @@ const ForgotPassword = () => {
                 <CheckCircle2 className="h-7 w-7 text-green-600" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-navy-800">Check your inbox</h1>
-                <p className="text-gray-500 text-sm">
-                  If <span className="font-medium text-gray-800">{email}</span> is registered,
+                <h1 className="text-2xl font-bold text-foreground">Check your inbox</h1>
+                <p className="text-muted-foreground text-sm">
+                  If <span className="font-medium text-foreground">{email}</span> is registered,
                   you'll receive a reset link shortly.
                 </p>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 Didn't get it? Check your spam folder or{' '}
                 <button
                   type="button"
-                  className="text-teal-600 hover:underline font-medium"
+                  className="text-primary hover:underline font-medium"
                   onClick={() => setSent(false)}
                 >
                   try again
@@ -91,7 +91,7 @@ const ForgotPassword = () => {
               </p>
               <Link
                 to="/login"
-                className="block text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 ← Back to sign in
               </Link>
@@ -99,8 +99,8 @@ const ForgotPassword = () => {
           ) : (
             <>
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-navy-800">Forgot password?</h1>
-                <p className="text-gray-500 mt-2">Enter your email and we'll send you a reset link.</p>
+                <h1 className="text-3xl font-bold text-foreground">Forgot password?</h1>
+                <p className="text-muted-foreground mt-2">Enter your email and we'll send you a reset link.</p>
               </div>
 
               {error && (
@@ -112,11 +112,11 @@ const ForgotPassword = () => {
 
               <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                 <div className="space-y-1.5">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="email" className="block text-sm font-medium text-foreground">
                     Email address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       id="email"
                       type="email"
@@ -127,7 +127,7 @@ const ForgotPassword = () => {
                       autoFocus
                       disabled={loading}
                       required
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -145,9 +145,9 @@ const ForgotPassword = () => {
                 </button>
               </form>
 
-              <p className="mt-6 text-center text-sm text-gray-500">
+              <p className="mt-6 text-center text-sm text-muted-foreground">
                 Remember it?{' '}
-                <Link to="/login" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
+                <Link to="/login" className="font-medium text-primary hover:text-primary/80 transition-colors">
                   Sign in
                 </Link>
               </p>

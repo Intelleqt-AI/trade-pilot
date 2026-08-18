@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Menu, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,15 +10,17 @@ const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === 'dark' ? '/tradepilot-darkmood-icon.jpg' : '/tradepilot-lightmood-icon.jpg';
 
   return (
-    <nav className="sticky top-0 z-50 bg-slate-100 backdrop-blur-sm border-b border-border/50">
+    <nav className="sticky top-0 z-50 bg-muted backdrop-blur-sm border-b border-border/50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="hover:opacity-80 transition-opacity duration-150">
-              <img src="/lovable-uploads/7a0926c1-fceb-4602-bd62-9abc593c1b6a.png" alt="Trade Pilot logo" className="h-24 sm:h-32 md:h-40 w-auto -my-6 sm:-my-8 md:-my-12" />
+              <img src={logoSrc} alt="Trade Pilot logo" className="h-24 sm:h-32 md:h-40 w-auto -my-6 sm:-my-8 md:-my-12" />
             </Link>
           </div>
 
@@ -28,6 +32,7 @@ const Navigation = () => {
               </Link>
             </div>
             <div className="flex items-center space-x-3">
+              <ThemeToggle />
               {user ? (
                 <>
                   <span className="text-foreground text-sm">Hello, {profile?.first_name}</span>
@@ -56,7 +61,8 @@ const Navigation = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-1">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>

@@ -7,10 +7,10 @@ const avatarVariants = cva(
   {
     variants: {
       tone: {
-        brand: 'bg-teal-50 text-teal-700',
+        brand: 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
         navy: 'bg-navy-700 text-white',
-        neutral: 'bg-gray-100 text-gray-600',
-        accent: 'bg-orange-50 text-orange-600',
+        neutral: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300',
+        accent: 'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
       },
       size: {
         xs: 'h-6 w-6 text-[10px]',
@@ -62,7 +62,7 @@ export function UserAvatar({
         initialsOf(name)
       )}
       {verified && (
-        <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-[38%] min-h-[14px] w-[38%] min-w-[14px] items-center justify-center rounded-full border-2 border-white bg-primary text-white">
+        <span className="absolute -bottom-0.5 -right-0.5 inline-flex h-[38%] min-h-[14px] w-[38%] min-w-[14px] items-center justify-center rounded-full border-2 border-background bg-primary text-white">
           <Check className="h-[70%] w-[70%]" strokeWidth={3.2} />
         </span>
       )}

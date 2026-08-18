@@ -67,7 +67,7 @@ const TradeSupport = () => {
             How can we help{user?.first_name ? `, ${user.first_name}` : ''}?
           </h2>
           <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
             <Input
               className="h-[46px] pl-10 text-base"
               placeholder="Search help articles…"
@@ -84,8 +84,8 @@ const TradeSupport = () => {
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25',
                   topic === t
-                    ? 'border-primary bg-teal-50 text-teal-700'
-                    : 'border-border bg-card text-gray-600 hover:bg-gray-50'
+                    ? 'border-primary bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
                 )}
               >
                 {t}
@@ -114,7 +114,7 @@ const TradeSupport = () => {
               </span>
               <div className="text-sm font-semibold text-foreground">{channel.title}</div>
               <p className="mt-1 flex-1 text-[13px] text-muted-foreground">{channel.description}</p>
-              <div className="mt-2 text-xs font-medium text-gray-500">{channel.meta}</div>
+              <div className="mt-2 text-xs font-medium text-muted-foreground">{channel.meta}</div>
               {channel.href ? (
                 <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
                   <a href={channel.href}>{channel.cta}</a>
@@ -146,7 +146,7 @@ const TradeSupport = () => {
           {MOCK_TICKETS.length === 0 ? (
             <EmptyState icon={Ticket} title="No tickets yet" description="Open a ticket and it will appear here." />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {MOCK_TICKETS.map(ticket => {
                 const status = TICKET_STATUS[ticket.status];
                 return (
@@ -154,7 +154,7 @@ const TradeSupport = () => {
                     key={ticket.id}
                     type="button"
                     onClick={() => toast('Support tickets are coming soon')}
-                    className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-gray-50"
+                    className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-muted"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-semibold text-foreground">
@@ -167,7 +167,7 @@ const TradeSupport = () => {
                     <Badge tone={status.tone} size="sm" dot>
                       {status.label}
                     </Badge>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   </button>
                 );
               })}
@@ -190,7 +190,7 @@ const TradeSupport = () => {
           ) : (
             <Accordion type="single" collapsible className="w-full">
               {filteredFaqs.map((faq, i) => (
-                <AccordionItem key={i} value={`faq-${i}`} className="border-gray-100">
+                <AccordionItem key={i} value={`faq-${i}`} className="border-border">
                   <AccordionTrigger className="py-3.5 text-left text-[13px] font-semibold hover:no-underline">
                     {faq.q}
                   </AccordionTrigger>

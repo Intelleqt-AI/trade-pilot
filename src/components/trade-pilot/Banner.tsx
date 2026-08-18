@@ -4,15 +4,15 @@ import { cn } from '@/lib/utils';
 import { Tone, toneChip } from './tones';
 
 const toneSurface: Record<string, string> = {
-  brand: 'border-teal-200 bg-teal-50',
+  brand: 'border-teal-200 bg-teal-50 dark:border-teal-500/30 dark:bg-teal-500/10',
   navy: 'border-navy-700 bg-navy-800 text-white',
-  success: 'border-green-500/25 bg-green-50',
-  warning: 'border-amber-500/25 bg-amber-50',
-  danger: 'border-red-500/25 bg-red-50',
-  info: 'border-blue-500/25 bg-blue-50',
-  neutral: 'border-gray-200 bg-gray-50',
-  accent: 'border-orange-500/25 bg-orange-50',
-  violet: 'border-violet-500/25 bg-violet-50',
+  success: 'border-green-500/25 bg-green-50 dark:bg-green-500/10',
+  warning: 'border-amber-500/25 bg-amber-50 dark:bg-amber-500/10',
+  danger: 'border-red-500/25 bg-red-50 dark:bg-red-500/10',
+  info: 'border-blue-500/25 bg-blue-50 dark:bg-blue-500/10',
+  neutral: 'border-border bg-muted',
+  accent: 'border-orange-500/25 bg-orange-50 dark:bg-orange-500/10',
+  violet: 'border-violet-500/25 bg-violet-50 dark:bg-violet-500/10',
 };
 
 interface BannerProps {
@@ -46,7 +46,7 @@ export function Banner({
         <span
           className={cn(
             'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-            onDark ? 'bg-white/10 text-white' : cn('bg-white', toneChip[tone].split(' ')[1])
+            onDark ? 'bg-white/10 text-white' : cn('bg-card', toneChip[tone].split(' ')[1])
           )}
         >
           <Icon className="h-[18px] w-[18px]" />
@@ -59,7 +59,7 @@ export function Banner({
           </div>
         )}
         {children && (
-          <div className={cn('text-[13px]', onDark ? 'text-white/70' : 'text-gray-600')}>
+          <div className={cn('text-[13px]', onDark ? 'text-white/70' : 'text-muted-foreground')}>
             {children}
           </div>
         )}

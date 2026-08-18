@@ -215,7 +215,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-        <div className="border-b border-gray-100 px-6 py-4">
+        <div className="border-b border-border px-6 py-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <SheetTitle className="text-base font-semibold text-foreground">
@@ -234,7 +234,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                   onClick={() => setBlockConfirmOpen(true)}
                   title="Block conversation"
                   aria-label="Block conversation"
-                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-50 dark:hover:bg-red-500/15 hover:text-destructive"
                 >
                   <Ban className="h-4 w-4" />
                 </button>
@@ -246,7 +246,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                   disabled={unblockMutation.isPending}
                   title="Unblock conversation"
                   aria-label="Unblock conversation"
-                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-gray-100 hover:text-teal-700 disabled:opacity-50"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-teal-700 disabled:opacity-50"
                 >
                   {unblockMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -261,7 +261,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                   onClick={() => setDetailsOpen(true)}
                   title="View job details"
                   aria-label="View job details"
-                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-gray-100 hover:text-teal-700"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-teal-700"
                 >
                   <Info className="h-4 w-4" />
                 </button>
@@ -270,13 +270,13 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
           </div>
 
           {homeowner && (
-            <div className="mt-3 space-y-1.5 rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2.5 text-xs text-gray-600">
+            <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
               {homeowner.email && (
                 <a
                   href={`mailto:${homeowner.email}`}
                   className="flex items-center gap-2 hover:text-teal-700"
                 >
-                  <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">{homeowner.email}</span>
                 </a>
               )}
@@ -285,13 +285,13 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                   href={`tel:${homeowner.phone}`}
                   className="flex items-center gap-2 hover:text-teal-700"
                 >
-                  <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="font-mono tabular-nums">{homeowner.phone}</span>
                 </a>
               )}
               {(homeowner.address || homeowner.postcode) && (
                 <div className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span>{[homeowner.address, homeowner.postcode].filter(Boolean).join(', ')}</span>
                 </div>
               )}
@@ -299,7 +299,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
           )}
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto bg-gray-50/60 px-4 py-4">
+        <div className="flex-1 space-y-3 overflow-y-auto bg-muted/40 px-4 py-4">
           {isLoading ? (
             <div className="flex justify-center py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -324,7 +324,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
         </div>
 
         {conversation && !conversation.can_send ? (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3.5">
             <p className="text-sm text-muted-foreground">
               {conversation.blocked_by_me
                 ? `You blocked ${other?.name || 'this user'}.`
@@ -343,9 +343,9 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
             )}
           </div>
         ) : (
-          <div className="border-t border-gray-100 px-4 py-3">
+          <div className="border-t border-border px-4 py-3">
             {editingMessageId && (
-              <div className="mb-2 flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1.5 text-xs text-teal-700">
+              <div className="mb-2 flex items-center justify-between rounded-md bg-teal-50 px-2.5 py-1.5 text-xs text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
                 <span className="font-medium">Editing message</span>
                 <button type="button" onClick={handleCancelEdit} className="text-teal-600 hover:text-teal-800">
                   Cancel

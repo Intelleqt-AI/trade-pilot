@@ -116,12 +116,12 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen w-full flex">
         {leftPanel}
-        <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+        <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-background">
           <div className="w-full max-w-md mx-auto">
             {mobileLogo}
             <div className="flex flex-col items-center gap-4 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-              <p className="text-gray-500 text-sm">Validating your reset link…</p>
+              <p className="text-muted-foreground text-sm">Validating your reset link…</p>
             </div>
           </div>
         </div>
@@ -133,7 +133,7 @@ const ResetPassword = () => {
     return (
       <div className="min-h-screen w-full flex">
         {leftPanel}
-        <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+        <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-background">
           <div className="w-full max-w-md mx-auto">
             {mobileLogo}
             <div className="text-center space-y-5">
@@ -141,8 +141,8 @@ const ResetPassword = () => {
                 <XCircle className="h-7 w-7 text-red-500" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-navy-800">Link invalid or expired</h1>
-                <p className="text-gray-500 text-sm">{tokenError}</p>
+                <h1 className="text-2xl font-bold text-foreground">Link invalid or expired</h1>
+                <p className="text-muted-foreground text-sm">{tokenError}</p>
               </div>
               <Link
                 to="/forgot-password"
@@ -152,7 +152,7 @@ const ResetPassword = () => {
               </Link>
               <Link
                 to="/login"
-                className="block text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 ← Back to sign in
               </Link>
@@ -167,7 +167,7 @@ const ResetPassword = () => {
     <div className="min-h-screen w-full flex">
       {leftPanel}
 
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-background">
         <div className="w-full max-w-md mx-auto">
           {mobileLogo}
 
@@ -177,8 +177,8 @@ const ResetPassword = () => {
                 <CheckCircle2 className="h-7 w-7 text-green-600" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-2xl font-bold text-navy-800">Password reset!</h1>
-                <p className="text-gray-500 text-sm">
+                <h1 className="text-2xl font-bold text-foreground">Password reset!</h1>
+                <p className="text-muted-foreground text-sm">
                   Your password has been updated. You can now sign in with your new password.
                 </p>
               </div>
@@ -192,8 +192,8 @@ const ResetPassword = () => {
           ) : (
             <>
               <div className="mb-8">
-                <h1 className="text-3xl font-bold text-navy-800">Set new password</h1>
-                <p className="text-gray-500 mt-2">Choose a strong password for your account.</p>
+                <h1 className="text-3xl font-bold text-foreground">Set new password</h1>
+                <p className="text-muted-foreground mt-2">Choose a strong password for your account.</p>
               </div>
 
               {error && (
@@ -205,11 +205,11 @@ const ResetPassword = () => {
 
               <form onSubmit={handleSubmit} className="space-y-5" noValidate>
                 <div className="space-y-1.5">
-                  <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="new-password" className="block text-sm font-medium text-foreground">
                     New password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       id="new-password"
                       type={showNew ? 'text' : 'password'}
@@ -220,12 +220,12 @@ const ResetPassword = () => {
                       autoFocus
                       disabled={loading}
                       required
-                      className={`w-full pl-10 pr-12 py-3 rounded-xl border bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60 ${fieldErrors.newPassword ? 'border-red-400' : 'border-gray-200'}`}
+                      className={`w-full pl-10 pr-12 py-3 rounded-xl border bg-background text-foreground placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60 ${fieldErrors.newPassword ? 'border-red-400' : 'border-border'}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowNew(v => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
                     >
                       {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -235,11 +235,11 @@ const ResetPassword = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="confirm-password" className="block text-sm font-medium text-foreground">
                     Confirm password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       id="confirm-password"
                       type={showConfirm ? 'text' : 'password'}
@@ -249,12 +249,12 @@ const ResetPassword = () => {
                       autoComplete="new-password"
                       disabled={loading}
                       required
-                      className={`w-full pl-10 pr-12 py-3 rounded-xl border bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60 ${fieldErrors.confirmPassword ? 'border-red-400' : 'border-gray-200'}`}
+                      className={`w-full pl-10 pr-12 py-3 rounded-xl border bg-background text-foreground placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm disabled:opacity-60 ${fieldErrors.confirmPassword ? 'border-red-400' : 'border-border'}`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirm(v => !v)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
                     >
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -276,8 +276,8 @@ const ResetPassword = () => {
                 </button>
               </form>
 
-              <p className="mt-6 text-center text-sm text-gray-500">
-                <Link to="/login" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                <Link to="/login" className="font-medium text-primary hover:text-primary/80 transition-colors">
                   ← Back to sign in
                 </Link>
               </p>

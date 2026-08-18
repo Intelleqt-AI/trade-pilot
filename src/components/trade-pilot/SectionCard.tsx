@@ -30,7 +30,7 @@ export function SectionCard({
   return (
     <div className={cn('rounded-xl border bg-card shadow-xs', className)}>
       {hasHeader && (
-        <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex items-center gap-3 border-b border-border px-5 py-4">
           {Icon && (
             <span
               className={cn(

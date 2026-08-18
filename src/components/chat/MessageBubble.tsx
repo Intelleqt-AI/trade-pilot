@@ -71,9 +71,9 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
   if (m.is_deleted) {
     return (
       <div className={cn('flex', m.is_mine ? 'justify-end' : 'justify-start')}>
-        <div className="max-w-[80%] rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-3.5 py-2 text-sm italic text-muted-foreground">
+        <div className="max-w-[80%] rounded-2xl border border-dashed border-border bg-muted px-3.5 py-2 text-sm italic text-muted-foreground">
           <p>This message was deleted</p>
-          <p className="mt-1 text-[10px] text-gray-400">{fmtTime(m.created_at)}</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">{fmtTime(m.created_at)}</p>
         </div>
       </div>
     );
@@ -131,14 +131,14 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
             <div
               className={cn(
                 'relative max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
-                m.is_mine ? 'bg-primary text-primary-foreground' : 'border border-gray-200 bg-white text-gray-800',
+                m.is_mine ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground',
               )}
             >
               <p className="whitespace-pre-wrap break-words">{m.body}</p>
               <div
                 className={cn(
                   'mt-1 flex items-center gap-1.5 text-[10px]',
-                  m.is_mine ? 'text-teal-100' : 'text-gray-400',
+                  m.is_mine ? 'text-teal-100' : 'text-muted-foreground',
                 )}
               >
                 <span>{fmtTime(m.created_at)}</span>
@@ -159,7 +159,7 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
                     type="button"
                     aria-label="Message actions"
                     className={cn(
-                      'absolute -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition-opacity hover:text-gray-700',
+                      'absolute -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-opacity hover:text-foreground',
                       m.is_mine ? '-left-2' : '-right-2',
                       isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
                     )}

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from 'next-themes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   updateTradePilotMe,
@@ -46,6 +47,7 @@ import {
   FileText, Trash2, ExternalLink, Plus, Pencil, MapPin,
   User, Building2, ShieldCheck, Wrench, Coins, Clock,
   Phone, Mail, CheckCircle2, BadgeCheck, Map as MapIcon, Camera,
+  Sun, Moon,
 } from 'lucide-react';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { cn } from '@/lib/utils';
@@ -81,6 +83,7 @@ const DELETE_CONFIRMATION_TEXT = 'DELETE';
 
 const TradeCRMProfile = () => {
   const { profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -608,9 +611,9 @@ const TradeCRMProfile = () => {
                 }
               />
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {services.map((svc: any) => (
-                  <div key={svc.id} className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50">
+                  <div key={svc.id} className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted">
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
                       <CheckCircle2 className="h-4 w-4" />
                     </span>
@@ -670,9 +673,9 @@ const TradeCRMProfile = () => {
                 description="Upload your insurance, certifications and other credentials."
               />
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-border">
                 {documents.map((doc: any) => (
-                  <div key={doc.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50">
+                  <div key={doc.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted">
                     <span
                       className={cn(
                         'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
@@ -742,12 +745,12 @@ const TradeCRMProfile = () => {
           {/* Compliance & trust */}
           <SectionCard title="Compliance & trust" subtitle="Shown on your public profile" icon={ShieldCheck}>
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border bg-white px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
                 <div className="flex items-center gap-3">
                   <span
                     className={cn(
                       'inline-flex h-9 w-9 items-center justify-center rounded-lg',
-                      hasInsurance ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+                      hasInsurance ? 'bg-green-50 text-green-600' : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <ShieldCheck className="h-4 w-4" />
@@ -759,12 +762,12 @@ const TradeCRMProfile = () => {
                 </div>
                 <Switch checked={hasInsurance} onCheckedChange={setHasInsurance} />
               </div>
-              <div className="flex items-center justify-between rounded-lg border bg-white px-4 py-3">
+              <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
                 <div className="flex items-center gap-3">
                   <span
                     className={cn(
                       'inline-flex h-9 w-9 items-center justify-center rounded-lg',
-                      hasLicense ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'
+                      hasLicense ? 'bg-blue-50 text-blue-600' : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <CheckCircle2 className="h-4 w-4" />
@@ -781,6 +784,25 @@ const TradeCRMProfile = () => {
                   {saving ? 'Saving…' : 'Save'}
                 </Button>
               </div>
+            </div>
+          </SectionCard>
+
+          {/* Appearance */}
+          <SectionCard title="Appearance" subtitle="Choose how TradePilot looks" icon={theme === 'dark' ? Moon : Sun}>
+            <div className="flex items-center justify-between rounded-lg border bg-card px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </span>
+                <div>
+                  <p className="text-sm font-medium">Dark mode</p>
+                  <p className="text-xs text-muted-foreground">Switch between light and dark</p>
+                </div>
+              </div>
+              <Switch
+                checked={theme === 'dark'}
+                onCheckedChange={checked => setTheme(checked ? 'dark' : 'light')}
+              />
             </div>
           </SectionCard>
         </div>

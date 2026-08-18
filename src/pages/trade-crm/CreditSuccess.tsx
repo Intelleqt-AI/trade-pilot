@@ -61,7 +61,7 @@ const CreditSuccess = () => {
   return (
     <div className="mx-auto max-w-md py-12">
       <div className="rounded-xl border bg-card p-10 text-center shadow-sm">
-        <span className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
+        <span className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400">
           <CheckCircle2 className="h-7 w-7" />
         </span>
 
@@ -73,7 +73,7 @@ const CreditSuccess = () => {
         </p>
 
         {typeof (user as any)?.credit_balance === 'number' && (
-          <div className="mb-6 rounded-lg bg-gray-50 px-4 py-3">
+          <div className="mb-6 rounded-lg bg-muted px-4 py-3">
             <div className="text-overline font-semibold uppercase text-muted-foreground">New balance</div>
             <div className="font-mono text-display font-semibold tabular-nums text-foreground">
               {(user as any).credit_balance}
@@ -92,7 +92,7 @@ const CreditSuccess = () => {
         </div>
 
         {status === 'verifying' && (
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-400">
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Updating your balance…
           </div>

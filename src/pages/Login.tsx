@@ -79,7 +79,7 @@ const Login = () => {
       </div>
 
       {/* Right panel — form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 bg-background">
         <div className="w-full max-w-md mx-auto">
           {/* Mobile logo */}
           <div className="lg:hidden mb-10">
@@ -87,18 +87,18 @@ const Login = () => {
           </div>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-navy-800">Welcome back</h1>
-            <p className="text-gray-500 mt-2">Sign in to your account to continue</p>
+            <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground mt-2">Sign in to your account to continue</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div className="space-y-1.5">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-foreground">
                 Email address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   id="email"
                   type="email"
@@ -106,7 +106,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
                   required
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
                 />
               </div>
             </div>
@@ -114,18 +114,18 @@ const Login = () => {
             {/* Password */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                  className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -133,12 +133,12 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
+                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-border bg-background text-foreground placeholder-gray-400 focus:outline-none focus:ring-[3px] focus:ring-primary/25 focus:border-primary transition-all duration-200 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -168,9 +168,9 @@ const Login = () => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              <div className="w-full border-t border-border" />
             </div>
-            <div className="relative flex justify-center text-xs text-gray-400 bg-white px-3">
+            <div className="relative flex justify-center text-xs text-muted-foreground bg-background px-3">
               Don't have an account?
             </div>
           </div>
@@ -178,17 +178,17 @@ const Login = () => {
           {/* Sign up CTA */}
           <Link
             to="/trades/join"
-            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-navy-800 text-navy-800 font-semibold text-sm hover:bg-navy-800 hover:text-white transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-secondary text-secondary font-semibold text-sm hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
           >
             Create Trade Professional account
             <ArrowRight className="w-4 h-4" />
           </Link>
 
-          <p className="text-center text-xs text-gray-400 mt-6">
+          <p className="text-center text-xs text-muted-foreground mt-6">
             By signing in you agree to our{' '}
-            <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+            <Link to="/terms" className="underline hover:text-foreground">Terms of Service</Link>
             {' '}and{' '}
-            <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
+            <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>
           </p>
         </div>
       </div>

@@ -17,14 +17,13 @@ import { SegmentedControl } from '@/components/trade-pilot/SegmentedControl';
 import { EmptyState } from '@/components/trade-pilot/EmptyState';
 import { Banner } from '@/components/trade-pilot/Banner';
 import { UserAvatar } from '@/components/trade-pilot/UserAvatar';
+import { PropertyCard, type PropertyDetail } from '@/components/trade-pilot/PropertyCard';
 import { toneDot, urgencyBadgeTone, urgencyLabel } from '@/components/trade-pilot/tones';
 import { deriveCompetition } from '@/lib/designMockData';
 import {
   AlertTriangle,
   ArrowDownUp,
   BarChart3,
-  Bath,
-  BedDouble,
   Briefcase,
   Calendar,
   Check,
@@ -34,7 +33,6 @@ import {
   Coins,
   CreditCard,
   FileText,
-  Home,
   Loader2,
   Lock,
   Mail,
@@ -47,10 +45,7 @@ import {
   User,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
-import L from 'leaflet';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { JobLocationMap, jobMarkerIcon } from '@/components/trade-pilot/JobLocationMap';
 import useFetch from '@/hooks/useFetch';
 import { usePost } from '@/hooks/usePost';
 import { toast } from '@/lib/toast';
@@ -61,34 +56,6 @@ import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeA
 import { getCategoriesForSpecialty, getTradeLabel } from '@/lib/jobCategories';
 import { QUESTION_LABELS, formatAnswerKey } from '@/lib/jobQuestions';
 import { cn } from '@/lib/utils';
-
-const _jobMarkerIcon = L.icon({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  shadowSize: [41, 41],
-});
-
-function JobLocationMap({ lat, lng }: { lat: number; lng: number }) {
-  return (
-    <div className="h-56 w-full overflow-hidden rounded-lg border">
-      <MapContainer
-        center={[lat, lng]}
-        zoom={15}
-        scrollWheelZoom={true}
-        zoomControl={true}
-        dragging={true}
-        attributionControl={false}
-        className="h-full w-full"
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Marker position={[lat, lng]} icon={_jobMarkerIcon} />
-      </MapContainer>
-    </div>
-  );
-}
 
 /** Read-only Leaflet mini-map of the trade's search area (right rail). */
 function SearchAreaMiniMap({
@@ -119,7 +86,7 @@ function SearchAreaMiniMap({
           radius={radiusKm * 1000}
           pathOptions={{ color: '#0f8b7d', weight: 1.5, dashArray: '6 6', fillColor: '#0f8b7d', fillOpacity: 0.07 }}
         />
-        <Marker position={[lat, lng]} icon={_jobMarkerIcon} />
+        <Marker position={[lat, lng]} icon={jobMarkerIcon} />
       </MapContainer>
     </div>
   );
@@ -156,20 +123,6 @@ const competitionMeta = {
   medium: { tone: 'warning' as const, label: 'Some competition' },
   high: { tone: 'danger' as const, label: 'High competition' },
 };
-
-interface PropertyDetail {
-  name?: string | null;
-  property_type: string;
-  bedrooms: number;
-  bathrooms: number;
-  year_built?: number | null;
-  epc_band?: string | null;
-  heating_type?: string | null;
-  wall_construction?: string | null;
-  tenure?: string | null;
-  council_tax_band?: string | null;
-  cover_image_url?: string | null;
-}
 
 interface MyBidSummary {
   id: string;
@@ -275,59 +228,6 @@ function timeAgo(dateStr: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
-}
-
-// Shared property profile card used by both the available-jobs and my-bids drawers.
-function PropertyCard({ detail }: { detail: PropertyDetail }) {
-  const extras: string[] = [];
-  if (detail.year_built) extras.push(`Built ${detail.year_built}`);
-  if (detail.epc_band) extras.push(`EPC ${detail.epc_band}`);
-  if (detail.heating_type) extras.push(formatAnswerKey(detail.heating_type));
-  if (detail.wall_construction) extras.push(`${formatAnswerKey(detail.wall_construction)} walls`);
-  if (detail.tenure) extras.push(formatAnswerKey(detail.tenure));
-  if (detail.council_tax_band) extras.push(`Council tax ${detail.council_tax_band}`);
-
-  return (
-    <div className="space-y-2">
-      {detail.cover_image_url && (
-        <img
-          src={detail.cover_image_url}
-          alt="Property"
-          className="h-32 w-full rounded-lg border object-cover"
-        />
-      )}
-      <div className="flex flex-wrap gap-4 rounded-lg bg-gray-50 px-3.5 py-3 text-[13px] text-gray-700">
-        <span className="inline-flex items-center gap-1.5 capitalize">
-          <Home className="h-[15px] w-[15px]" />
-          {detail.property_type.replace('_', ' ')}
-        </span>
-        {detail.bedrooms > 0 && (
-          <span className="inline-flex items-center gap-1.5">
-            <BedDouble className="h-[15px] w-[15px]" />
-            <span className="font-mono tabular-nums">{detail.bedrooms}</span> bed
-          </span>
-        )}
-        {detail.bathrooms > 0 && (
-          <span className="inline-flex items-center gap-1.5">
-            <Bath className="h-[15px] w-[15px]" />
-            <span className="font-mono tabular-nums">{detail.bathrooms}</span> bath
-          </span>
-        )}
-      </div>
-      {extras.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {extras.map(e => (
-            <span
-              key={e}
-              className="rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600"
-            >
-              {e}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface Props {
@@ -588,7 +488,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-teal-50 px-3.5 text-[13px] font-semibold text-teal-700">
+          <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-teal-50 px-3.5 text-[13px] font-semibold text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
             <Coins className="h-4 w-4" />
             <span className="font-mono tabular-nums">{creditBalance}</span> credits
           </span>
@@ -628,7 +528,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         {subTab === 'available' && (
           <div className="flex flex-wrap items-center gap-2.5">
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
-              <SelectTrigger className="h-8 w-40 rounded-lg bg-white text-[13px]">
+              <SelectTrigger className="h-8 w-40 rounded-lg bg-card text-[13px]">
                 <SelectValue placeholder="Any urgency" />
               </SelectTrigger>
               <SelectContent>
@@ -642,7 +542,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             </Select>
             {tradeCategories.length > 0 && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="h-8 w-48 rounded-lg bg-white text-[13px]">
+                <SelectTrigger className="h-8 w-48 rounded-lg bg-card text-[13px]">
                   <SelectValue placeholder="Any category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -656,9 +556,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               </Select>
             )}
             <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
-              <SelectTrigger className="h-8 w-40 rounded-lg bg-white text-[13px]">
+              <SelectTrigger className="h-8 w-40 rounded-lg bg-card text-[13px]">
                 <div className="flex items-center gap-1.5">
-                  <ArrowDownUp className="h-3.5 w-3.5 text-gray-400" />
+                  <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
                   <SelectValue />
                 </div>
               </SelectTrigger>
@@ -709,7 +609,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   <div
                     key={job.id}
                     onClick={() => setDetailJob(job)}
-                    className="cursor-pointer overflow-hidden rounded-xl border bg-card shadow-xs transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    className="cursor-pointer overflow-hidden rounded-xl border bg-card shadow-xs transition-all hover:-translate-y-0.5 hover:border-input hover:shadow-md"
                   >
                     <div className="flex gap-4 p-5">
                       <div className="min-w-0 flex-1">
@@ -732,7 +632,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         <p className="line-clamp-2 text-[13px] text-muted-foreground">{job.description}</p>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-5 py-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted px-5 py-2.5">
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                         {job.distance_km != null && (
                           <span className="inline-flex items-center gap-1">
@@ -766,7 +666,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             Purchased — view
                           </Button>
                         ) : job.is_full ? (
-                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-gray-400">
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                             <Lock className="h-3.5 w-3.5" />
                             Bidding closed
                           </span>
@@ -797,25 +697,25 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               icon={BarChart3}
             >
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                <div className="rounded-lg bg-muted px-3.5 py-3">
                   <SectionLabel className="mb-1">Avg. job value</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
                     {marketInsights.avg_job_value != null ? `£${marketInsights.avg_job_value}` : '—'}
                   </div>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                <div className="rounded-lg bg-muted px-3.5 py-3">
                   <SectionLabel className="mb-1">Jobs this week</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-foreground">
                     {marketInsights.jobs_this_week ?? 0}
                   </div>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                <div className="rounded-lg bg-muted px-3.5 py-3">
                   <SectionLabel className="mb-1">Your win rate</SectionLabel>
                   <div className="font-mono text-h2 font-semibold tabular-nums text-green-600">
                     {marketInsights.win_rate != null ? `${marketInsights.win_rate}%` : '—'}
                   </div>
                 </div>
-                <div className="rounded-lg bg-gray-50 px-3.5 py-3">
+                <div className="rounded-lg bg-muted px-3.5 py-3">
                   <SectionLabel className="mb-1">Competition</SectionLabel>
                   <div className="text-h2 font-semibold text-foreground">
                     {marketInsights.competition ?? '—'}
@@ -864,7 +764,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <div className="flex flex-col gap-3.5">
           {bidsLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : myBids.length === 0 ? (
             <div className="rounded-xl border border-dashed bg-card">
@@ -884,7 +784,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
               <div
                 key={bid.id}
                 onClick={() => setDetailBid(bid)}
-                className="cursor-pointer rounded-xl border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                className="cursor-pointer rounded-xl border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-input hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="min-w-0 flex-1">
@@ -905,7 +805,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         {bid.amount ? (
                           <>
                             Your quote{' '}
-                            <span className="font-mono font-semibold tabular-nums text-gray-700">
+                            <span className="font-mono font-semibold tabular-nums text-foreground">
                               £{parseFloat(bid.amount).toFixed(0)}
                             </span>
                           </>
@@ -928,7 +828,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         <span
                           className={cn(
                             'font-medium capitalize',
-                            bid.job_status === 'completed' ? 'text-green-600' : 'text-gray-600'
+                            bid.job_status === 'completed' ? 'text-green-600' : 'text-muted-foreground'
                           )}
                         >
                           {bid.job_status.replace('_', ' ')}
@@ -958,7 +858,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       View contact
                     </Button>
                   ) : (
-                    <span className="text-xs text-gray-400">Awaiting homeowner</span>
+                    <span className="text-xs text-muted-foreground">Awaiting homeowner</span>
                   )}
                 </div>
               </div>
@@ -972,7 +872,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[480px]">
           {detailJob && (
             <>
-              <div className="flex items-start gap-3.5 border-b border-gray-100 p-6 pb-5 pr-12">
+              <div className="flex items-start gap-3.5 border-b border-border p-6 pb-5 pr-12">
                 <div>
                   <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
                     {detailJob.title}
@@ -1002,13 +902,13 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {detailJob.description && (
                   <div>
                     <SectionLabel className="mb-2">Description</SectionLabel>
-                    <p className="text-sm leading-relaxed text-gray-700">{detailJob.description}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{detailJob.description}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-2.5">
                   {detailJob.distance_km != null && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="rounded-lg bg-muted px-3 py-2.5">
                       <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" />
                         Distance
@@ -1018,7 +918,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
                     </div>
                   )}
-                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                  <div className="rounded-lg bg-muted px-3 py-2.5">
                     <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       Posted
@@ -1028,7 +928,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     </div>
                   </div>
                   {detailJob.preferred_date && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="rounded-lg bg-muted px-3 py-2.5">
                       <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         Preferred
@@ -1051,7 +951,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   Object.keys(detailJob.answers).filter(k => detailJob.answers[k] && k !== 'description').length > 0 && (
                     <div>
                       <SectionLabel className="mb-2">Additional details</SectionLabel>
-                      <div className="divide-y divide-gray-100 rounded-lg border">
+                      <div className="divide-y divide-border rounded-lg border">
                         {Object.entries(detailJob.answers)
                           .filter(([key, val]) => val && key !== 'description')
                           .map(([key, val]) => (
@@ -1086,11 +986,11 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           href={f.presigned_url ?? '#'}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                          className="flex items-center gap-2 rounded-lg border bg-muted px-3 py-2 text-sm transition-colors hover:bg-border"
                         >
-                          <FileText className="h-4 w-4 shrink-0 text-gray-400" />
-                          <span className="flex-1 truncate text-gray-700">{f.file_name}</span>
-                          <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="flex-1 truncate text-foreground">{f.file_name}</span>
+                          <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                             {(f.file_size / 1024).toFixed(0)} KB
                           </span>
                         </a>
@@ -1103,7 +1003,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 <div>
                   <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
                   {detailJob.unlocked_info ? (
-                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 dark:border-teal-500/30 dark:bg-teal-500/10 p-4">
                       <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
                         <CheckCircle2 className="h-4 w-4 shrink-0" />
                         {detailJob.unlocked_info.my_bid?.status === 'accepted'
@@ -1112,8 +1012,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
 
                       {(detailJob.unlocked_info.address || detailJob.unlocked_info.postcode) && (
-                        <div className="flex items-start gap-2 text-sm text-gray-700">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                        <div className="flex items-start gap-2 text-sm text-foreground">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           <div>
                             {detailJob.unlocked_info.address && (
                               <p className="font-medium leading-snug">{detailJob.unlocked_info.address}</p>
@@ -1154,18 +1054,18 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             {detailJob.unlocked_info.homeowner.email && (
                               <a
                                 href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
-                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
                               >
-                                <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
                                 <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
                               </a>
                             )}
                             {detailJob.unlocked_info.homeowner.phone && (
                               <a
                                 href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
-                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
                               >
-                                <Phone className="h-4 w-4 shrink-0 text-gray-400" />
+                                <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
                                 <span className="font-mono tabular-nums">
                                   {detailJob.unlocked_info.homeowner.phone}
                                 </span>
@@ -1175,19 +1075,19 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         </>
                       ) : (
                         <div className="relative overflow-hidden rounded-lg border border-teal-200/70">
-                          <div className="select-none space-y-2.5 bg-white/70 p-3.5 blur-sm" aria-hidden="true">
+                          <div className="select-none space-y-2.5 bg-background/70 p-3.5 blur-sm" aria-hidden="true">
                             <div className="flex items-center gap-2.5">
-                              <span className="h-9 w-9 rounded-full bg-gray-200" />
+                              <span className="h-9 w-9 rounded-full bg-muted" />
                               <div>
                                 <p className="text-sm font-semibold text-foreground">John D.</p>
-                                <p className="text-xs text-gray-400">Homeowner</p>
+                                <p className="text-xs text-muted-foreground">Homeowner</p>
                               </div>
                             </div>
                             <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
                           </div>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/60">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-background/60">
                             <Lock className="h-4 w-4 text-muted-foreground" />
-                            <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                            <span className="px-4 text-center text-xs font-semibold text-foreground">
                               Contact unlocks once the homeowner accepts your bid
                             </span>
                           </div>
@@ -1198,20 +1098,20 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <div className="relative overflow-hidden rounded-xl border">
                       <div className="select-none space-y-2.5 p-4 blur-sm" aria-hidden="true">
                         <div className="flex items-center gap-2.5">
-                          <span className="h-9 w-9 rounded-full bg-gray-200" />
+                          <span className="h-9 w-9 rounded-full bg-muted" />
                           <div>
                             <p className="text-sm font-semibold text-foreground">John D.</p>
-                            <p className="text-xs text-gray-400">Homeowner</p>
+                            <p className="text-xs text-muted-foreground">Homeowner</p>
                           </div>
                         </div>
                         <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
                         <div className="text-[13px] text-muted-foreground">j••••@gmail.com</div>
                       </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/55">
-                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/55">
+                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm">
                           <Lock className="h-4 w-4" />
                         </span>
-                        <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                        <span className="px-4 text-center text-xs font-semibold text-foreground">
                           purchase lead contact details to unlock location
                         </span>
                       </div>
@@ -1220,7 +1120,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
                 {detailJob.unlocked_info ? (
                   <>
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700">
@@ -1246,7 +1146,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       <span className="font-mono tabular-nums">{detailJob.bid_credits}</span> credits to unlock
                     </span>
                     {detailJob.is_full ? (
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
                         <Lock className="h-4 w-4" />
                         Bidding closed — {MAX_BIDS_PER_JOB} bids received
                       </span>
@@ -1272,7 +1172,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[480px]">
           {detailBid && (
             <>
-              <div className="flex items-start gap-3.5 border-b border-gray-100 p-6 pb-5 pr-12">
+              <div className="flex items-start gap-3.5 border-b border-border p-6 pb-5 pr-12">
                 <div>
                   <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
                     {detailBid.job_title}
@@ -1292,12 +1192,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {detailBid.job_description && (
                   <div>
                     <SectionLabel className="mb-2">Job description</SectionLabel>
-                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.job_description}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{detailBid.job_description}</p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-2.5">
-                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                  <div className="rounded-lg bg-muted px-3 py-2.5">
                     <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Coins className="h-3 w-3" />
                       Your quote
@@ -1306,7 +1206,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       {detailBid.amount ? `£${parseFloat(detailBid.amount).toFixed(0)}` : '—'}
                     </div>
                   </div>
-                  <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                  <div className="rounded-lg bg-muted px-3 py-2.5">
                     <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       Submitted
@@ -1316,7 +1216,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     </div>
                   </div>
                   {detailBid.availability && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="rounded-lg bg-muted px-3 py-2.5">
                       <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         Available
@@ -1327,7 +1227,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     </div>
                   )}
                   {detailBid.job_created_at && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="rounded-lg bg-muted px-3 py-2.5">
                       <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         Posted
@@ -1338,7 +1238,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     </div>
                   )}
                   {detailBid.job_preferred_date && (
-                    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+                    <div className="rounded-lg bg-muted px-3 py-2.5">
                       <div className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         Preferred
@@ -1356,7 +1256,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <span
                       className={cn(
                         'font-medium capitalize',
-                        detailBid.job_status === 'completed' ? 'text-green-600' : 'text-gray-600'
+                        detailBid.job_status === 'completed' ? 'text-green-600' : 'text-muted-foreground'
                       )}
                     >
                       {detailBid.job_status.replace('_', ' ')}
@@ -1384,7 +1284,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   Object.keys(detailBid.answers).filter(k => detailBid.answers![k] && k !== 'description').length > 0 && (
                     <div>
                       <SectionLabel className="mb-2">Additional details</SectionLabel>
-                      <div className="divide-y divide-gray-100 rounded-lg border">
+                      <div className="divide-y divide-border rounded-lg border">
                         {Object.entries(detailBid.answers)
                           .filter(([key, val]) => val && key !== 'description')
                           .map(([key, val]) => (
@@ -1418,11 +1318,11 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                             href={f.presigned_url ?? '#'}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                            className="flex items-center gap-2 rounded-lg border bg-muted px-3 py-2 text-sm transition-colors hover:bg-border"
                           >
-                            <FileText className="h-4 w-4 shrink-0 text-gray-400" />
-                            <span className="flex-1 truncate text-gray-700">{f.file_name}</span>
-                            <span className="shrink-0 font-mono text-xs tabular-nums text-gray-400">
+                            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="flex-1 truncate text-foreground">{f.file_name}</span>
+                            <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                               {(f.file_size / 1024).toFixed(0)} KB
                             </span>
                           </a>
@@ -1435,18 +1335,18 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {detailBid.description && (
                   <div>
                     <SectionLabel className="mb-2">Your bid message</SectionLabel>
-                    <p className="text-sm leading-relaxed text-gray-700">{detailBid.description}</p>
+                    <p className="text-sm leading-relaxed text-foreground">{detailBid.description}</p>
                   </div>
                 )}
 
                 {detailBid.rating != null && (
                   <div>
                     <SectionLabel className="mb-2">Homeowner rating</SectionLabel>
-                    <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3.5 py-3 text-[13px] text-amber-700">
+                    <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3.5 py-3 text-[13px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                       <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
                       <span className="font-mono font-semibold tabular-nums">{detailBid.rating}/5</span>
                       {detailBid.rating_comment && (
-                        <span className="text-amber-600">— {detailBid.rating_comment}</span>
+                        <span className="text-amber-600 dark:text-amber-400">— {detailBid.rating_comment}</span>
                       )}
                     </div>
                   </div>
@@ -1455,9 +1355,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {(detailBid.address || detailBid.job_postcode) && (
                   <div>
                     <SectionLabel className="mb-2">Location</SectionLabel>
-                    <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-                      <div className="flex items-start gap-2 text-sm text-gray-700">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                    <div className="space-y-3 rounded-xl border border-border bg-muted/60 p-4">
+                      <div className="flex items-start gap-2 text-sm text-foreground">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                         <div>
                           {detailBid.address && (
                             <p className="font-medium leading-snug">{detailBid.address}</p>
@@ -1478,7 +1378,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 <div>
                   <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
                   {detailBid.homeowner ? (
-                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 p-4">
+                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 dark:border-teal-500/30 dark:bg-teal-500/10 p-4">
                       <div className="flex items-center gap-3">
                         <UserAvatar
                           name={`${detailBid.homeowner.first_name} ${detailBid.homeowner.last_name}`}
@@ -1496,18 +1396,18 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         {detailBid.homeowner.email && (
                           <a
                             href={`mailto:${detailBid.homeowner.email}`}
-                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
                           >
-                            <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <span className="truncate">{detailBid.homeowner.email}</span>
                           </a>
                         )}
                         {detailBid.homeowner.phone && (
                           <a
                             href={`tel:${detailBid.homeowner.phone}`}
-                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-white p-2.5 text-sm text-gray-700 transition-colors hover:bg-teal-50"
+                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
                           >
-                            <Phone className="h-4 w-4 shrink-0 text-gray-400" />
+                            <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
                             <span className="font-mono tabular-nums">{detailBid.homeowner.phone}</span>
                           </a>
                         )}
@@ -1517,20 +1417,20 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     <div className="relative overflow-hidden rounded-xl border">
                       <div className="select-none space-y-2.5 p-4 blur-sm" aria-hidden="true">
                         <div className="flex items-center gap-2.5">
-                          <span className="h-9 w-9 rounded-full bg-gray-200" />
+                          <span className="h-9 w-9 rounded-full bg-muted" />
                           <div>
                             <p className="text-sm font-semibold text-foreground">John D.</p>
-                            <p className="text-xs text-gray-400">Homeowner</p>
+                            <p className="text-xs text-muted-foreground">Homeowner</p>
                           </div>
                         </div>
                         <div className="text-[13px] text-muted-foreground">+44 7700 ••• •••</div>
                         <div className="text-[13px] text-muted-foreground">j••••@gmail.com</div>
                       </div>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/55">
-                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-sm">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/55">
+                        <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm">
                           <Lock className="h-4 w-4" />
                         </span>
-                        <span className="px-4 text-center text-xs font-semibold text-gray-700">
+                        <span className="px-4 text-center text-xs font-semibold text-foreground">
                           Contact unlocks once the homeowner accepts your bid
                         </span>
                       </div>
@@ -1539,7 +1439,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-gray-100 bg-card px-6 py-4">
+              <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-700">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Lead purchased
@@ -1585,7 +1485,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           </DialogHeader>
           {contactBid?.homeowner && (
             <div className="space-y-4 py-2">
-              <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3">
+              <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
                 <UserAvatar
                   name={`${contactBid.homeowner.first_name} ${contactBid.homeowner.last_name}`}
                   size="md"
@@ -1601,25 +1501,25 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {contactBid.homeowner.email && (
                   <a
                     href={`mailto:${contactBid.homeowner.email}`}
-                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
                   >
-                    <Mail className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-teal-600" />
-                    <span className="truncate text-sm text-gray-700">{contactBid.homeowner.email}</span>
+                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-teal-600" />
+                    <span className="truncate text-sm text-foreground">{contactBid.homeowner.email}</span>
                   </a>
                 )}
                 {contactBid.homeowner.phone && (
                   <a
                     href={`tel:${contactBid.homeowner.phone}`}
-                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-gray-50"
+                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
                   >
-                    <Phone className="h-4 w-4 shrink-0 text-gray-400 group-hover:text-teal-600" />
-                    <span className="font-mono text-sm tabular-nums text-gray-700">
+                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-teal-600" />
+                    <span className="font-mono text-sm tabular-nums text-foreground">
                       {contactBid.homeowner.phone}
                     </span>
                   </a>
                 )}
                 {!contactBid.homeowner.phone && !contactBid.homeowner.email && (
-                  <p className="py-2 text-center text-sm text-gray-400">No contact details available.</p>
+                  <p className="py-2 text-center text-sm text-muted-foreground">No contact details available.</p>
                 )}
               </div>
             </div>
@@ -1639,7 +1539,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
             <DialogTitle>Search area</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="overflow-hidden rounded-xl border bg-gray-25">
+            <div className="overflow-hidden rounded-xl border bg-muted">
               <div className="flex items-center gap-2 border-b px-4 py-3">
                 <MapPin className="h-4 w-4 text-teal-600" />
                 <span className="text-sm font-medium">Work coverage area</span>
@@ -1716,7 +1616,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <DialogContent className="sm:max-w-[460px]">
           {bidSuccess ? (
             <div className="px-2 py-8 text-center">
-              <span className="mb-3.5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600">
+              <span className="mb-3.5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400">
                 <Check className="h-7 w-7" strokeWidth={2.4} />
               </span>
               <h2 className="mb-1.5 text-h2 font-semibold text-foreground">Lead unlocked</h2>
@@ -1747,7 +1647,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {selectedJob &&
                   (selectedJob.category ||
                     (selectedJob.answers && Object.keys(selectedJob.answers).length > 0)) && (
-                    <div className="space-y-2 rounded-lg border bg-gray-50 p-3">
+                    <div className="space-y-2 rounded-lg border bg-muted p-3">
                       <SectionLabel>Job details</SectionLabel>
                       {selectedJob.category && (
                         <div className="flex gap-2 text-xs">
@@ -1774,7 +1674,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   can add your quote afterwards — there's no obligation to quote.
                 </p>
 
-                <div className="flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2.5 text-xs text-orange-600">
+                <div className="flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2.5 text-xs text-orange-600 dark:bg-orange-500/15 dark:text-orange-400">
                   <Coins className="h-3.5 w-3.5 shrink-0" />
                   <span>
                     This lead costs{' '}

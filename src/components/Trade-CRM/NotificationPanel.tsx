@@ -24,12 +24,12 @@ interface NotificationsResponse {
 }
 
 const typeConfig = {
-  bid_accepted: { icon: Briefcase, iconCls: 'bg-green-50 text-green-600', dotCls: 'bg-green-500' },
-  bid_rejected: { icon: XCircle, iconCls: 'bg-red-50 text-red-600', dotCls: 'bg-red-500' },
-  job_status: { icon: Briefcase, iconCls: 'bg-blue-50 text-blue-600', dotCls: 'bg-blue-500' },
-  new_review: { icon: Star, iconCls: 'bg-amber-50 text-amber-600', dotCls: 'bg-amber-500' },
-  document_reviewed: { icon: FileCheck, iconCls: 'bg-teal-50 text-teal-600', dotCls: 'bg-teal-500' },
-  account_verified: { icon: BadgeCheck, iconCls: 'bg-teal-50 text-teal-600', dotCls: 'bg-teal-500' },
+  bid_accepted: { icon: Briefcase, iconCls: 'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400', dotCls: 'bg-green-500' },
+  bid_rejected: { icon: XCircle, iconCls: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400', dotCls: 'bg-red-500' },
+  job_status: { icon: Briefcase, iconCls: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400', dotCls: 'bg-blue-500' },
+  new_review: { icon: Star, iconCls: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400', dotCls: 'bg-amber-500' },
+  document_reviewed: { icon: FileCheck, iconCls: 'bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300', dotCls: 'bg-teal-500' },
+  account_verified: { icon: BadgeCheck, iconCls: 'bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300', dotCls: 'bg-teal-500' },
 };
 
 export const NotificationPanel = () => {
@@ -77,18 +77,18 @@ export const NotificationPanel = () => {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="relative" aria-label="Notifications">
-          <Bell className="h-[18px] w-[18px] text-gray-600" />
+          <Bell className="h-[18px] w-[18px] text-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full border-2 border-white bg-orange-500" />
+            <span className="absolute right-2 top-1.5 h-2 w-2 rounded-full border-2 border-background bg-orange-500" />
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="w-80 overflow-hidden rounded-xl p-0 shadow-lg">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-semibold text-foreground">Notifications</span>
             {unreadCount > 0 && (
-              <span className="rounded-full bg-teal-50 px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums text-teal-700">
+              <span className="rounded-full bg-teal-50 px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">
                 {unreadCount > 99 ? '99+' : unreadCount} new
               </span>
             )}
@@ -96,7 +96,7 @@ export const NotificationPanel = () => {
           {unreadCount > 0 && (
             <button
               onClick={() => markAllRead.mutate()}
-              className="flex items-center gap-1 text-xs font-medium text-teal-600 transition-colors hover:text-teal-700"
+              className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Mark all read
@@ -104,10 +104,10 @@ export const NotificationPanel = () => {
           )}
         </div>
 
-        <div className="max-h-[420px] divide-y divide-gray-100 overflow-y-auto">
+        <div className="max-h-[420px] divide-y divide-border overflow-y-auto">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
+              <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
                 <BellOff className="h-5 w-5" />
               </span>
               <p className="text-sm font-semibold text-foreground">All caught up</p>
@@ -121,8 +121,8 @@ export const NotificationPanel = () => {
                 <div
                   key={n.id}
                   onClick={() => handleNotifClick(n)}
-                  className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${
-                    !n.is_read ? 'bg-teal-50/40' : ''
+                  className={`group relative flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted ${
+                    !n.is_read ? 'bg-teal-50/40 dark:bg-teal-500/10' : ''
                   }`}
                 >
                   {!n.is_read && (
@@ -132,20 +132,20 @@ export const NotificationPanel = () => {
                     <Icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-[13px] leading-snug ${!n.is_read ? 'font-semibold text-foreground' : 'font-medium text-gray-700'}`}>
+                    <p className={`text-[13px] leading-snug ${!n.is_read ? 'font-semibold text-foreground' : 'font-medium text-muted-foreground'}`}>
                       {n.title}
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{n.body}</p>
-                    <p className="mt-1 text-[10px] text-gray-400">
+                    <p className="mt-1 text-[10px] text-muted-foreground">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </p>
                   </div>
                   <button
                     onClick={e => { e.stopPropagation(); deleteNotif.mutate(n.id); }}
-                    className="shrink-0 rounded p-1 opacity-0 transition-opacity hover:bg-red-50 group-hover:opacity-100"
+                    className="shrink-0 rounded p-1 opacity-0 transition-opacity hover:bg-red-50 dark:hover:bg-red-500/15 group-hover:opacity-100"
                     aria-label="Delete notification"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-gray-400 transition-colors hover:text-red-500" />
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-red-500" />
                   </button>
                 </div>
               );
@@ -154,14 +154,14 @@ export const NotificationPanel = () => {
         </div>
 
         {notifications.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-25 px-4 py-2.5">
+          <div className="border-t border-border bg-muted px-4 py-2.5">
             <button
               onClick={() => {
                 if (window.confirm('Delete all notifications?')) {
                   notifications.forEach(n => deleteNotif.mutate(n.id));
                 }
               }}
-              className="flex items-center gap-1 text-xs text-gray-400 transition-colors hover:text-red-500"
+              className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-red-500"
             >
               <Trash2 className="h-3 w-3" />
               Clear all

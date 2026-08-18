@@ -13,15 +13,15 @@ export type Tone =
 
 /** Tinted chip surface (icon chips, soft fills). */
 export const toneChip: Record<Tone, string> = {
-  neutral: 'bg-gray-100 text-gray-600',
-  brand: 'bg-teal-50 text-teal-600',
+  neutral: 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300',
+  brand: 'bg-teal-50 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300',
   navy: 'bg-navy-800 text-white',
-  success: 'bg-green-50 text-green-600',
-  warning: 'bg-amber-50 text-amber-600',
-  danger: 'bg-red-50 text-red-600',
-  info: 'bg-blue-50 text-blue-600',
-  accent: 'bg-orange-50 text-orange-600',
-  violet: 'bg-violet-50 text-violet-600',
+  success: 'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400',
+  warning: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400',
+  danger: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400',
+  info: 'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
+  accent: 'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
+  violet: 'bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400',
 };
 
 /** Solid dot / rail colour. */

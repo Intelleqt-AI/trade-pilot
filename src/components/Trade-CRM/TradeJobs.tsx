@@ -60,11 +60,11 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
     <div
       className={cn(
         'overflow-hidden rounded-lg border bg-card shadow-xs',
-        isRated ? 'border-amber-500/30' : isDragging ? 'border-gray-300 shadow-xl' : ''
+        isRated ? 'border-amber-500/30' : isDragging ? 'border-input shadow-xl' : ''
       )}
     >
       {isRated && (
-        <div className="flex items-center gap-1.5 border-b border-amber-500/25 bg-amber-50 px-3 py-1.5">
+        <div className="flex items-center gap-1.5 border-b border-amber-500/25 bg-amber-50 px-3 py-1.5 dark:bg-amber-500/10">
           <Lock className="h-3 w-3 shrink-0 text-amber-600" />
           <span className="text-[10px] font-semibold text-amber-600">Owner rated · locked</span>
         </div>
@@ -91,7 +91,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
           <span>{getTradeLabel(bid.job_trade)}</span>
           {bid.job_category && (
             <>
-              <span className="text-gray-300">·</span>
+              <span className="text-muted-foreground">·</span>
               <span>{bid.job_category}</span>
             </>
           )}
@@ -108,7 +108,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
           <p className="line-clamp-2 text-xs italic text-muted-foreground">“{bid.rating_comment}”</p>
         )}
 
-        <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-2.5">
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-2.5">
           <span className="flex min-w-0 items-center gap-1.5">
             {bid.homeowner ? (
               <>
@@ -117,12 +117,12 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
                   size="xs"
                   tone={isCompleted ? 'brand' : 'navy'}
                 />
-                <span className="truncate text-xs font-medium text-gray-700">
+                <span className="truncate text-xs font-medium text-foreground">
                   {bid.homeowner.first_name} {bid.homeowner.last_name}
                 </span>
               </>
             ) : (
-              <span className="text-xs text-gray-400">Homeowner</span>
+              <span className="text-xs text-muted-foreground">Homeowner</span>
             )}
           </span>
           <span
@@ -135,7 +135,7 @@ const BidCardContent = ({ bid, isDragging = false }: { bid: any; isDragging?: bo
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-gray-400">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           {dateLine ? (
             <span className={cn('inline-flex items-center gap-1 font-medium', dateLine.cls)}>
               <CalendarDays className="h-3 w-3 shrink-0" />
@@ -200,7 +200,7 @@ const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children
     <div
       ref={setNodeRef}
       className={cn(
-        'min-h-[150px] rounded-xl border border-gray-100 bg-gray-50 p-3 transition-colors',
+        'min-h-[150px] rounded-xl border border-border bg-muted p-3 transition-colors',
         isDraggingOver && 'border-dashed border-primary/50 bg-teal-50/40'
       )}
     >
@@ -209,21 +209,21 @@ const DroppableColumn = React.memo(({ column, visibleCount, onLoadMore, children
           <span className={cn('h-2 w-2 rounded-full', COLUMN_DOT[column.status] ?? 'bg-gray-400')} />
           {column.name}
         </span>
-        <span className="rounded-md bg-white px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-gray-500 shadow-xs">
+        <span className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-muted-foreground shadow-xs">
           {column.items?.length || 0}
         </span>
       </div>
       <div className="space-y-2.5">
         {children}
         {isEmpty && (
-          <div className="select-none rounded-lg border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
+          <div className="select-none rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
             Drop jobs here
           </div>
         )}
         {visibleCount < (column.items?.length || 0) && (
           <button
             onClick={() => onLoadMore(column.id)}
-            className="flex w-full items-center justify-center py-2 text-xs font-medium text-gray-500 transition-colors hover:text-foreground"
+            className="flex w-full items-center justify-center py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Load more
           </button>

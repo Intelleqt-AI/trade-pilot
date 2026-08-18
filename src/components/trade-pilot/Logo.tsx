@@ -1,26 +1,27 @@
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
   collapsed?: boolean;
+  /** Force a specific icon/text variant regardless of site theme — for
+   *  panels with a fixed background color. Omit to follow the live theme. */
   onDark?: boolean;
   className?: string;
 }
 
-/** TradePilot brand logo — teal rounded-square mark with white check,
- *  plus the "Trade✓Pilot" wordmark (orange check tucked over "Pilot"). */
-export function Logo({ collapsed = false, onDark = true, className }: LogoProps) {
+/** TradePilot brand logo — icon mark plus the "Trade✓Pilot" wordmark
+ *  (orange check tucked over "Pilot"). Mark variant follows `onDark` when
+ *  given, otherwise the current resolved theme. */
+export function Logo({ collapsed = false, onDark, className }: LogoProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = onDark ?? resolvedTheme === 'dark';
+
   const mark = (
-    <span className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-primary">
-      <svg viewBox="0 0 24 24" width="19" height="19" fill="none">
-        <path
-          d="M4 12.5L9.5 18L20 6.5"
-          stroke="#fff"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
+    <img
+      src={isDark ? '/tradepilot-darkmood-icon.jpg' : '/tradepilot-lightmood-icon.jpg'}
+      alt="TradePilot"
+      className="h-[34px] w-[34px] shrink-0 rounded-[9px] object-cover"
+    />
   );
 
   if (collapsed) return <span className={className}>{mark}</span>;
@@ -31,7 +32,7 @@ export function Logo({ collapsed = false, onDark = true, className }: LogoProps)
       <span
         className={cn(
           'inline-flex items-baseline text-[19px] font-bold tracking-[-0.02em]',
-          onDark ? 'text-white' : 'text-foreground'
+          isDark ? 'text-white' : 'text-foreground'
         )}
       >
         <span>Trade</span>

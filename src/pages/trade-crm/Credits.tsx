@@ -301,8 +301,8 @@ const Credits = () => {
                       className={cn(
                         'relative flex flex-col items-start gap-1 overflow-hidden rounded-xl border p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25',
                         selected
-                          ? 'border-primary bg-teal-50/60 shadow-xs'
-                          : 'border-border bg-card hover:border-gray-300 hover:shadow-xs'
+                          ? 'border-primary bg-teal-50/60 shadow-xs dark:bg-teal-500/10'
+                          : 'border-border bg-card hover:border-input hover:shadow-xs'
                       )}
                     >
                       {isPopular && (
@@ -313,7 +313,7 @@ const Credits = () => {
                       <span
                         className={cn(
                           'mb-1 inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg',
-                          selected ? 'bg-teal-100 text-teal-700' : 'bg-gray-50 text-gray-500'
+                          selected ? 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' : 'bg-muted text-muted-foreground'
                         )}
                       >
                         {p.images?.[0] ? (
@@ -339,7 +339,7 @@ const Credits = () => {
                   );
                 })}
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Coins className="h-4 w-4 text-teal-600" />
                   After Payment New Balance:{' '}
@@ -393,7 +393,7 @@ const Credits = () => {
             {byCategory.map(c => (
               <div key={c.label} className="flex items-center gap-2.5">
                 <span className={cn('h-2 w-2 shrink-0 rounded-full', c.colorClass)} />
-                <span className="min-w-0 flex-1 truncate text-[13px] text-gray-700">{c.label}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{c.label}</span>
                 <span className="font-mono text-[13px] font-semibold tabular-nums text-foreground">
                   {c.credits}
                 </span>
@@ -403,7 +403,7 @@ const Credits = () => {
               </div>
             ))}
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4">
             <div>
               <div className="mb-0.5 text-xs text-muted-foreground">Avg. per bid</div>
               <div className="font-mono text-h3 font-semibold tabular-nums text-foreground">
@@ -452,13 +452,13 @@ const Credits = () => {
             description="Credit purchases and bid spending will appear here."
           />
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border">
             {filteredLedger.map(entry => (
-              <div key={entry.key} className="flex items-center gap-3.5 px-5 py-3 transition-colors hover:bg-gray-50">
+              <div key={entry.key} className="flex items-center gap-3.5 px-5 py-3 transition-colors hover:bg-muted">
                 <span
                   className={cn(
                     'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                    entry.kind === 'purchase' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'
+                    entry.kind === 'purchase' ? 'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400' : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {entry.kind === 'purchase' ? (
@@ -475,7 +475,7 @@ const Credits = () => {
                   <div className="font-mono text-xs tabular-nums text-muted-foreground">
                     {entry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
-                  <div className="font-mono text-[10px] tabular-nums text-gray-400">
+                  <div className="font-mono text-[10px] tabular-nums text-muted-foreground">
                     {entry.date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -489,7 +489,7 @@ const Credits = () => {
                     {entry.credits > 0 ? '+' : ''}
                     {entry.credits}
                   </span>
-                  <span className="ml-0.5 text-[10px] text-gray-400">cr</span>
+                  <span className="ml-0.5 text-[10px] text-muted-foreground">cr</span>
                 </div>
                 <div className="hidden w-16 shrink-0 text-right font-mono text-[13px] font-semibold tabular-nums text-foreground md:block">
                   {formatMajor(entry.amount, entry.currency)}
@@ -532,8 +532,8 @@ const Credits = () => {
             <DialogTitle>Confirm purchase</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-              <span className="text-sm text-gray-700">{selectedProduct?.name} pack</span>
+            <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+              <span className="text-sm text-foreground">{selectedProduct?.name} pack</span>
               <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                 {selectedProduct?.credits} credits
               </span>
@@ -549,14 +549,14 @@ const Credits = () => {
                 <span className="text-muted-foreground">New balance</span>
                 <span className="font-mono tabular-nums text-foreground">{balance + (selectedProduct?.credits ?? 0)}</span>
               </div>
-              <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
+              <div className="flex justify-between border-t border-border pt-2 text-sm font-semibold">
                 <span className="text-foreground">Total</span>
                 <span className="font-mono tabular-nums text-foreground">
                   {selectedProduct && formatMoney(selectedProduct.unit_amount, selectedProduct.currency)}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 shrink-0 text-green-600" />
               You'll be redirected to Stripe to complete payment securely.
             </div>
