@@ -22,7 +22,7 @@ const VerifyEmail = () => {
       if (user?.user_type === "trade") {
         navigate("/trades-crm");
       } else {
-        navigate("/find-tradespeople");
+        navigate("/dashboard");
       }
     },
     onError: (err: any) => {

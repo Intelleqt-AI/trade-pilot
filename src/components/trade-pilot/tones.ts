@@ -37,16 +37,26 @@ export const toneDot: Record<Tone, string> = {
   violet: 'bg-violet-500',
 };
 
-/** Badge tone name for a job urgency value (design urgency mapping). */
+/** Ideal-timeframe labels for a job's `urgency` value (rough expectation, not an exact date). */
+const URGENCY_LABELS: Record<string, string> = {
+  within_1_week: 'Within 1 week',
+  within_2_weeks: 'Within 2 weeks',
+  within_1_month: 'Within 1 month',
+  within_2_months: 'Within 2 months',
+  flexible: '3+ months / Flexible',
+};
+
+/** Badge tone name for a job urgency/timeframe value (design mapping). */
 export function urgencyBadgeTone(
   urgency: string | undefined
 ): 'danger' | 'accent' | 'info' | 'neutral' {
   switch ((urgency || '').toLowerCase()) {
-    case 'emergency':
+    case 'within_1_week':
       return 'danger';
-    case 'urgent':
+    case 'within_2_weeks':
       return 'accent';
-    case 'normal':
+    case 'within_1_month':
+    case 'within_2_months':
       return 'info';
     default:
       return 'neutral';
@@ -56,5 +66,5 @@ export function urgencyBadgeTone(
 export function urgencyLabel(urgency: string | undefined): string {
   const u = (urgency || '').toLowerCase();
   if (!u) return 'Flexible';
-  return u.charAt(0).toUpperCase() + u.slice(1);
+  return URGENCY_LABELS[u] ?? u.charAt(0).toUpperCase() + u.slice(1);
 }

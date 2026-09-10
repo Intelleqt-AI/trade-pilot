@@ -24,7 +24,7 @@ const Login = () => {
       if (user?.user_type === 'trade') {
         navigate('/trades-crm')
       } else {
-        navigate('/find-tradespeople')
+        navigate('/dashboard')
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.response?.data?.errors?.detail || 'Invalid email or password.'

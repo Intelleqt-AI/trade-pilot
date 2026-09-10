@@ -100,10 +100,11 @@ const MAX_BIDS_PER_JOB = 3;
 
 
 const URGENCY_OPTIONS = [
-  { value: 'emergency', label: 'Emergency (same day)' },
-  { value: 'urgent', label: 'Urgent (within 48h)' },
-  { value: 'normal', label: 'Normal (within 2 weeks)' },
-  { value: 'flexible', label: 'Flexible' },
+  { value: 'within_1_week', label: 'Within 1 week' },
+  { value: 'within_2_weeks', label: 'Within 2 weeks' },
+  { value: 'within_1_month', label: 'Within 1 month' },
+  { value: 'within_2_months', label: 'Within 2 months' },
+  { value: 'flexible', label: '3+ months / Flexible' },
 ];
 
 const bidStatusTone: Record<string, 'success' | 'warning' | 'danger'> = {
@@ -529,10 +530,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
           <div className="flex flex-wrap items-center gap-2.5">
             <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
               <SelectTrigger className="h-8 w-40 rounded-lg bg-card text-[13px]">
-                <SelectValue placeholder="Any urgency" />
+                <SelectValue placeholder="Any timeframe" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Any urgency</SelectItem>
+                <SelectItem value="all">Any timeframe</SelectItem>
                 {URGENCY_OPTIONS.map(o => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
