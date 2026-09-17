@@ -74,11 +74,11 @@ const JobDetailsDialog = ({ job, open, onOpenChange }: JobDetailsDialogProps) =>
           {job.description && (
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</p>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{job.description}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{job.description}</p>
             </div>
           )}
 
-          <div className="space-y-1.5 rounded-lg border bg-gray-50 p-3">
+          <div className="space-y-1.5 rounded-lg border bg-muted p-3">
             {(job.location || job.postcode) && (
               <Row label="Location" value={[job.location, job.postcode].filter(Boolean).join(', ')} />
             )}
@@ -89,7 +89,7 @@ const JobDetailsDialog = ({ job, open, onOpenChange }: JobDetailsDialogProps) =>
           {prop && (
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Property</p>
-              <div className="space-y-1.5 rounded-lg border bg-gray-50 p-3">
+              <div className="space-y-1.5 rounded-lg border bg-muted p-3">
                 {prop.property_type && <Row label="Type" value={cap(prop.property_type)} />}
                 {prop.bedrooms != null && <Row label="Bedrooms" value={prop.bedrooms} />}
                 {prop.bathrooms != null && <Row label="Bathrooms" value={prop.bathrooms} />}
@@ -105,7 +105,7 @@ const JobDetailsDialog = ({ job, open, onOpenChange }: JobDetailsDialogProps) =>
           {answers.length > 0 && (
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Additional details</p>
-              <div className="space-y-1.5 rounded-lg border bg-gray-50 p-3">
+              <div className="space-y-1.5 rounded-lg border bg-muted p-3">
                 {answers.map(([key, val]) => (
                   <Row key={key} label={answerLabel(key)} value={String(val)} />
                 ))}

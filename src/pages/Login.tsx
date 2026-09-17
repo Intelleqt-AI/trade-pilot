@@ -178,7 +178,7 @@ const Login = () => {
           {/* Sign up CTA */}
           <Link
             to="/trades/join"
-            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-secondary text-secondary font-semibold text-sm hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-secondary text-secondary dark:text-secondary-foreground font-semibold text-sm hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
           >
             Create Trade Professional account
             <ArrowRight className="w-4 h-4" />

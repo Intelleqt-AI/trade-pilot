@@ -37,9 +37,9 @@ export const SUPPORT_CHANNELS = [
     key: 'email',
     title: 'Email',
     description: 'Send the detail and we reply within one working day.',
-    meta: 'help@tradepilot.co.uk',
+    meta: 'ben@hellotradepilot.io',
     cta: 'Email support',
-    href: 'mailto:help@tradepilot.co.uk',
+    href: 'mailto:ben@hellotradepilot.io',
     tone: 'accent' as const,
   },
 ];
