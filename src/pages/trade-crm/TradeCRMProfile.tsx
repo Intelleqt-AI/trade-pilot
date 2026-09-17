@@ -61,17 +61,12 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+// Only the trades homeowners can currently request are selectable.
 const TRADE_SPECIALTIES = [
   'Plumber',
   'Electrician',
-  'Builder',
-  'Roofer',
-  'Painter',
-  'Kitchen Installer',
   'Gas Engineer',
-  'Carpenter',
-  'Tiler',
-  'Plasterer',
+  'Roofer',
 ];
 
 const TRADE_LABELS: Record<string, string> = {

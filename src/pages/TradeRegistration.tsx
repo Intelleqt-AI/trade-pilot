@@ -131,17 +131,12 @@ const TradeRegistration = () => {
     }));
   };
 
+  // Only the trades homeowners can currently request are open for sign-up.
   const tradeOptions = [
     'Plumber',
     'Electrician',
-    'Builder',
-    'Roofer',
-    'Painter/Decorator',
-    'Kitchen Installer',
     'Gas Engineer',
-    'Carpenter/Joiner',
-    'Tiler',
-    'Plasterer',
+    'Roofer',
   ];
 
   const renderStepContent = () => {

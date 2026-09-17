@@ -16,8 +16,10 @@ export interface PropertyDetail {
   cover_image_url?: string | null;
 }
 
-/** Shared property profile card used across job/bid/lead detail drawers. */
-export function PropertyCard({ detail }: { detail: PropertyDetail }) {
+/** Shared property profile card used across job/bid/lead detail drawers.
+ *  `showImage` gates the cover photo — hidden until the lead is purchased so
+ *  the property can't be identified before unlocking. */
+export function PropertyCard({ detail, showImage = true }: { detail: PropertyDetail; showImage?: boolean }) {
   const [imageFailed, setImageFailed] = useState(false);
   const extras: string[] = [];
   if (detail.year_built) extras.push(`Built ${detail.year_built}`);
@@ -29,7 +31,7 @@ export function PropertyCard({ detail }: { detail: PropertyDetail }) {
 
   return (
     <div className="space-y-2">
-      {detail.cover_image_url && !imageFailed && (
+      {showImage && detail.cover_image_url && !imageFailed && (
         <img
           src={detail.cover_image_url}
           alt="Property"

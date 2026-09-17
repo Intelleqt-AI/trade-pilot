@@ -944,7 +944,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                 {detailJob.property_detail && (
                   <div>
                     <SectionLabel className="mb-2">Property</SectionLabel>
-                    <PropertyCard detail={detailJob.property_detail} />
+                    <PropertyCard
+                      detail={detailJob.property_detail}
+                      showImage={!!detailJob.unlocked_info?.contact_unlocked}
+                    />
                   </div>
                 )}
 
