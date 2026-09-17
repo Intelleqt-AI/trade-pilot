@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock3, Copy, Flag, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Clock3, Copy, Download, FileText, Flag, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -43,6 +43,10 @@ export interface ChatMessage {
   is_reported_by_me: boolean;
   can_edit?: boolean;
   can_delete_for_everyone?: boolean;
+  attachment_url?: string | null;
+  attachment_file_name?: string;
+  attachment_file_size?: number | null;
+  attachment_type?: 'image' | 'video' | 'pdf' | 'docx' | '';
 }
 
 interface MessageBubbleProps {
@@ -55,6 +59,50 @@ interface MessageBubbleProps {
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+
+const fmtFileSize = (bytes?: number | null) => {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const AttachmentContent = ({ m }: { m: ChatMessage }) => {
+  if (!m.attachment_url || !m.attachment_type) return null;
+  if (m.attachment_type === 'image') {
+    return (
+      <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className="block">
+        <img
+          src={m.attachment_url}
+          alt={m.attachment_file_name || 'Image attachment'}
+          className="max-h-64 w-full rounded-lg object-cover"
+        />
+      </a>
+    );
+  }
+  if (m.attachment_type === 'video') {
+    return (
+      // eslint-disable-next-line jsx-a11y/media-has-caption
+      <video src={m.attachment_url} controls className="max-h-64 w-full rounded-lg" />
+    );
+  }
+  // pdf / docx — a downloadable file chip.
+  return (
+    <a
+      href={m.attachment_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs no-underline',
+        m.is_mine ? 'border-white/30 bg-white/10' : 'border-border bg-muted',
+      )}
+    >
+      <FileText className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{m.attachment_file_name || 'Attachment'}</span>
+      {m.attachment_file_size ? <span className="shrink-0 opacity-70">{fmtFileSize(m.attachment_file_size)}</span> : null}
+      <Download className="h-3.5 w-3.5 shrink-0" />
+    </a>
+  );
+};
 
 const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }: MessageBubbleProps) => {
   const isMobile = useIsMobile();
@@ -134,7 +182,12 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
                 m.is_mine ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground',
               )}
             >
-              <p className="whitespace-pre-wrap break-words">{m.body}</p>
+              {m.attachment_url && (
+                <div className={cn(m.body ? 'mb-1.5' : undefined)}>
+                  <AttachmentContent m={m} />
+                </div>
+              )}
+              {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
               <div
                 className={cn(
                   'mt-1 flex items-center gap-1.5 text-[10px]',

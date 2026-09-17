@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Ban, Check, Info, Loader2, Mail, MapPin, Phone, Send, Unlock } from 'lucide-react';
+import { Ban, Check, FileText, Info, Loader2, Mail, MapPin, Paperclip, Phone, Send, Unlock, X } from 'lucide-react';
 import useFetch from '@/hooks/useFetch';
 import { postData } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -26,16 +26,26 @@ import {
   deleteMessage,
   editMessage,
   getMessagesUrl,
+  presignAttachment,
   reportMessage,
   unblockConversation,
+  type AttachmentType,
   type DeleteScope,
   type ReportReason,
 } from '@/lib/messaging';
+import { uploadAttachment, validateAttachmentClientSide } from '@/lib/attachmentUpload';
 
 // Trader-side chat panel (TradePilot). Talks to the trader messaging mount.
 const BASE = '/api/v1/tradepilot/messaging';
 const CONVERSATIONS_URL = `${BASE}/conversations/`;
 const UNREAD_URL = `${BASE}/unread-count/`;
+const ATTACHMENT_ACCEPT = 'image/*,video/*,application/pdf,.doc,.docx';
+
+type PendingAttachment = {
+  file: File;
+  s3_key: string;
+  attachment_type: AttachmentType;
+};
 
 interface OtherParty {
   id: string;
@@ -75,6 +85,10 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [reportingMessage, setReportingMessage] = useState<ChatMessage | null>(null);
   const [historyMessage, setHistoryMessage] = useState<ChatMessage | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [attachmentProgress, setAttachmentProgress] = useState<number | null>(null);
+  const [isAttaching, setIsAttaching] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const messagesUrl = open && conversationId ? getMessagesUrl(conversationId) : null;
@@ -103,6 +117,9 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
     setDraft('');
     setReportingMessage(null);
     setHistoryMessage(null);
+    setPendingAttachment(null);
+    setAttachmentProgress(null);
+    setIsAttaching(false);
   }, [conversationId]);
 
   const invalidateThread = () => {
@@ -110,9 +127,23 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   };
 
   const sendMutation = useMutation({
-    mutationFn: (body: string) => postData({ url: getMessagesUrl(conversationId as string), data: { body } }),
+    mutationFn: ({ body, attachment }: { body: string; attachment: PendingAttachment | null }) =>
+      postData({
+        url: getMessagesUrl(conversationId as string),
+        data: {
+          body,
+          ...(attachment && {
+            attachment_s3_key: attachment.s3_key,
+            attachment_file_name: attachment.file.name,
+            attachment_file_size: attachment.file.size,
+            attachment_content_type: attachment.file.type,
+            attachment_type: attachment.attachment_type,
+          }),
+        },
+      }),
     onSuccess: () => {
       setDraft('');
+      setPendingAttachment(null);
       invalidateThread();
       queryClient.invalidateQueries({ queryKey: [UNREAD_URL] });
     },
@@ -120,6 +151,33 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
       toast.error(err?.response?.data?.message || 'Failed to send message.');
     },
   });
+
+  const handleAttachClick = () => fileInputRef.current?.click();
+
+  const handleFileSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !conversationId) return;
+    const clientError = validateAttachmentClientSide(file);
+    if (clientError) {
+      toast.error(clientError);
+      return;
+    }
+    setIsAttaching(true);
+    setAttachmentProgress(0);
+    try {
+      const presigned = await presignAttachment(conversationId, file);
+      await uploadAttachment(file, presigned, setAttachmentProgress);
+      setPendingAttachment({ file, s3_key: presigned.s3_key, attachment_type: presigned.attachment_type });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to attach file.');
+    } finally {
+      setIsAttaching(false);
+      setAttachmentProgress(null);
+    }
+  };
+
+  const handleRemoveAttachment = () => setPendingAttachment(null);
 
   const editMutation = useMutation({
     mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
@@ -188,11 +246,13 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
 
   const handleSend = () => {
     const body = draft.trim();
-    if (!body || !conversationId) return;
+    if (!conversationId) return;
     if (editingMessageId) {
+      if (!body) return;
       editMutation.mutate({ messageId: editingMessageId, body });
     } else {
-      sendMutation.mutate(body);
+      if (!body && !pendingAttachment) return;
+      sendMutation.mutate({ body, attachment: pendingAttachment });
     }
   };
 
@@ -352,6 +412,29 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                 </button>
               </div>
             )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ATTACHMENT_ACCEPT}
+              className="hidden"
+              onChange={handleFileSelected}
+            />
+            {(isAttaching || pendingAttachment) && !editingMessageId && (
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground">
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">
+                  {isAttaching ? 'Uploading…' : pendingAttachment?.file.name}
+                  {isAttaching && attachmentProgress != null ? ` ${attachmentProgress}%` : ''}
+                </span>
+                {isAttaching ? (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                ) : (
+                  <button type="button" onClick={handleRemoveAttachment} className="shrink-0 hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <Textarea
                 value={draft}
@@ -369,7 +452,20 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
                   }
                 }}
               />
-              <Button size="icon" onClick={handleSend} disabled={!draft.trim() || isComposerBusy}>
+              {!editingMessageId && (
+                <Button size="icon" variant="outline" onClick={handleAttachClick} disabled={isAttaching} title="Attach a file">
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={
+                  isComposerBusy ||
+                  isAttaching ||
+                  (editingMessageId ? !draft.trim() : !draft.trim() && !pendingAttachment)
+                }
+              >
                 {isComposerBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : editingMessageId ? (
