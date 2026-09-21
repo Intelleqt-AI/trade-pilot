@@ -97,9 +97,10 @@ const Navigation = () => {
                     <Button
                       variant="ghost"
                       className="w-full justify-start"
-                      onClick={() => {
-                        signOut();
+                      onClick={async () => {
+                        await signOut();
                         setIsOpen(false);
+                        navigate('/login', { replace: true });
                       }}
                       disabled={loading}
                     >

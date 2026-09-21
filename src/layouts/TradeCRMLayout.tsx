@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationPanel from '@/components/Trade-CRM/NotificationPanel';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, ME_URL } from '@/hooks/useAuth';
 import { fetchData } from '@/lib/api';
 import { Navigate, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -65,9 +65,20 @@ const TradeCRMLayout = () => {
   const { isAuthenticated, loading, isTrade, user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('tp_collapsed') === '1');
   const [jobMarketCredits, setJobMarketCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        queryClient.invalidateQueries({ queryKey: [ME_URL] });
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [queryClient]);
 
   const { data: msgUnread } = useQuery({
     queryKey: [MESSAGES_UNREAD_URL],
