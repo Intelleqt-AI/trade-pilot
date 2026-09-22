@@ -3,6 +3,7 @@ import App from './App.tsx';
 import './index.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserbackProvider } from '@userback/react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ThemeProvider } from './components/theme-provider';
 
 const queryClient = new QueryClient({
@@ -15,7 +16,9 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById('root')!).render(
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+const app = (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="tradepilot-theme">
     <QueryClientProvider client={queryClient}>
       <UserbackProvider token="A-toB4qf6TlycGzt55mrEgeMRHe">
@@ -23,4 +26,8 @@ createRoot(document.getElementById('root')!).render(
       </UserbackProvider>
     </QueryClientProvider>
   </ThemeProvider>
+);
+
+createRoot(document.getElementById('root')!).render(
+  googleClientId ? <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider> : app
 );

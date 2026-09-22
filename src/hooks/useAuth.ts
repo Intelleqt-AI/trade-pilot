@@ -58,6 +58,7 @@ export const useAuth = () => {
   const user = meData?.data ?? null;
 
   const loginMutation = usePost<any>({});
+  const socialLoginMutation = usePost<any>({});
 
   const signIn = async (email: string, password: string) => {
     const res = await loginMutation.mutateAsync({
@@ -65,6 +66,28 @@ export const useAuth = () => {
       data: { email, password },
     } as any);
     // Seed cache immediately so TradeCRMLayout sees authenticated user on navigate
+    if (res?.data?.user) {
+      queryClient.setQueryData([ME_URL], { data: res.data.user });
+    }
+    return res;
+  };
+
+  const signInWithGoogle = async (credential: string) => {
+    const res = await socialLoginMutation.mutateAsync({
+      url: '/api/v1/tradepilot/auth/social/google/',
+      data: { credential },
+    } as any);
+    if (res?.data?.user) {
+      queryClient.setQueryData([ME_URL], { data: res.data.user });
+    }
+    return res;
+  };
+
+  const signInWithApple = async (idToken: string, firstName?: string, lastName?: string) => {
+    const res = await socialLoginMutation.mutateAsync({
+      url: '/api/v1/tradepilot/auth/social/apple/',
+      data: { id_token: idToken, first_name: firstName, last_name: lastName },
+    } as any);
     if (res?.data?.user) {
       queryClient.setQueryData([ME_URL], { data: res.data.user });
     }
@@ -89,6 +112,8 @@ export const useAuth = () => {
     profile: user,
     loading: isLoading,
     signIn,
+    signInWithGoogle,
+    signInWithApple,
     signOut,
     isAuthenticated: !!user,
     isCustomer: user?.user_type === 'customer',

@@ -6,7 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Slider } from '@/components/ui/slider';
@@ -32,7 +39,9 @@ import {
   Clock,
   Coins,
   CreditCard,
+  EyeOff,
   FileText,
+  Flag,
   Loader2,
   Lock,
   Mail,
@@ -43,6 +52,7 @@ import {
   SlidersHorizontal,
   Star,
   User,
+  UserX,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import { JobLocationMap, jobMarkerIcon } from '@/components/trade-pilot/JobLocationMap';
@@ -52,6 +62,8 @@ import { toast } from '@/lib/toast';
 import { useAuth } from '@/hooks/useAuth';
 import { updateTradePilotMe, patchData } from '@/lib/api';
 import ChatPanel from '@/components/chat/ChatPanel';
+import ReportJobDialog from '@/components/Trade-CRM/ReportJobDialog';
+import { reportJob, hideJob, blockHomeownerForJob, type JobReportReason } from '@/lib/jobModeration';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
 import { getCategoriesForSpecialty, getTradeLabel } from '@/lib/jobCategories';
 import { QUESTION_LABELS, formatAnswerKey } from '@/lib/jobQuestions';
@@ -266,6 +278,10 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [subTab, setSubTab] = useState<'available' | 'my-bids'>('available');
   const [sortBy, setSortBy] = useState<'newest' | 'distance'>('newest');
   const [detailJob, setDetailJob] = useState<Job | null>(null);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  // Shown right after a report is submitted — hide/block are a *consequence*
+  // of reporting, not independent options sitting next to it.
+  const [followUpOpen, setFollowUpOpen] = useState(false);
 
   const tradeCategories = useMemo(() => getCategoriesForSpecialty(profile?.trade_specialty), [profile?.trade_specialty]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -433,6 +449,50 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
       data: {},
     } as any);
   };
+
+  // Report a job post for moderation review. On success, the follow-up dialog
+  // opens to offer hide/block as a consequence of the report — see `followUpOpen`.
+  const reportMutation = useMutation({
+    mutationFn: (payload: { reason: JobReportReason; details?: string }) =>
+      reportJob((detailJob as Job).id, payload),
+    onSuccess: () => {
+      toast.success('Post reported. Thanks for flagging it.');
+      setReportDialogOpen(false);
+      setFollowUpOpen(true);
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to report post.');
+    },
+  });
+
+  // "Not seeing this post" / "Block this homeowner" — only reachable from the
+  // post-report follow-up dialog, personal + immediate. Both remove the job
+  // from the Job Market feed for this trader only.
+  const hideMutation = useMutation({
+    mutationFn: () => hideJob((detailJob as Job).id),
+    onSuccess: () => {
+      toast.success("Post hidden — you won't see it again.");
+      setFollowUpOpen(false);
+      setDetailJob(null);
+      queryClient.invalidateQueries({ predicate: q => (q.queryKey[0] as string)?.startsWith(JOBS_URL) });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to hide post.');
+    },
+  });
+
+  const blockHomeownerMutation = useMutation({
+    mutationFn: () => blockHomeownerForJob((detailJob as Job).id),
+    onSuccess: () => {
+      toast.success('Homeowner blocked.');
+      setFollowUpOpen(false);
+      setDetailJob(null);
+      queryClient.invalidateQueries({ predicate: q => (q.queryKey[0] as string)?.startsWith(JOBS_URL) });
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to block homeowner.');
+    },
+  });
 
   // Submit / edit the quote on a purchased lead.
   const quoteMutation = useMutation({
@@ -873,7 +933,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
         <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-[480px]">
           {detailJob && (
             <>
-              <div className="flex items-start gap-3.5 border-b border-border p-6 pb-5 pr-12">
+              <div className="flex items-start justify-between gap-3.5 border-b border-border p-6 pb-5 pr-12">
                 <div>
                   <h2 className="mb-2 text-h2 font-semibold leading-snug text-foreground">
                     {detailJob.title}
@@ -897,6 +957,15 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                     )}
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setReportDialogOpen(true)}
+                  title="Report this post"
+                  aria-label="Report this post"
+                  className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                >
+                  <Flag className="h-4 w-4" />
+                </button>
               </div>
 
               <div className="flex flex-1 flex-col gap-5 p-6">
@@ -1166,6 +1235,59 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   </>
                 )}
               </div>
+
+              <ReportJobDialog
+                open={reportDialogOpen}
+                onOpenChange={setReportDialogOpen}
+                onSubmit={payload => reportMutation.mutate(payload)}
+                isSubmitting={reportMutation.isPending}
+              />
+
+              <Dialog open={followUpOpen} onOpenChange={setFollowUpOpen}>
+                <DialogContent className="sm:max-w-[420px]">
+                  <DialogHeader>
+                    <DialogTitle>Report submitted</DialogTitle>
+                    <DialogDescription>What would you like to do about this post?</DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => hideMutation.mutate()}
+                      disabled={hideMutation.isPending || blockHomeownerMutation.isPending}
+                      className="flex items-center gap-2.5 rounded-lg border border-gray-100 px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {hideMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 shrink-0" />
+                      )}
+                      Not seeing this post
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => blockHomeownerMutation.mutate()}
+                      disabled={hideMutation.isPending || blockHomeownerMutation.isPending}
+                      className="flex items-center gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      {blockHomeownerMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                      ) : (
+                        <UserX className="h-4 w-4 shrink-0" />
+                      )}
+                      Block posts from this homeowner
+                    </button>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      disabled={hideMutation.isPending || blockHomeownerMutation.isPending}
+                      onClick={() => setFollowUpOpen(false)}
+                    >
+                      Leave as it is
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </>
           )}
         </SheetContent>

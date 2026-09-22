@@ -253,7 +253,7 @@ const CustomerRegistration = () => {
         {/* Left side - Image */}
         <div className="hidden lg:flex lg:w-1/2 bg-secondary relative overflow-hidden">
           <img 
-            src="/lovable-uploads/8409bc5c-91c8-4bc8-82b6-7dab7eb6049e.png"
+            src="/site-assets/8409bc5c-91c8-4bc8-82b6-7dab7eb6049e.png"
             alt="Happy customer with tradesperson"
             className="absolute inset-0 w-full h-full object-cover"
           />

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/lib/toast"
 import { Logo } from "@/components/trade-pilot/Logo"
+import SocialSignInButtons from "@/components/auth/SocialSignInButtons"
 
 const Login = () => {
   const [email, setEmail] = useState("")
@@ -164,6 +165,17 @@ const Login = () => {
               )}
             </button>
           </form>
+
+          {/* Social sign-in */}
+          <div className="mt-6">
+            <SocialSignInButtons
+              onSuccess={user => {
+                if (user?.user_type === 'trade') navigate('/trades-crm')
+                else navigate('/dashboard')
+              }}
+              onError={message => toast.error(message)}
+            />
+          </div>
 
           {/* Divider */}
           <div className="relative my-6">

@@ -499,7 +499,7 @@ const TradeRegistration = () => {
         {/* Left side - Image */}
         <div className="hidden lg:flex lg:w-1/2 bg-secondary relative overflow-hidden">
           <img
-            src="/lovable-uploads/3ee8a739-9971-4a96-86e1-14de2728d255.png"
+            src="/site-assets/3ee8a739-9971-4a96-86e1-14de2728d255.png"
             alt="Professional tradesperson"
             className="absolute inset-0 w-full h-full object-cover"
           />
