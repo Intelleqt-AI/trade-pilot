@@ -50,10 +50,10 @@ const GasEngineers = () => {
       <SiteHeader />
       <main>
         <ElectriciansHero
-          imageSrc="/trade-pilot-plumbers-hero-v2.jpg"
-          imageAlt="Modern home interior with heating and hot water"
+          imageSrc="/trade-pilot-gas-engineers-hero.jpg"
+          imageAlt="Modern bathroom with twin basins on a wooden vanity and floor-to-ceiling glass doors onto a garden"
           imageFit="cover"
-          imagePosition="50% 100%"
+          imagePosition="50% 50%"
           tradeName="Gas & Boiler Engineers"
           heading="Find Trusted Gas & Boiler Engineers"
           description="Tell us about the job and compare quotes from up to 3 vetted local gas and boiler engineers."
