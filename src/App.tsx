@@ -7,6 +7,7 @@ import { useFaviconTheme } from '@/hooks/useFaviconTheme';
 import Index from './pages/Index';
 import Electricians from './pages/Electricians';
 import AreaReading from './pages/AreaReading';
+import PaintersDecoratorsReading from './pages/PaintersDecoratorsReading';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -48,6 +49,7 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/electricians" element={<Electricians />} />
           <Route path="/areas/reading" element={<AreaReading />} />
+          <Route path="/painters-decorators/reading" element={<PaintersDecoratorsReading />} />
           <Route path="/dashboard" element={<CustomerDashboard />} />
           <Route path="/trades-crm" element={<TradeCRMLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
