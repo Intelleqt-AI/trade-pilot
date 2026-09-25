@@ -4,6 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useMessagingSocket } from '@/hooks/useMessagingSocket';
 import { useFaviconTheme } from '@/hooks/useFaviconTheme';
+import Index from './pages/Index';
+import Electricians from './pages/Electricians';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -42,7 +44,8 @@ const App = () => {
     <Sonner />
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Index />} />
+          <Route path="/electricians" element={<Electricians />} />
           <Route path="/dashboard" element={<CustomerDashboard />} />
           <Route path="/trades-crm" element={<TradeCRMLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
