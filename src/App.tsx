@@ -8,6 +8,7 @@ import Index from './pages/Index';
 import Electricians from './pages/Electricians';
 import Plumbers from './pages/Plumbers';
 import Builders from './pages/Builders';
+import GasEngineers from './pages/GasEngineers';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -50,6 +51,7 @@ const App = () => {
           <Route path="/electricians" element={<Electricians />} />
           <Route path="/plumbers" element={<Plumbers />} />
           <Route path="/builders" element={<Builders />} />
+          <Route path="/gas-engineers" element={<GasEngineers />} />
           <Route path="/dashboard" element={<CustomerDashboard />} />
           <Route path="/trades-crm" element={<TradeCRMLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
