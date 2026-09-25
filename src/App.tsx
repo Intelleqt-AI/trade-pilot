@@ -14,6 +14,7 @@ import PaintersDecorators from './pages/PaintersDecorators';
 import KitchenFitters from './pages/KitchenFitters';
 import Carpenters from './pages/Carpenters';
 import Apps from './pages/Apps';
+import AreaReading from './pages/AreaReading';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
@@ -62,6 +63,7 @@ const App = () => {
           <Route path="/kitchen-fitters" element={<KitchenFitters />} />
           <Route path="/carpenters" element={<Carpenters />} />
           <Route path="/apps" element={<Apps />} />
+          <Route path="/areas/reading" element={<AreaReading />} />
           <Route path="/dashboard" element={<CustomerDashboard />} />
           <Route path="/trades-crm" element={<TradeCRMLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />

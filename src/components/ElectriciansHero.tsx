@@ -14,6 +14,7 @@ type ElectriciansHeroProps = {
   description?: string;
   imageFit?: "cover" | "contain";
   imagePosition?: string;
+  initialPostcode?: string;
   onSubmit?: (postcode: string) => void | Promise<void>;
 };
 const TRUST_ITEMS = [
@@ -30,11 +31,12 @@ export default function ElectriciansHero({
   description = "Tell us about the job and compare quotes from up to 3 vetted local electricians.",
   imageFit = "cover",
   imagePosition = "50% 30%",
+  initialPostcode = "",
   onSubmit,
 }: ElectriciansHeroProps) {
   const inputId = useId();
   const errorId = `${inputId}-error`;
-  const [postcode, setPostcode] = useState("");
+  const [postcode, setPostcode] = useState(initialPostcode);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState(false);
   const [submitted, setSubmitted] = useState<string | null>(null);
@@ -66,8 +68,8 @@ export default function ElectriciansHero({
               <div role="status" className="flex gap-3.5 rounded-2xl border border-white/20 bg-white/[0.06] p-[18px] lg:px-[22px] lg:py-5">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1DAFA1]/20"><MapPin aria-hidden="true" className="h-5 w-5 text-[#1DAFA1]" /></span>
                 <div className="flex flex-col items-start">
-                  <p className="text-base font-semibold leading-snug text-white lg:text-[17px]">Thanks. We’ll look for vetted electricians near {submitted}.</p>
-                  <p className="mt-1.5 text-[15px] leading-normal text-[#C8D5E2]">Next, tell us a little about the job so up to 3 local electricians can quote.</p>
+                  <p className="text-base font-semibold leading-snug text-white lg:text-[17px]">Thanks. We’ll look for vetted {tradeName.toLowerCase()} near {submitted}.</p>
+                  <p className="mt-1.5 text-[15px] leading-normal text-[#C8D5E2]">Next, tell us a little about the job so up to 3 local {tradeName.toLowerCase()} can quote.</p>
                   <button type="button" onClick={() => setSubmitted(null)} className="min-h-11 rounded-lg text-[15px] font-semibold text-white underline underline-offset-4 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-white">Change postcode</button>
                 </div>
               </div>
