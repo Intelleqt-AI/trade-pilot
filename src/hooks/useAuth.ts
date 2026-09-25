@@ -47,6 +47,8 @@ export const useAuth = () => {
         return await apiRequest<MeResponse>(ME_URL, { method: 'GET' }, true);
       } catch (err: any) {
         if (err?.response?.status === 401) return null;
+        // The public homepage should remain available when the optional API is offline.
+        if (!err?.response) return null;
         throw err;
       }
     },
