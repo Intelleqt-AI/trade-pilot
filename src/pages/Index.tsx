@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Star, Shield, Zap, Clock, Phone, Search, ArrowRight, MapPin, Wrench, Zap as Electric, Hammer, Paintbrush, Flower, Sparkles, TrendingUp, Users, DollarSign, FileCheck, Bot, CreditCard, Smartphone, ChevronLeft, ChevronRight, Home, ChefHat, Flame, CheckCircle, Info, UserCheck, ShieldCheck, Banknote } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 const heroImage = "/site-assets/c7b681c7-7a7b-41b3-a2cd-b1c3508f99c0.png";
-const stepSnapImage = "/site-assets/bb6bc857-8b38-4995-ae7d-e5a77b1f0303.png";
-const stepMatchImage = "/site-assets/3ee8a739-9971-4a96-86e1-14de2728d255.png";
-const stepCompleteImage = "/site-assets/c067a8dd-6671-4c98-9bd8-5fc0734cc817.png";
+const stepSnapImage = "/site-assets/how-it-works-1.jpg";
+const stepMatchImage = "/site-assets/how-it-works-2.jpg";
+const stepCompleteImage = "/site-assets/how-it-works-3.jpg";
+
+const faqs = [
+  { question: "How does Trade Pilot work?", answer: "Tell us what you need and your postcode. Up to 3 vetted local trades who cover your area can quote. You compare their quotes and reviews, then choose who to invite round." },
+  { question: "Is Trade Pilot free for homeowners?", answer: "Yes. Posting a job and getting quotes is free, and you don’t have to accept any quote." },
+  { question: "How do you check the trades?", answer: "We check every trade before they can quote on Trade Pilot. You should still check the right registration for the job, such as the Gas Safe Register for gas work and a registered electrician for electrical work, and ask for proof of insurance." },
+  { question: "What does “reviews from real, invoiced jobs” mean?", answer: "Reviews on Trade Pilot are linked to jobs that were invoiced through the platform. That means you’re reading about work that was actually done and paid for, not reviews anyone could post." },
+  { question: "Which areas do you cover?", answer: "We’re launching town by town, starting with Reading. Enter your postcode when you post a job and we’ll match you with trades who cover your area." },
+  { question: "Why up to 3 quotes?", answer: "Three quotes are enough to compare prices and approaches without being chased by lots of trades. Each job goes to no more than 3 trades." },
+];
 
 const Index = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -66,10 +74,10 @@ const Index = () => {
             {/* Left side - Content */}
             <div className="flex flex-col justify-center text-center lg:text-left">
               <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                Find trusted local tradespeople.
+                Find trusted local tradespeople
               </h1>
               <p className={`text-base sm:text-lg md:text-xl text-white/80 font-light mb-6 sm:mb-8 max-w-lg mx-auto lg:mx-0 transition-all duration-700 delay-200 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-                Every professional vetted, reviewed, and rated. Get matched with quality trades in minutes.
+                Tell us about the job once and compare quotes from up to 3 vetted local trades. Free for homeowners, with no obligation.
               </p>
               <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start transition-all duration-700 delay-400 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-white px-6 sm:px-8 py-5 sm:py-6 text-base sm:text-lg rounded-xl" asChild>
@@ -88,28 +96,42 @@ const Index = () => {
                 <p className="text-muted-foreground text-xs sm:text-sm mb-4 sm:mb-6">Tell us what you need and we'll match you with the right trades</p>
 
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-muted rounded-lg sm:rounded-xl">
-                    <Search className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="What do you need?"
-                      className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-base"
-                    />
+                  <div>
+                    <label htmlFor="enquiry-trade" className="mb-1.5 block text-xs sm:text-sm font-medium text-secondary">What do you need?</label>
+                    <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-muted rounded-lg sm:rounded-xl">
+                      <Search className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+                      <select
+                        id="enquiry-trade"
+                        defaultValue=""
+                        className="flex-1 min-w-0 bg-transparent border-none outline-none text-foreground text-sm sm:text-base"
+                      >
+                        <option value="" disabled>Select a trade</option>
+                        {["Plumbers", "Electricians", "Gas & Boiler Engineers", "Builders", "Roofers", "Painters & Decorators", "Kitchen Fitters", "Carpenters & Joiners"].map((trade) => (
+                          <option key={trade} value={trade}>{trade}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-muted rounded-lg sm:rounded-xl">
-                    <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Your postcode"
-                      className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-base"
-                    />
+                  <div>
+                    <label htmlFor="enquiry-postcode" className="mb-1.5 block text-xs sm:text-sm font-medium text-secondary">Your postcode</label>
+                    <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-muted rounded-lg sm:rounded-xl">
+                      <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
+                      <input
+                        id="enquiry-postcode"
+                        type="text"
+                        placeholder="e.g. RG1 1AA"
+                        autoComplete="postal-code"
+                        className="flex-1 min-w-0 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-sm sm:text-base"
+                      />
+                    </div>
                   </div>
                   <Button size="lg" className="w-full rounded-lg sm:rounded-xl py-5 sm:py-6 bg-secondary hover:bg-secondary/90 text-white text-sm sm:text-base" asChild>
                     <a href="/find-tradespeople">
-                      Get quotes
+                      Compare up to 3 quotes
                       <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2" />
                     </a>
                   </Button>
+                  <p className="text-center text-xs sm:text-sm text-muted-foreground">Free for homeowners. You don’t have to accept any quote.</p>
                 </div>
 
                 {/* Trust indicators */}
@@ -160,77 +182,77 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium text-center text-white mb-8 sm:mb-12 lg:mb-16">Browse our most popular categories</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 max-w-6xl mx-auto">
-            <div className="group cursor-pointer">
+            <Link to="/plumbers" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Wrench className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Plumbers</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/electricians" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Electric className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Electricians</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/builders" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Hammer className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Builders</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/roofers" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Home className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Roofers</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/painters-decorators" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Paintbrush className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Painters / Decorators</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/kitchen-fitters" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <ChefHat className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Kitchen Installers</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/gas-engineers" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Flame className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Gas Engineers</h3>
               </div>
-            </div>
+            </Link>
             
-            <div className="group cursor-pointer">
+            <Link to="/carpenters" className="group block">
               <div className="bg-white rounded-xl sm:rounded-2xl h-24 sm:h-28 lg:h-32 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:bg-primary transition-all duration-300 border border-white/20">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-secondary/10 rounded-full flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-white/20 transition-colors">
                   <Wrench className="h-6 w-6 text-secondary group-hover:text-white" />
                 </div>
                 <h3 className="font-semibold text-secondary group-hover:text-white text-sm">Carpenters / Joiners</h3>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -244,13 +266,13 @@ const Index = () => {
             <div className="relative">
               <div className="bg-muted rounded-2xl overflow-hidden h-full flex flex-col">
                 <div className="w-full h-48 sm:h-56 lg:h-64 overflow-hidden">
-                  <img src={stepSnapImage} alt="Snap a photo" className="w-full h-full object-cover" />
+                  <img src={stepSnapImage} alt="Modern kitchen with a marble island and wooden cabinets" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <span className="text-orange-500 text-sm font-medium mb-3">Step 1</span>
-                  <h3 className="text-xl font-semibold text-secondary mb-4">Post your job (60 seconds)</h3>
+                  <h3 className="text-xl font-semibold text-secondary mb-4">Tell us about the job</h3>
                   <p className="text-muted-foreground text-base leading-relaxed">
-                    Add your postcode and a short brief. You can attach a photo or record a quick voice note.
+                    Choose the trade, add your postcode and describe what you need. Photos help. It takes about a minute.
                   </p>
                 </div>
               </div>
@@ -260,13 +282,13 @@ const Index = () => {
             <div className="relative">
               <div className="bg-muted rounded-2xl overflow-hidden h-full flex flex-col">
                 <div className="w-full h-48 sm:h-56 lg:h-64 overflow-hidden">
-                  <img src={stepMatchImage} alt="Match with tradespeople" className="w-full h-full object-cover" />
+                  <img src={stepMatchImage} alt="Modern kitchen with dark cabinets and a large window overlooking trees" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <span className="text-orange-500 text-sm font-medium mb-3">Step 2</span>
-                  <h3 className="text-xl font-semibold text-secondary mb-4">Get 3 verified trades quotes</h3>
+                  <h3 className="text-xl font-semibold text-secondary mb-4">Get up to 3 quotes</h3>
                   <p className="text-muted-foreground text-base leading-relaxed">
-                    We shortlist three nearby trades based on reviews, certifications and availability. They receive your brief instantly.
+                    Up to 3 vetted local trades who cover your area can quote for the job.
                   </p>
                 </div>
               </div>
@@ -276,13 +298,13 @@ const Index = () => {
             <div className="relative">
               <div className="bg-muted rounded-2xl overflow-hidden h-full flex flex-col">
                 <div className="w-full h-48 sm:h-56 lg:h-64 overflow-hidden">
-                  <img src={stepCompleteImage} alt="Complete and review" className="w-full h-full object-cover" />
+                  <img src={stepCompleteImage} alt="Modern bathroom with twin basins and a stone vanity" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                   <span className="text-orange-500 text-sm font-medium mb-3">Step 3</span>
-                  <h3 className="text-xl font-semibold text-secondary mb-4">Compare and book direct</h3>
+                  <h3 className="text-xl font-semibold text-secondary mb-4">Compare and choose</h3>
                   <p className="text-muted-foreground text-base leading-relaxed">
-                    See quotes side by side, message the pros, and choose the one you prefer.
+                    Read reviews from their real, invoiced jobs, compare the quotes, and choose who to invite round. Or choose no one.
                   </p>
                 </div>
               </div>
@@ -291,106 +313,59 @@ const Index = () => {
         </div>
       </section>
 
+      {/* About Trade Pilot */}
+      <section className="py-12 sm:py-16 lg:py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto space-y-8 sm:space-y-10 text-center">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold text-secondary mb-3">Find a trusted local tradesperson, without the guesswork</h2>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">Finding a reliable local tradesperson usually means asking around, phoning several firms and hoping the online reviews are real. Trade Pilot makes it simpler. Tell us what you need and your postcode, and up to 3 vetted local trades who cover your area can quote. Each job goes to no more than 3 trades, so you get enough quotes to compare without being chased by a crowd. It’s free for homeowners, and you don’t have to accept any quote.</p>
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold text-secondary mb-3">Reviews from real, invoiced jobs</h2>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">Most trade review sites let anyone post a review. On Trade Pilot, reviews are tied to jobs that were invoiced through the platform, so you’re reading about work that was actually done and paid for. That makes it easier to compare tradespeople on what matters: the quality of their work, how they communicate and whether they finish on time and on budget.</p>
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold text-secondary mb-3">Plumbers, electricians, builders and more</h2>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">You can compare quotes from plumbers, electricians, gas and boiler engineers, builders, roofers, painters and decorators, kitchen fitters and carpenters and joiners. Whether it’s a dripping tap, a boiler service, an electrical safety check, a roof repair or a new kitchen, one short form reaches local trades who do that work.</p>
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold text-secondary mb-3">Launching town by town, starting with Reading</h2>
+              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">We’re opening one area at a time, starting with Reading in Berkshire, and we only open an area once there are local trades ready to cover it. Before any work starts, check the trade’s registration and insurance, ask for a written quote, and avoid paying large sums upfront.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Keep Your Home in Shape */}
       <section className="py-12 sm:py-16 lg:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium text-center text-secondary mb-8 sm:mb-12 lg:mb-16">Keep your home in shape</h2>
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium text-center text-secondary mb-8 sm:mb-12 lg:mb-16">Popular areas</h2>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 max-w-7xl mx-auto">
-            {/* Kitchen Installation */}
-            <div className="group cursor-pointer">
-              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl h-64 sm:h-80 lg:h-96 shadow-lg hover:shadow-xl transition-all duration-300">
-                <img 
-                  src="/lovable-uploads/b63cd1f9-6e40-4716-bda0-9c34b9f6d061.png" 
-                  alt="Kitchen Installation" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex flex-wrap gap-1 sm:gap-2">
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Kitchen</span>
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Installation</span>
+            {[
+              { trade: "Plumber", image: "/site-assets/popular-areas-1.jpg", alt: "Modern kitchen with oak cabinets, a white island with a gas hob and a round dining table" },
+              { trade: "Electrician", image: "/site-assets/popular-areas-2.jpg", alt: "Kitchen with dark wood cabinets, a marble island and two chrome pendant lights" },
+              { trade: "Builder", image: "/site-assets/popular-areas-3.jpg", alt: "Kitchen with brown wood cabinets, under-cabinet lighting and a stone tile floor" },
+              { trade: "Roofer", image: "/site-assets/popular-areas-4.jpg", alt: "Black clad garden building with a pitched roof and large glass sliding doors" },
+            ].map(({ trade, image, alt }) => (
+              <Link key={trade} to="/areas/reading" className="group block">
+                <div className="relative overflow-hidden rounded-xl sm:rounded-2xl h-64 sm:h-80 lg:h-96 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <img
+                    src={image}
+                    alt={alt}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-6 text-white">
+                    <p className="text-sm sm:text-base lg:text-lg font-medium mb-2 sm:mb-4">{trade} in Reading</p>
+                    <span className="flex w-full items-center justify-center bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-lg sm:rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium group-hover:bg-white/30 transition-all duration-150">
+                      Find a {trade.toLowerCase()}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </span>
+                  </div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-6 text-white">
-                  <p className="text-sm sm:text-base lg:text-lg font-medium mb-1 sm:mb-2">Kitchen Installation</p>
-                  <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">Starting at £450.00</p>
-                  <button className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-lg sm:rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium hover:bg-white/30 transition-all duration-300 flex items-center justify-center">
-                    Get Help Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Bathroom Renovation */}
-            <div className="group cursor-pointer">
-              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl h-64 sm:h-80 lg:h-96 shadow-lg hover:shadow-xl transition-all duration-300">
-                <img 
-                  src="/lovable-uploads/31f52746-1420-439c-9f35-555016c7e6ba.png" 
-                  alt="Bathroom Renovation" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex flex-wrap gap-1 sm:gap-2">
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Bathroom</span>
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Renovation</span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-6 text-white">
-                  <p className="text-sm sm:text-base lg:text-lg font-medium mb-1 sm:mb-2">Bathroom Renovation</p>
-                  <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">Starting at £320.00</p>
-                  <button className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-lg sm:rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium hover:bg-white/30 transition-all duration-300 flex items-center justify-center">
-                    Get Help Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Electrical Work */}
-            <div className="group cursor-pointer">
-              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl h-64 sm:h-80 lg:h-96 shadow-lg hover:shadow-xl transition-all duration-300">
-                <img 
-                  src="/lovable-uploads/a5c5ec1d-c610-4a2f-999d-0f3695ecbbde.png" 
-                  alt="Electrical Repairs" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex flex-wrap gap-1 sm:gap-2">
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Electrical</span>
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Wiring</span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-6 text-white">
-                  <p className="text-sm sm:text-base lg:text-lg font-medium mb-1 sm:mb-2">Electrical Repairs</p>
-                  <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">Starting at £85.00</p>
-                  <button className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-lg sm:rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium hover:bg-white/30 transition-all duration-300 flex items-center justify-center">
-                    Get Help Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Garden Landscaping */}
-            <div className="group cursor-pointer">
-              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl h-64 sm:h-80 lg:h-96 shadow-lg hover:shadow-xl transition-all duration-300">
-                <img 
-                  src="/lovable-uploads/ede9e89a-df34-4177-b17f-d9d9577b0a7c.png" 
-                  alt="Garden Landscaping" 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                <div className="absolute top-2 sm:top-4 left-2 sm:left-4 flex flex-wrap gap-1 sm:gap-2">
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Garden</span>
-                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-[10px] sm:text-xs font-medium text-white">Landscaping</span>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-6 text-white">
-                  <p className="text-sm sm:text-base lg:text-lg font-medium mb-1 sm:mb-2">Garden Landscaping</p>
-                  <p className="text-white/80 text-xs sm:text-sm mb-2 sm:mb-4">Starting at £280.00</p>
-                  <button className="w-full bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-lg sm:rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium hover:bg-white/30 transition-all duration-300 flex items-center justify-center">
-                    Get Help Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -400,41 +375,25 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-6 sm:mb-8 text-center lg:text-left">Why Trade Pilot?</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-500 mb-3 text-center lg:text-left">Why use Trade Pilot</p>
+              <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-6 sm:mb-8 text-center lg:text-left">How Trade Pilot helps you hire</h2>
               <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Shield className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-secondary mb-2">Vetted local trades</h3>
+                    <p className="text-muted-foreground">We check every trade before they can quote on Trade Pilot. For gas work, always ask to see a Gas Safe ID card.</p>
+                  </div>
+                </div>
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <FileCheck className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-secondary mb-2">Invoice-verified reviews</h3>
-                    <p className="text-muted-foreground">Reviews linked to a job & invoice to reduce fakery.</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CreditCard className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-secondary mb-2">Predictable, low fees</h3>
-                    <p className="text-muted-foreground">Simple monthly plans. No pay-per-lead roulette.</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Smartphone className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-secondary mb-2">Modern, mobile first</h3>
-                    <p className="text-muted-foreground">Fast, clean UX for both homeowners and trades.</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Banknote className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-secondary mb-2">No escrow: you pay the trade direct</h3>
+                    <h3 className="text-lg font-semibold text-secondary mb-2">Reviews from real jobs</h3>
+                    <p className="text-muted-foreground">Reviews on Trade Pilot are tied to invoiced jobs, so you’re reading about work that was actually done and paid for.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-4">
@@ -442,8 +401,8 @@ const Index = () => {
                     <CheckCircle className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-secondary mb-2">Trade Vetting badges</h3>
-                    <p className="text-muted-foreground">ID ✓ · insurance ✓ · Gas Safe / NICEIC</p>
+                    <h3 className="text-lg font-semibold text-secondary mb-2">Free, with no obligation</h3>
+                    <p className="text-muted-foreground">Posting a job and getting up to 3 quotes is free for homeowners. You choose who to invite round, or no one at all.</p>
                   </div>
                 </div>
               </div>
@@ -451,8 +410,8 @@ const Index = () => {
             <div className="relative">
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <img 
-                  src="/lovable-uploads/78c45c37-043b-4102-be34-98a64df6bb17.png" 
-                  alt="Happy customers with tradesperson in kitchen" 
+                  src="/site-assets/why-trade-pilot.jpg" 
+                  alt="Marble bathroom with a double vanity, brass taps and a large mirror" 
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -461,208 +420,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Enhanced Reviews Section */}
-      <section className="py-12 sm:py-16 lg:py-20 pb-20 sm:pb-24 lg:pb-32 bg-gradient-to-br from-muted/50 to-background">
-        <div className="container mx-auto px-4">
-          {/* Hero Section */}
-          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-6">Join our group of happy customers</h2>
-            
-            {/* Trust Rating */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-8">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">Excellent</span>
-                <div className="flex items-center">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 fill-current text-green-500" />
-                  ))}
-                </div>
-              </div>
-              <div className="text-muted-foreground text-center sm:text-left">
-                <span className="font-medium">4.8/5</span> based on <span className="font-medium">2,450+</span> reviews
-              </div>
-            </div>
-          </div>
-
-          {/* Review Cards Carousel */}
-          <div className="max-w-7xl mx-auto">
-            <Carousel className="w-full" opts={{ align: "start", loop: true }}>
-              <CarouselContent className="-ml-2 md:-ml-4 pb-4">
-                {/* Card 1 - Overview */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card bg-primary/5 border-primary/20 h-full flex flex-col">
-                    <div className="text-center mb-6 flex-grow">
-                      <h3 className="text-2xl font-bold text-primary mb-2">2,450+</h3>
-                      <p className="text-lg font-semibold mb-2">Five star reviews</p>
-                      <div className="flex items-center justify-center mb-4">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                        ))}
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        Read real reviews from customers about their service experiences.
-                      </p>
-                    </div>
-                    <Button className="w-full mt-auto" asChild>
-                      <a href="/find-tradespeople">Find a tradesperson</a>
-                    </Button>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 2 - Trade Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Perfect Service</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "Trade Pilot has transformed my business. Quality leads without the endless admin. The platform is intuitive and the support team is excellent."
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-secondary-foreground font-semibold text-xs">JM</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">John Mason</p>
-                        <p className="text-muted-foreground text-xs">Electrician</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 3 - Homeowner Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Best Platform</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "This is probably the best site to get experts for your job. I've found some really good tradespeople on here. Highly recommend!"
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-primary-foreground font-semibold text-xs">HK</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Helen</p>
-                        <p className="text-muted-foreground text-xs">Homeowner</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 4 - Trade Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Highly Recommend</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "It was so easy to use. Leave an explanation of what you would like done and wait for responses. More work, better customers!"
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-secondary-foreground font-semibold text-xs">SP</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Sarah Parker</p>
-                        <p className="text-muted-foreground text-xs">Plumber</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 5 - Additional Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Outstanding Quality</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "Finally, a platform that understands what trades actually need. The quality of leads is outstanding."
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-secondary-foreground font-semibold text-xs">MT</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Mike Thompson</p>
-                        <p className="text-muted-foreground text-xs">Carpenter</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 6 - Additional Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Quick & Reliable</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "Quick, reliable connections with vetted professionals. Exactly what I needed for my home renovations."
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-primary-foreground font-semibold text-xs">EM</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">Emma</p>
-                        <p className="text-muted-foreground text-xs">Homeowner</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Card 7 - Additional Review */}
-                <CarouselItem className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
-                  <div className="trade-card h-full flex flex-col">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                      ))}
-                    </div>
-                    <h4 className="font-semibold mb-3">Brilliant Platform</h4>
-                    <p className="text-muted-foreground text-sm mb-4 flex-grow">
-                      "The verification system gives me confidence in every tradesperson I hire. Brilliant platform!"
-                    </p>
-                    <div className="flex items-center mt-auto">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-                        <span className="text-primary-foreground font-semibold text-xs">DW</span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">David Wilson</p>
-                        <p className="text-muted-foreground text-xs">Property Manager</p>
-                      </div>
-                    </div>
-                  </div>
-                </CarouselItem>
-              </CarouselContent>
-              
-              {/* Navigation arrows positioned below the carousel */}
-              <div className="flex justify-center mt-12 space-x-4">
-                <CarouselPrevious className="relative top-0 left-0 translate-y-0 translate-x-0 bg-white border-border hover:bg-muted" />
-                <CarouselNext className="relative top-0 right-0 translate-y-0 translate-x-0 bg-white border-border hover:bg-muted" />
-              </div>
-            </Carousel>
-          </div>
-        </div>
-      </section>
+      {/* Reviews section removed until there are real, invoice-verified reviews to show. When it returns, show the reviewer's first name and town only, and only with their permission. */}
 
       {/* FAQ Section */}
       <section className="py-20 bg-background">
@@ -671,41 +429,16 @@ const Index = () => {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium text-center text-secondary mb-16">Frequently Asked Questions</h2>
             
             <Accordion type="single" collapsible className="w-full space-y-4">
-              <AccordionItem value="vetting" className="border border-border rounded-lg px-6">
-                <AccordionTrigger className="text-left text-lg font-semibold py-6">
-                  How are trades vetted?
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-6">
-                  All tradespeople go through our comprehensive vetting process which includes ID verification, insurance checks, and relevant trade qualifications (Gas Safe, NICEIC, etc.). We verify their credentials, insurance coverage, and past work history to ensure you're connected with qualified professionals.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="homeowner-fees" className="border border-border rounded-lg px-6">
-                <AccordionTrigger className="text-left text-lg font-semibold py-6">
-                  Do you charge homeowners?
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-6">
-                  No, Trade Pilot is completely free for homeowners. You can post jobs, receive quotes, and connect with tradespeople at no cost. Our revenue comes from subscription fees paid by tradespeople who want to access leads and grow their business through our platform.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="review-verification" className="border border-border rounded-lg px-6">
-                <AccordionTrigger className="text-left text-lg font-semibold py-6">
-                  How are reviews verified?
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-6">
-                  All reviews are linked to actual completed jobs with verified invoices. This means every review comes from a real customer who has hired and paid the tradesperson through a documented transaction, significantly reducing fake or misleading reviews and ensuring authentic feedback.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="problems" className="border border-border rounded-lg px-6">
-                <AccordionTrigger className="text-left text-lg font-semibold py-6">
-                  What happens if there's a problem?
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-6">
-                  If you encounter any issues with a tradesperson or job, our support team is here to help resolve disputes. Since all trades are vetted and insured, you have protection. We also maintain a feedback system to ensure quality standards are maintained across our network of professionals.
-                </AccordionContent>
-              </AccordionItem>
+              {faqs.map(({ question, answer }, index) => (
+                <AccordionItem key={question} value={`faq-${index}`} className="border border-border rounded-lg px-6">
+                  <AccordionTrigger className="text-left text-lg font-semibold py-6">
+                    {question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-6">
+                    {answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
             </Accordion>
           </div>
         </div>
@@ -717,40 +450,11 @@ const Index = () => {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "FAQPage",
-              "mainEntity": [
-                {
-                  "@type": "Question",
-                  "name": "How are trades vetted?",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "All tradespeople go through our comprehensive vetting process which includes ID verification, insurance checks, and relevant trade qualifications (Gas Safe, NICEIC, etc.). We verify their credentials, insurance coverage, and past work history to ensure you're connected with qualified professionals."
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": "Do you charge homeowners?",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "No, Trade Pilot is completely free for homeowners. You can post jobs, receive quotes, and connect with tradespeople at no cost. Our revenue comes from subscription fees paid by tradespeople who want to access leads and grow their business through our platform."
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": "How are reviews verified?",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "All reviews are linked to actual completed jobs with verified invoices. This means every review comes from a real customer who has hired and paid the tradesperson through a documented transaction, significantly reducing fake or misleading reviews and ensuring authentic feedback."
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": "What happens if there's a problem?",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "If you encounter any issues with a tradesperson or job, our support team is here to help resolve disputes. Since all trades are vetted and insured, you have protection. We also maintain a feedback system to ensure quality standards are maintained across our network of professionals."
-                  }
-                }
-              ]
+              "mainEntity": faqs.map(({ question, answer }) => ({
+                "@type": "Question",
+                "name": question,
+                "acceptedAnswer": { "@type": "Answer", "text": answer },
+              })),
             })
           }}
         />
@@ -759,32 +463,19 @@ const Index = () => {
       {/* For Tradespeople */}
       <section className="py-12 bg-slate-50">
         <div className="container mx-auto px-4">
-          <div className="max-w-7xl mx-auto bg-primary text-white rounded-2xl p-8 text-center">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-12 text-white">For Tradespeople</h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 mb-12">
-              <div className="flex flex-col items-center text-center">
-                <TrendingUp className="h-8 w-8 text-secondary mb-4" />
-                <h4 className="text-lg font-semibold mb-2 text-white">Get new leads</h4>
-                <p className="text-white/80">Connect with customers in your area looking for your services</p>
-              </div>
-              
-              <div className="flex flex-col items-center text-center">
-                <Users className="h-8 w-8 text-secondary mb-4" />
-                <h4 className="text-lg font-semibold mb-2 text-white">Build your reputation</h4>
-                <p className="text-white/80">Showcase your work and build trust with verified reviews</p>
-              </div>
-              
-              <div className="flex flex-col items-center text-center">
-                <DollarSign className="h-8 w-8 text-secondary mb-4" />
-                <h4 className="text-lg font-semibold mb-2 text-white">Simple, fair pricing</h4>
-                <p className="text-white/80">Transparent fees with no hidden costs or surprise charges</p>
-              </div>
+          <div className="max-w-7xl mx-auto bg-primary text-white rounded-2xl p-8 sm:p-12 text-center">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium mb-6 text-white">For tradespeople</h2>
+            <p className="mx-auto mb-8 max-w-3xl text-base sm:text-lg leading-relaxed text-white/90">
+              Get homeowner enquiries in your area without a monthly subscription. It’s free to join. Buy credits and spend them only on the jobs you want. Each job goes to no more than 3 trades, and your reviews come from real, invoiced work.
+            </p>
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+              <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-secondary-foreground hover:text-secondary-foreground px-8 py-4 text-lg rounded-lg" asChild>
+                <a href="https://app.mytradepilot.io/trades/join">Join as a trade</a>
+              </Button>
+              <Link to="/trades" className="text-base sm:text-lg font-medium text-white underline underline-offset-4 hover:text-white/80">
+                How Trade Pilot works for trades
+              </Link>
             </div>
-            
-            <Button size="lg" className="bg-secondary hover:bg-secondary/90 text-secondary-foreground hover:text-secondary-foreground px-8 py-4 text-lg rounded-lg" asChild>
-              <a href="/trades/join">Join Our Network</a>
-            </Button>
           </div>
         </div>
       </section>

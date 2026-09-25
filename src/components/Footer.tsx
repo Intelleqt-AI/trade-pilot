@@ -1,5 +1,6 @@
 import { Facebook, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AREAS_HREF, FOOTER_TRADE_PAGES, SHOW_AREAS_LINK } from "@/lib/siteNav";
 
 const Footer = () => {
   return (
@@ -42,7 +43,7 @@ const Footer = () => {
             </div>
 
             {/* App Download Section */}
-            <div className="space-y-3">
+            <div id="apps" className="space-y-3 scroll-mt-24">
               <h4 className="font-medium text-secondary-foreground text-sm">DOWNLOAD THE APP</h4>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a href="#" className="inline-block">
@@ -67,21 +68,20 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-medium text-secondary-foreground">Homeowners</h4>
             <ul className="space-y-2 text-sm">
-              <li>
-                <a href="/find-tradespeople" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
-                  Find a tradesperson
-                </a>
-              </li>
-              <li>
-                <a href="/homeowners/join-free" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
-                  Join free
-                </a>
-              </li>
-              <li>
-                <a href="/homeowners/review-trade" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
-                  Review a trade
-                </a>
-              </li>
+              {FOOTER_TRADE_PAGES.map(({ label, href }) => (
+                <li key={href}>
+                  <Link to={href} className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
+                    {label}
+                  </Link>
+                </li>
+              ))}
+              {SHOW_AREAS_LINK && (
+                <li>
+                  <Link to={AREAS_HREF} className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
+                    Areas: Reading
+                  </Link>
+                </li>
+              )}
               <li>
                 <a href="/blog" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
                   Blog
@@ -100,8 +100,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a href="/trades/premium" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
-                  Premium plans
+                <a href="/trades" className="text-secondary-foreground/80 hover:text-secondary-foreground transition-colors duration-150">
+                  Credit-based system
                 </a>
               </li>
               <li>

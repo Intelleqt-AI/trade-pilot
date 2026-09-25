@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, User, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import AppsPopover from "@/components/AppsPopover";
+import { APPS_PATH, AREAS_HREF, SHOW_AREAS_LINK, TRADE_PAGES } from "@/lib/siteNav";
 
 const focusRing =
   "rounded-lg focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-[#001F3D]";
 
+const navLink = `px-1.5 py-3 text-[15px] font-medium text-[#212121] hover:underline hover:underline-offset-[5px] ${focusRing}`;
+const mobileLink = `flex min-h-11 items-center text-base font-medium text-[#212121] ${focusRing}`;
+
 const SiteHeader = () => {
   const [open, setOpen] = useState(false);
-  const links = [
-    ["Homeowners", "/"],
-    ["Trades", "/trades"],
-    ["Your account", "/login"],
-  ] as const;
 
   return (
     <header className="border-b border-[#E5E7EB] bg-white font-sans">
@@ -27,14 +28,26 @@ const SiteHeader = () => {
         </Link>
         <nav aria-label="Main" className="hidden items-center gap-5 md:flex">
           <div className="flex items-center gap-3">
-            <Link to="/" className={`px-1.5 py-3 text-[15px] font-medium text-[#212121] hover:underline hover:underline-offset-[5px] ${focusRing}`}>Homeowners</Link>
-            <span aria-hidden="true" className="h-5 w-px bg-[#D1D5DB]" />
-            <Link to="/trades" className={`px-1.5 py-3 text-[15px] font-medium text-[#212121] hover:underline hover:underline-offset-[5px] ${focusRing}`}>Trades</Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`inline-flex items-center gap-1 ${navLink}`}>
+                Trades
+                <ChevronDown aria-hidden="true" className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {TRADE_PAGES.map(({ label, href }) => (
+                  <DropdownMenuItem key={href} asChild>
+                    <Link to={href}>{label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {SHOW_AREAS_LINK && <Link to={AREAS_HREF} className={navLink}>Areas</Link>}
+            <Link to="/login" className={navLink}>Sign in</Link>
+            <AppsPopover>
+              <button type="button" className={`inline-flex h-11 items-center border border-[#D1D5DB] px-5 text-[15px] font-semibold text-[#001F3D] hover:bg-[#F3F4F6] ${focusRing}`}>Apps</button>
+            </AppsPopover>
           </div>
           <Link to="/trades/join" className={`inline-flex h-11 items-center bg-[#001F3D] px-5 text-[15px] font-semibold text-white hover:bg-[#0A3157] ${focusRing}`}>Join as a trade</Link>
-          <Link to="/login" aria-label="Your account" className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D1D5DB] text-[#001F3D] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-[#001F3D]">
-            <User aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
-          </Link>
         </nav>
         <div className="flex items-center gap-2 md:hidden">
           <Link to="/trades/join" className={`inline-flex h-11 items-center bg-[#001F3D] px-3.5 text-sm font-semibold text-white ${focusRing}`}>Join as a trade</Link>
@@ -45,7 +58,13 @@ const SiteHeader = () => {
       </div>
       {open && (
         <nav id="mobile-menu" aria-label="Main" className="border-t border-[#E5E7EB] px-4 py-2 md:hidden">
-          {links.map(([label, href]) => <Link key={label} to={href} onClick={() => setOpen(false)} className={`flex min-h-11 items-center text-base font-medium text-[#212121] ${focusRing}`}>{label}</Link>)}
+          <p className={mobileLink}>Trades</p>
+          {TRADE_PAGES.map(({ label, href }) => (
+            <Link key={href} to={href} onClick={() => setOpen(false)} className={`${mobileLink} pl-4 font-normal`}>{label}</Link>
+          ))}
+          {SHOW_AREAS_LINK && <Link to={AREAS_HREF} onClick={() => setOpen(false)} className={mobileLink}>Areas</Link>}
+          <Link to="/login" onClick={() => setOpen(false)} className={mobileLink}>Sign in</Link>
+          <Link to={APPS_PATH} onClick={() => setOpen(false)} className={mobileLink}>Apps</Link>
         </nav>
       )}
     </header>
