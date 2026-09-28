@@ -3,18 +3,16 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="bg-[#001F3D] text-white">
+    <footer className="bg-secondary text-secondary-foreground">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Column */}
           <div className="space-y-4 lg:col-span-2">
-            <div className="h-11 w-[180px]">
-              <img
-                src="/trade-pilot-footer-logo-white-cropped.png"
-                alt="Trade Pilot logo"
-                className="block h-11 w-[180px] object-contain object-left"
-              />
-            </div>
+            <img 
+              src="/tradepilot-darkmood-icon.jpg"
+              alt="Trade Pilot logo" 
+              className="h-24 w-auto"
+            />
             <p className="text-secondary-foreground/80 text-sm">
               Connecting trusted trades with homeowners across the UK.
             </p>
