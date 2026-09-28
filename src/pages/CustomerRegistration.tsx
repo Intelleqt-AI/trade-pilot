@@ -9,6 +9,8 @@ import { ArrowLeft, ArrowRight, CheckCircle, Star, Shield, Users, Eye, EyeOff, L
 import { Link, useNavigate } from "react-router-dom";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "@/lib/toast";
+import SocialSignInButtons from "@/components/auth/SocialSignInButtons";
+import { homePathFor } from "@/lib/socialAuth";
 
 const CustomerRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -95,7 +97,14 @@ const CustomerRegistration = () => {
               <h2 className="text-2xl font-semibold text-secondary mb-2">Welcome to Trade Pilot</h2>
               <p className="text-muted-foreground">Find trusted tradespeople for your next project</p>
             </div>
-            
+
+            <SocialSignInButtons
+              variant="signup"
+              signupAs="customer"
+              onSuccess={data => navigate(homePathFor(data.user))}
+              onError={message => toast.error(message)}
+            />
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
