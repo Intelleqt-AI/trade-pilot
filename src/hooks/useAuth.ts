@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import useFetch from './useFetch';
-import { usePost } from './usePost';
 import { apiRequest, BASE_URL } from '@/lib/apiClient';
+import type { SignupAs } from '@/lib/socialAuth';
 
 export const ME_URL = '/api/v1/tradepilot/auth/me/';
 
@@ -57,14 +57,10 @@ export const useAuth = () => {
 
   const user = meData?.data ?? null;
 
-  const loginMutation = usePost<any>({});
-  const socialLoginMutation = usePost<any>({});
-
-  const signIn = async (email: string, password: string) => {
-    const res = await loginMutation.mutateAsync({
-      url: '/api/v1/tradepilot/auth/login/',
-      data: { email, password },
-    } as any);
+  // Auth endpoints answer bad credentials with 401 — skip apiRequest's "session expired,
+  // redirect to /login" handling so the caller gets the error body instead.
+  const postAuth = async (url: string, data: unknown) => {
+    const res = await apiRequest<any>(url, { method: 'POST', body: JSON.stringify(data) }, true);
     // Seed cache immediately so TradeCRMLayout sees authenticated user on navigate
     if (res?.data?.user) {
       queryClient.setQueryData([ME_URL], { data: res.data.user });
@@ -72,27 +68,22 @@ export const useAuth = () => {
     return res;
   };
 
-  const signInWithGoogle = async (credential: string) => {
-    const res = await socialLoginMutation.mutateAsync({
-      url: '/api/v1/tradepilot/auth/social/google/',
-      data: { credential },
-    } as any);
-    if (res?.data?.user) {
-      queryClient.setQueryData([ME_URL], { data: res.data.user });
-    }
-    return res;
-  };
+  const signIn = (email: string, password: string) =>
+    postAuth('/api/v1/tradepilot/auth/login/', { email, password });
 
-  const signInWithApple = async (idToken: string, firstName?: string, lastName?: string) => {
-    const res = await socialLoginMutation.mutateAsync({
-      url: '/api/v1/tradepilot/auth/social/apple/',
-      data: { id_token: idToken, first_name: firstName, last_name: lastName },
-    } as any);
-    if (res?.data?.user) {
-      queryClient.setQueryData([ME_URL], { data: res.data.user });
-    }
-    return res;
-  };
+  const signInWithGoogle = (credential: string, signupAs?: SignupAs) =>
+    postAuth('/api/v1/tradepilot/auth/social/google/', { credential, signup_as: signupAs });
+
+  const signInWithApple = (idToken: string, firstName?: string, lastName?: string, signupAs?: SignupAs) =>
+    postAuth('/api/v1/tradepilot/auth/social/apple/', {
+      id_token: idToken,
+      first_name: firstName,
+      last_name: lastName,
+      signup_as: signupAs,
+    });
+
+  const registerTradeWithSocial = (payload: Record<string, unknown>) =>
+    postAuth('/api/v1/tradepilot/auth/trade/register/social/', payload);
 
   const signOut = async () => {
     try {
@@ -114,6 +105,7 @@ export const useAuth = () => {
     signIn,
     signInWithGoogle,
     signInWithApple,
+    registerTradeWithSocial,
     signOut,
     isAuthenticated: !!user,
     isCustomer: user?.user_type === 'customer',

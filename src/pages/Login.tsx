@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/lib/toast"
 import { Logo } from "@/components/trade-pilot/Logo"
 import SocialSignInButtons from "@/components/auth/SocialSignInButtons"
+import { authErrorMessage, homePathFor } from "@/lib/socialAuth"
 
 const Login = () => {
   const [email, setEmail] = useState("")
@@ -28,8 +29,7 @@ const Login = () => {
         navigate('/dashboard')
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.errors?.detail || 'Invalid email or password.'
-      toast.error(msg)
+      toast.error(authErrorMessage(err, 'Invalid email or password.'))
     } finally {
       setLoading(false)
     }
@@ -169,9 +169,13 @@ const Login = () => {
           {/* Social sign-in */}
           <div className="mt-6">
             <SocialSignInButtons
-              onSuccess={user => {
-                if (user?.user_type === 'trade') navigate('/trades-crm')
-                else navigate('/dashboard')
+              onSuccess={data => {
+                if (data.needs_registration) {
+                  toast.success('Finish setting up your trade account')
+                  navigate('/trades/join', { state: { socialSignup: data } })
+                } else {
+                  navigate(homePathFor(data.user))
+                }
               }}
               onError={message => toast.error(message)}
             />

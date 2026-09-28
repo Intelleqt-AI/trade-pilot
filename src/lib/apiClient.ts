@@ -55,7 +55,9 @@ export async function apiRequest<T>(
       window.location.href = '/login';
     }
     const err: any = new Error('Unauthorized');
-    err.response = { status: 401, data: {} };
+    let data: unknown = {};
+    try { data = await res.json(); } catch {}
+    err.response = { status: 401, data };
     throw err;
   }
 

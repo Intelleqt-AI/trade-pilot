@@ -8,9 +8,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, ArrowRight, Loader2, Star, Shield, Users, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { usePost } from '@/hooks/usePost';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/lib/toast';
+import SocialSignInButtons from '@/components/auth/SocialSignInButtons';
+import { authErrorMessage, homePathFor, providerLabel, type SocialAuthResult, type SocialSignup } from '@/lib/socialAuth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -22,11 +25,19 @@ const TradeRegistration = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { registerTradeWithSocial } = useAuth();
+  // Set when the person verified their identity with Google/Apple (here or on /login):
+  // they skip the password fields and the OTP step.
+  const [socialSignup, setSocialSignup] = useState<SocialSignup | null>(
+    () => (location.state as { socialSignup?: SocialSignup } | null)?.socialSignup ?? null,
+  );
+  const [socialSubmitting, setSocialSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Personal Details
-    firstName: '',
-    lastName: '',
-    email: '',
+    firstName: socialSignup?.first_name ?? '',
+    lastName: socialSignup?.last_name ?? '',
+    email: socialSignup?.email ?? '',
     phone: '',
     password: '',
     confirmPassword: '',
@@ -58,21 +69,87 @@ const TradeRegistration = () => {
     },
   });
 
-  const loading = registerMutation.isPending;
+  const loading = registerMutation.isPending || socialSubmitting;
+
+  const applySocialSignup = (data: SocialSignup) => {
+    setSocialSignup(data);
+    setFormData(prev => ({
+      ...prev,
+      firstName: data.first_name || prev.firstName,
+      lastName: data.last_name || prev.lastName,
+      email: data.email,
+      password: '',
+      confirmPassword: '',
+    }));
+  };
+
+  const clearSocialSignup = () => {
+    setSocialSignup(null);
+    setFormData(prev => ({ ...prev, email: '' }));
+    // Drop the router state so a refresh doesn't restore the old identity.
+    navigate(location.pathname, { replace: true, state: null });
+  };
+
+  const handleSocialResult = (data: SocialAuthResult) => {
+    if (data.needs_registration && data.signup_token && data.email) {
+      applySocialSignup(data as SocialSignup);
+      toast.success(`${providerLabel(data.provider)} verified — just add your details below.`);
+      return;
+    }
+    toast.success('Welcome back! You already have an account.');
+    navigate(homePathFor(data.user));
+  };
+
+  const submitSocialSignup = async (signup: SocialSignup) => {
+    setSocialSubmitting(true);
+    try {
+      await registerTradeWithSocial({
+        signup_token: signup.signup_token,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        business_name: formData.businessName,
+        business_type: formData.businessType,
+        years_experience: formData.yearsExperience,
+        trade_specialty: formData.tradeSpecialty,
+        location: formData.location,
+        postcode: formData.postcode,
+        has_insurance: formData.hasInsurance,
+        has_license: formData.hasLicense,
+        profile_description: formData.profileDescription,
+      });
+      toast.success('Welcome to TradePilot!');
+      navigate('/trades-crm');
+    } catch (err: any) {
+      if (err?.response?.data?.errors?.signup_token) {
+        clearSocialSignup();
+        setCurrentStep(1);
+      }
+      toast.error(authErrorMessage(err, 'Registration failed.'));
+    } finally {
+      setSocialSubmitting(false);
+    }
+  };
 
   const nextStep = async () => {
     if (currentStep === 1) {
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
         toast.error('Please fill in all required fields.');
         return;
       }
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('Passwords do not match.');
-        return;
-      }
-      if (formData.password.length < 8) {
-        toast.error('Password must be at least 8 characters.');
-        return;
+      if (!socialSignup) {
+        if (!formData.password || !formData.confirmPassword) {
+          toast.error('Please fill in all required fields.');
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          toast.error('Passwords do not match.');
+          return;
+        }
+        if (formData.password.length < 8) {
+          toast.error('Password must be at least 8 characters.');
+          return;
+        }
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
@@ -89,6 +166,10 @@ const TradeRegistration = () => {
       setCurrentStep(4);
     } else if (currentStep === 4) {
       // Final step — submit all data
+      if (socialSignup) {
+        await submitSocialSignup(socialSignup);
+        return;
+      }
       try {
         const res: any = await registerMutation.mutateAsync({
           url: '/api/v1/tradepilot/auth/trade/register/',
@@ -149,6 +230,29 @@ const TradeRegistration = () => {
               <p className="text-muted-foreground">Tell us a bit about yourself</p>
             </div>
 
+            {socialSignup ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+                <span className="flex items-center gap-2 text-foreground">
+                  <Check className="h-4 w-4 text-primary shrink-0" />
+                  Signed in with {providerLabel(socialSignup.provider)} as <strong className="break-all">{socialSignup.email}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={clearSocialSignup}
+                  className="text-primary hover:underline text-left sm:text-right shrink-0"
+                >
+                  Use a different account
+                </button>
+              </div>
+            ) : (
+              <SocialSignInButtons
+                variant="signup"
+                signupAs="trade"
+                onSuccess={handleSocialResult}
+                onError={message => toast.error(message)}
+              />
+            )}
+
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -179,6 +283,8 @@ const TradeRegistration = () => {
                   value={formData.email}
                   onChange={e => updateFormData('email', e.target.value)}
                   placeholder="Enter your email address"
+                  readOnly={!!socialSignup}
+                  className={socialSignup ? 'bg-muted cursor-not-allowed' : undefined}
                 />
               </div>
 
@@ -193,6 +299,8 @@ const TradeRegistration = () => {
                 />
               </div>
 
+              {!socialSignup && (
+              <>
               <div className="space-y-2">
                 <Label htmlFor="password">Password *</Label>
                 <div className="relative">
@@ -239,6 +347,8 @@ const TradeRegistration = () => {
                   <p className="text-sm text-destructive">Passwords do not match</p>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
         );
@@ -470,18 +580,16 @@ const TradeRegistration = () => {
               <CardContent className="pt-6">
                 <p className="text-sm font-medium mb-3">After creating your account:</p>
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">1</div>
-                    <span className="text-sm">Verify your email with the code we send you</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">2</div>
-                    <span className="text-sm">We'll review your application within 24 hours</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">3</div>
-                    <span className="text-sm">Start receiving job leads immediately</span>
-                  </div>
+                  {[
+                    ...(socialSignup ? [] : ['Verify your email with the code we send you']),
+                    "We'll review your application within 24 hours",
+                    'Start receiving job leads immediately',
+                  ].map((text, i) => (
+                    <div key={text} className="flex items-center space-x-3">
+                      <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-medium">{i + 1}</div>
+                      <span className="text-sm">{text}</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

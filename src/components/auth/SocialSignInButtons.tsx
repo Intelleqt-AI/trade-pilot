@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google"
 import { useAuth } from "@/hooks/useAuth"
+import { authErrorMessage, type SignupAs, type SocialAuthResult } from "@/lib/socialAuth"
 
 declare global {
   interface Window {
@@ -22,16 +23,28 @@ declare global {
 }
 
 interface SocialSignInButtonsProps {
-  onSuccess: (user: any) => void
+  /** Receives the response `data`: a signed-in `user`, or `needs_registration` + a signup token. */
+  onSuccess: (data: SocialAuthResult) => void
   onError: (message: string) => void
+  variant?: "signin" | "signup"
+  /** What a brand-new identity becomes. Omitted/"trade" → finish in the trade wizard; "customer" → customer account. */
+  signupAs?: SignupAs
 }
 
 const APPLE_SDK_SRC = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
 
-const extractErrorMessage = (err: any): string =>
-  err?.response?.data?.message || err?.response?.data?.errors?.detail || "Sign-in failed. Please try again."
+const extractErrorMessage = (err: any): string => authErrorMessage(err, "Sign-in failed. Please try again.")
 
-const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) => {
+const Divider = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+    <div className="h-px flex-1 bg-border" />
+    <span>{label}</span>
+    <div className="h-px flex-1 bg-border" />
+  </div>
+)
+
+const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs }: SocialSignInButtonsProps) => {
+  const isSignup = variant === "signup"
   const { signInWithGoogle, signInWithApple } = useAuth()
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
@@ -74,8 +87,8 @@ const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) =
       return
     }
     try {
-      const res: any = await signInWithGoogle(credentialResponse.credential)
-      onSuccess(res?.data?.user)
+      const res: any = await signInWithGoogle(credentialResponse.credential, signupAs)
+      onSuccess(res?.data ?? {})
     } catch (err) {
       onError(extractErrorMessage(err))
     }
@@ -90,8 +103,9 @@ const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) =
         res.authorization.id_token,
         res.user?.name?.firstName,
         res.user?.name?.lastName,
+        signupAs,
       )
-      onSuccess(result?.data?.user)
+      onSuccess(result?.data ?? {})
     } catch (err: any) {
       if (err?.response) onError(extractErrorMessage(err))
       // else: user closed the Apple popup — nothing to surface
@@ -104,14 +118,7 @@ const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) =
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs text-muted-foreground bg-background px-3">
-          Or continue with
-        </div>
-      </div>
+      {!isSignup && <Divider label="Or continue with" />}
 
       <div ref={containerRef} className="flex flex-col items-center gap-2.5 w-full">
         {googleClientId && (
@@ -121,7 +128,9 @@ const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) =
             width={width.toString()}
             theme="outline"
             size="large"
-            text="continue_with"
+            text={isSignup ? "signup_with" : "continue_with"}
+            context={isSignup ? "signup" : "signin"}
+            locale="en_GB"
           />
         )}
         {appleClientId && appleRedirectUri && (
@@ -135,10 +144,12 @@ const SocialSignInButtons = ({ onSuccess, onError }: SocialSignInButtonsProps) =
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
               <path d="M16.365 1.43c0 1.14-.462 2.098-1.386 2.874-.923.775-2.033 1.226-3.328 1.351-.078-1.113.375-2.14 1.326-2.918.95-.78 2.145-1.239 3.388-1.307zM20.37 17.045c-.463 1.052-.68 1.522-1.276 2.454-.83 1.3-2.002 2.918-3.454 2.93-1.29.012-1.623-.84-3.373-.828-1.75.011-2.12.842-3.41.83-1.452-.012-2.562-1.472-3.393-2.772C2.865 17.07 2.18 13.16 3.07 10.406c.61-1.884 1.868-3.267 3.44-3.365 1.24-.078 2.13.9 3.373.9 1.24 0 1.93-.9 3.373-.9 1.34 0 2.526.752 3.373 1.917-2.963 1.622-2.484 5.844.744 7.087z" />
             </svg>
-            {appleLoading ? "Signing in…" : "Continue with Apple"}
+            {appleLoading ? "Signing in…" : isSignup ? "Sign up with Apple" : "Continue with Apple"}
           </button>
         )}
       </div>
+
+      {isSignup && <Divider label="or sign up with email" />}
     </div>
   )
 }
