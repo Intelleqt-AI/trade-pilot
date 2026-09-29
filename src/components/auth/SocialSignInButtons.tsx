@@ -22,11 +22,15 @@ declare global {
   }
 }
 
+export type ProviderCredential = { provider: "google" | "apple"; token: string }
+
 interface SocialSignInButtonsProps {
   /** Receives the response `data`: a signed-in `user`, or `needs_registration` + a signup token. */
-  onSuccess: (data: SocialAuthResult) => void
+  onSuccess?: (data: SocialAuthResult) => void
   onError: (message: string) => void
-  variant?: "signin" | "signup"
+  variant?: "signin" | "signup" | "reauth"
+  /** When set, hand the provider token back (e.g. to re-confirm identity) instead of signing in. */
+  onCredential?: (credential: ProviderCredential) => void
   /** What a brand-new identity becomes. Omitted/"trade" → finish in the trade wizard; "customer" → customer account. */
   signupAs?: SignupAs
 }
@@ -43,8 +47,9 @@ const Divider = ({ label }: { label: string }) => (
   </div>
 )
 
-const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs }: SocialSignInButtonsProps) => {
+const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs, onCredential }: SocialSignInButtonsProps) => {
   const isSignup = variant === "signup"
+  const isReauth = variant === "reauth"
   const { signInWithGoogle, signInWithApple } = useAuth()
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
@@ -87,8 +92,12 @@ const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs 
       return
     }
     try {
+      if (onCredential) {
+        onCredential({ provider: "google", token: credentialResponse.credential })
+        return
+      }
       const res: any = await signInWithGoogle(credentialResponse.credential, signupAs)
-      onSuccess(res?.data ?? {})
+      onSuccess?.(res?.data ?? {})
     } catch (err) {
       onError(extractErrorMessage(err))
     }
@@ -99,13 +108,17 @@ const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs 
     setAppleLoading(true)
     try {
       const res = await window.AppleID.auth.signIn()
+      if (onCredential) {
+        onCredential({ provider: "apple", token: res.authorization.id_token })
+        return
+      }
       const result: any = await signInWithApple(
         res.authorization.id_token,
         res.user?.name?.firstName,
         res.user?.name?.lastName,
         signupAs,
       )
-      onSuccess(result?.data ?? {})
+      onSuccess?.(result?.data ?? {})
     } catch (err: any) {
       if (err?.response) onError(extractErrorMessage(err))
       // else: user closed the Apple popup — nothing to surface
@@ -118,7 +131,7 @@ const SocialSignInButtons = ({ onSuccess, onError, variant = "signin", signupAs 
 
   return (
     <div className="space-y-4">
-      {!isSignup && <Divider label="Or continue with" />}
+      {!isSignup && !isReauth && <Divider label="Or continue with" />}
 
       <div ref={containerRef} className="flex flex-col items-center gap-2.5 w-full">
         {googleClientId && (

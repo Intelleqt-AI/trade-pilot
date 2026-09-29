@@ -46,9 +46,14 @@ export const deleteData = <T = any>({ url, data }: { url: string; data?: any }):
 export const updateTradePilotMe = (data: Record<string, any>) =>
   patchData({ url: 'api/v1/tradepilot/auth/me/', data });
 
-// Permanently delete the authenticated TradePilot account (requires password confirmation)
-export const deleteTradePilotAccount = (password: string) =>
-  deleteData({ url: 'api/v1/tradepilot/auth/delete-account/', data: { password } });
+// Permanently delete the authenticated TradePilot account — confirmed by password, or for
+// Google/Apple-only accounts by a fresh provider re-confirmation.
+export type DeleteAccountPayload =
+  | { password: string }
+  | { provider: 'google' | 'apple'; credential: string };
+
+export const deleteTradePilotAccount = (payload: DeleteAccountPayload) =>
+  deleteData({ url: 'api/v1/tradepilot/auth/delete-account/', data: payload });
 
 // Profile photo
 export const uploadTraderPhoto = (formData: FormData) =>

@@ -32,6 +32,9 @@ export interface TradePilotUser {
   is_verified: boolean;
   profile_description: string;
   profile_photo_url: string | null;
+  /** False for accounts that only sign in with Google/Apple. */
+  has_password?: boolean;
+  auth_providers?: string[];
 }
 
 interface MeResponse {
