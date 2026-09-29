@@ -118,6 +118,7 @@ const TradeCRMProfile = () => {
   const [servicePriceType, setServicePriceType] = useState('fixed');
 
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountStep, setDeleteAccountStep] = useState<'confirm' | 'verify'>('confirm');
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [deleteAccountCredential, setDeleteAccountCredential] = useState<ProviderCredential | null>(null);
   // Google/Apple-only accounts have no password (older API responses lack the field → assume one).
@@ -250,11 +251,10 @@ const TradeCRMProfile = () => {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tradeServices'] }); toast({ title: 'Service removed' }); },
   });
 
-  const isDeleteAccountValid =
-    (hasPassword ? deleteAccountPassword.length > 0 : !!deleteAccountCredential) &&
-    deleteAccountConfirmText.trim() === DELETE_CONFIRMATION_TEXT;
+  const isDeleteAccountValid = deleteAccountPassword.length > 0 || !!deleteAccountCredential;
 
   const resetDeleteAccountState = () => {
+    setDeleteAccountStep('confirm');
     setDeleteAccountPassword('');
     setDeleteAccountCredential(null);
     setDeleteAccountConfirmText('');
@@ -264,9 +264,9 @@ const TradeCRMProfile = () => {
   const deleteAccountMutation = useMutation({
     mutationFn: () =>
       deleteTradePilotAccount(
-        hasPassword
-          ? { password: deleteAccountPassword }
-          : { provider: deleteAccountCredential!.provider, credential: deleteAccountCredential!.token },
+        deleteAccountCredential
+          ? { provider: deleteAccountCredential.provider, credential: deleteAccountCredential.token }
+          : { password: deleteAccountPassword },
       ),
     onSuccess: async () => {
       await signOut();
@@ -955,7 +955,7 @@ const TradeCRMProfile = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete account confirmation */}
+      {/* Delete account confirmation — 2-step: intent then identity */}
       <AlertDialog
         open={deleteAccountOpen}
         onOpenChange={open => {
@@ -974,87 +974,134 @@ const TradeCRMProfile = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="space-y-4">
-            {hasPassword ? (
+          {deleteAccountStep === 'confirm' ? (
+            <>
               <div className="space-y-1.5">
-                <Label htmlFor="delete-account-password">Confirm your password</Label>
+                <p className="text-sm text-gray-700">
+                  To confirm deletion, please type{' '}
+                  <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-red-600">
+                    {DELETE_CONFIRMATION_TEXT}
+                  </code>{' '}
+                  below:
+                </p>
                 <Input
-                  id="delete-account-password"
-                  type="password"
-                  value={deleteAccountPassword}
-                  onChange={e => setDeleteAccountPassword(e.target.value)}
-                  autoComplete="current-password"
-                  disabled={deleteAccountMutation.isPending}
+                  type="text"
+                  value={deleteAccountConfirmText}
+                  onChange={e => setDeleteAccountConfirmText(e.target.value)}
+                  placeholder={`Type "${DELETE_CONFIRMATION_TEXT}" to confirm`}
+                  autoFocus
                 />
               </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label>Confirm it's you</Label>
-                {deleteAccountCredential ? (
-                  <div className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm">
-                    <span className="flex items-center gap-2 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Confirmed with {deleteAccountCredential.provider === 'apple' ? 'Apple' : 'Google'}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:underline"
-                      onClick={() => setDeleteAccountCredential(null)}
-                      disabled={deleteAccountMutation.isPending}
-                    >
-                      Use a different account
-                    </button>
-                  </div>
-                ) : HAS_SOCIAL_BUTTONS ? (
-                  <SocialSignInButtons
-                    variant="reauth"
-                    onCredential={c => {
-                      setDeleteAccountError(null);
-                      setDeleteAccountCredential(c);
-                    }}
-                    onError={setDeleteAccountError}
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-500 text-white hover:bg-red-600"
+                  disabled={deleteAccountConfirmText.trim() !== DELETE_CONFIRMATION_TEXT}
+                  onClick={e => {
+                    e.preventDefault();
+                    setDeleteAccountError(null);
+                    setDeleteAccountStep('verify');
+                  }}
+                >
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:underline"
+                  onClick={() => {
+                    setDeleteAccountPassword('');
+                    setDeleteAccountCredential(null);
+                    setDeleteAccountError(null);
+                    setDeleteAccountStep('confirm');
+                  }}
+                  disabled={deleteAccountMutation.isPending}
+                >
+                  ← Back
+                </button>
+
+                {/* Password option */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="delete-account-password">
+                    Confirm your password
+                    {HAS_SOCIAL_BUTTONS && (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">(optional if using Google below)</span>
+                    )}
+                  </Label>
+                  <Input
+                    id="delete-account-password"
+                    type="password"
+                    value={deleteAccountPassword}
+                    onChange={e => { setDeleteAccountPassword(e.target.value); if (deleteAccountCredential) setDeleteAccountCredential(null); }}
+                    autoComplete="current-password"
+                    disabled={deleteAccountMutation.isPending}
+                    placeholder="Enter your password"
+                    autoFocus
                   />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Set a password first: sign out and use <strong>Forgot password?</strong> on the login page.
-                  </p>
+                </div>
+
+                {/* Social sign-in option */}
+                {HAS_SOCIAL_BUTTONS && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 border-t border-border" />
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <div className="flex-1 border-t border-border" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Sign in with your account</Label>
+                      {deleteAccountCredential ? (
+                        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                          <span className="text-muted-foreground">
+                            {deleteAccountCredential.provider === 'apple' ? 'Apple' : 'Google'} account selected
+                          </span>
+                          <button
+                            type="button"
+                            className="text-xs text-muted-foreground hover:underline"
+                            onClick={() => setDeleteAccountCredential(null)}
+                            disabled={deleteAccountMutation.isPending}
+                          >
+                            Use a different account
+                          </button>
+                        </div>
+                      ) : (
+                        <SocialSignInButtons
+                          variant="reauth"
+                          onCredential={c => {
+                            setDeleteAccountError(null);
+                            setDeleteAccountPassword('');
+                            setDeleteAccountCredential(c);
+                          }}
+                          onError={setDeleteAccountError}
+                        />
+                      )}
+                    </div>
+                  </>
                 )}
+
+                {deleteAccountError && <p className="text-xs text-destructive">{deleteAccountError}</p>}
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              <p className="text-sm text-gray-700">
-                To confirm deletion, please type{' '}
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-red-600">
-                  {DELETE_CONFIRMATION_TEXT}
-                </code>{' '}
-                below:
-              </p>
-              <Input
-                type="text"
-                value={deleteAccountConfirmText}
-                onChange={e => setDeleteAccountConfirmText(e.target.value)}
-                placeholder={`Type "${DELETE_CONFIRMATION_TEXT}" to confirm`}
-                disabled={deleteAccountMutation.isPending}
-              />
-            </div>
-
-            {deleteAccountError && <p className="text-xs text-destructive">{deleteAccountError}</p>}
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAccountMutation.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 text-white hover:bg-red-600"
-              disabled={!isDeleteAccountValid || deleteAccountMutation.isPending}
-              onClick={e => {
-                e.preventDefault();
-                deleteAccountMutation.mutate();
-              }}
-            >
-              {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Account'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleteAccountMutation.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-500 text-white hover:bg-red-600"
+                  disabled={!isDeleteAccountValid || deleteAccountMutation.isPending}
+                  onClick={e => {
+                    e.preventDefault();
+                    deleteAccountMutation.mutate();
+                  }}
+                >
+                  {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Account'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>
