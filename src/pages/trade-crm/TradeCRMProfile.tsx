@@ -50,6 +50,7 @@ import {
   Sun, Moon,
 } from 'lucide-react';
 import TradeAreaMap, { type LocationChange } from '@/components/Trade-CRM/TradeAreaMap';
+import SocialSignInButtons, { type ProviderCredential } from '@/components/auth/SocialSignInButtons';
 import { cn } from '@/lib/utils';
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -75,6 +76,7 @@ const TRADE_LABELS: Record<string, string> = {
 };
 
 const DELETE_CONFIRMATION_TEXT = 'DELETE';
+const HAS_SOCIAL_BUTTONS = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.VITE_APPLE_CLIENT_ID);
 
 const TradeCRMProfile = () => {
   const { profile, signOut } = useAuth();
@@ -117,6 +119,9 @@ const TradeCRMProfile = () => {
 
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountCredential, setDeleteAccountCredential] = useState<ProviderCredential | null>(null);
+  // Google/Apple-only accounts have no password (older API responses lack the field → assume one).
+  const hasPassword = profile?.has_password !== false;
   const [deleteAccountConfirmText, setDeleteAccountConfirmText] = useState('');
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
@@ -246,27 +251,36 @@ const TradeCRMProfile = () => {
   });
 
   const isDeleteAccountValid =
-    deleteAccountPassword.length > 0 && deleteAccountConfirmText.trim() === DELETE_CONFIRMATION_TEXT;
+    (hasPassword ? deleteAccountPassword.length > 0 : !!deleteAccountCredential) &&
+    deleteAccountConfirmText.trim() === DELETE_CONFIRMATION_TEXT;
 
   const resetDeleteAccountState = () => {
     setDeleteAccountPassword('');
+    setDeleteAccountCredential(null);
     setDeleteAccountConfirmText('');
     setDeleteAccountError(null);
   };
 
   const deleteAccountMutation = useMutation({
-    mutationFn: () => deleteTradePilotAccount(deleteAccountPassword),
+    mutationFn: () =>
+      deleteTradePilotAccount(
+        hasPassword
+          ? { password: deleteAccountPassword }
+          : { provider: deleteAccountCredential!.provider, credential: deleteAccountCredential!.token },
+      ),
     onSuccess: async () => {
       await signOut();
       toast({ title: 'Your account has been deleted.' });
       navigate('/login', { replace: true });
     },
     onError: (err: any) => {
-      const message =
-        err?.response?.data?.errors?.password?.[0] ??
-        err?.response?.data?.message ??
-        'Failed to delete account.';
-      setDeleteAccountError(message);
+      const errors = err?.response?.data?.errors ?? {};
+      const pick = (v: unknown) => (Array.isArray(v) ? v[0] : v) as string | undefined;
+      const credentialError = pick(errors.credential);
+      if (credentialError) setDeleteAccountCredential(null);
+      setDeleteAccountError(
+        pick(errors.password) ?? credentialError ?? err?.response?.data?.message ?? 'Failed to delete account.',
+      );
     },
   });
 
@@ -961,17 +975,52 @@ const TradeCRMProfile = () => {
           </AlertDialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="delete-account-password">Confirm your password</Label>
-              <Input
-                id="delete-account-password"
-                type="password"
-                value={deleteAccountPassword}
-                onChange={e => setDeleteAccountPassword(e.target.value)}
-                autoComplete="current-password"
-                disabled={deleteAccountMutation.isPending}
-              />
-            </div>
+            {hasPassword ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-account-password">Confirm your password</Label>
+                <Input
+                  id="delete-account-password"
+                  type="password"
+                  value={deleteAccountPassword}
+                  onChange={e => setDeleteAccountPassword(e.target.value)}
+                  autoComplete="current-password"
+                  disabled={deleteAccountMutation.isPending}
+                />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Confirm it's you</Label>
+                {deleteAccountCredential ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-2 text-green-700">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Confirmed with {deleteAccountCredential.provider === 'apple' ? 'Apple' : 'Google'}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:underline"
+                      onClick={() => setDeleteAccountCredential(null)}
+                      disabled={deleteAccountMutation.isPending}
+                    >
+                      Use a different account
+                    </button>
+                  </div>
+                ) : HAS_SOCIAL_BUTTONS ? (
+                  <SocialSignInButtons
+                    variant="reauth"
+                    onCredential={c => {
+                      setDeleteAccountError(null);
+                      setDeleteAccountCredential(c);
+                    }}
+                    onError={setDeleteAccountError}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Set a password first: sign out and use <strong>Forgot password?</strong> on the login page.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <p className="text-sm text-gray-700">
