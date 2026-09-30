@@ -7,6 +7,12 @@ import { useFaviconTheme } from '@/hooks/useFaviconTheme';
 import CustomerDashboard from './pages/CustomerDashboard';
 import TradeRegistration from './pages/TradeRegistration';
 import CustomerRegistration from './pages/CustomerRegistration';
+import HomeownerOnboarding from './pages/HomeownerOnboarding';
+import HomeownerLayout from './layouts/HomeownerLayout';
+import HomeImprovement from './pages/homeowner/HomeImprovement';
+import HomeownerMessages from './pages/homeowner/Messages';
+import HomeownerNotifications from './pages/homeowner/Notifications';
+import HomeownerSettings from './pages/homeowner/Settings';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -43,7 +49,16 @@ const App = () => {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/dashboard" element={<CustomerDashboard />} />
+          <Route path="/dashboard" element={<Navigate to="/homeowner/dashboard" replace />} />
+          <Route path="/homeowner/onboarding" element={<HomeownerOnboarding />} />
+          <Route path="/homeowner" element={<HomeownerLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<CustomerDashboard />} />
+            <Route path="improvements" element={<HomeImprovement />} />
+            <Route path="messages" element={<HomeownerMessages />} />
+            <Route path="notifications" element={<HomeownerNotifications />} />
+            <Route path="settings" element={<HomeownerSettings />} />
+          </Route>
           <Route path="/trades-crm" element={<TradeCRMLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />

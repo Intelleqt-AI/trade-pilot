@@ -2,7 +2,12 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { BASE_URL } from '@/lib/apiClient';
-import { CONVERSATIONS_URL, getMessagesUrl } from '@/lib/messaging';
+import { BASE, HOMEOWNER_BASE, getConversationsUrl, getMessagesUrl } from '@/lib/messaging';
+
+// A signed-in user is a trader or a homeowner, never both (role lock), so
+// invalidating both mounts' keys is a no-op miss on whichever one is unused —
+// cheaper than threading the role into a hook mounted globally in App.tsx.
+const MOUNTS = [BASE, HOMEOWNER_BASE];
 
 const MAX_BACKOFF_MS = 30000;
 // Consecutive attempts that closed without ever opening — e.g. every handshake
@@ -33,6 +38,15 @@ export function useMessagingSocket() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failedAttemptsRef = useRef(0);
 
+  const invalidateThread = (conversationId?: string) => {
+    for (const base of MOUNTS) {
+      queryClient.invalidateQueries({ queryKey: [getConversationsUrl(base)] });
+      if (conversationId) {
+        queryClient.invalidateQueries({ queryKey: [getMessagesUrl(conversationId, base)] });
+      }
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     closedByUsRef.current = false;
@@ -58,16 +72,10 @@ export function useMessagingSocket() {
 
         if (type === 'message.new' || type === 'message.edited' || type === 'message.deleted') {
           const conversationId = payload.conversation_id as string | undefined;
-          if (conversationId) {
-            queryClient.invalidateQueries({ queryKey: [getMessagesUrl(conversationId)] });
-          }
-          queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
+          invalidateThread(conversationId);
         } else if (type === 'conversation.updated') {
-          queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
           const conversationId = (payload.conversation as { id?: string } | undefined)?.id;
-          if (conversationId) {
-            queryClient.invalidateQueries({ queryKey: [getMessagesUrl(conversationId)] });
-          }
+          invalidateThread(conversationId);
         }
       };
 

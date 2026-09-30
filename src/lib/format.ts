@@ -4,6 +4,18 @@
 const DEFAULT_LOCALE = 'en-GB';
 const DEFAULT_CURRENCY = 'gbp';
 
+/** One-line property address, e.g. "12 Example St, SW1A 1AA".
+ *  A reverse-geocoded address often already ends with the postcode, so appending it
+ *  blindly prints it twice. */
+export function formatPropertyLine(address?: string | null, postcode?: string | null): string {
+  const addr = (address || '').trim().replace(/,\s*$/, '');
+  const pc = (postcode || '').trim();
+  if (!pc) return addr;
+  if (!addr) return pc;
+  const squash = (s: string) => s.replace(/\s+/g, '').toUpperCase();
+  return squash(addr).includes(squash(pc)) ? addr : `${addr}, ${pc}`;
+}
+
 /** Format a minor-unit amount (Stripe pence) as currency. */
 export function formatMoney(
   minorAmount: number,

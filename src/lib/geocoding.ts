@@ -16,7 +16,10 @@ export async function postcodeToLatLng(pc: string): Promise<LatLng | null> {
     // ignore
   }
   try {
-    const outward = cleaned.length > 3 ? cleaned.slice(0, -3) : cleaned;
+    // Strip the inward code only when one is actually present — a bare outcode
+    // like "EC1A" would otherwise be truncated to "E" and never resolve.
+    const hasInwardCode = /\d[A-Z]{2}$/.test(cleaned);
+    const outward = hasInwardCode ? cleaned.slice(0, -3) : cleaned;
     const res2 = await fetch(`https://api.postcodes.io/outcodes/${encodeURIComponent(outward)}`);
     if (!res2.ok) return null;
     const body = await res2.json();

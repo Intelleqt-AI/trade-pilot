@@ -37,8 +37,9 @@ export const toneDot: Record<Tone, string> = {
   violet: 'bg-violet-500',
 };
 
-/** Ideal-timeframe labels for a job's `urgency` value (rough expectation, not an exact date). */
-const URGENCY_LABELS: Record<string, string> = {
+/** Ideal-timeframe labels for a job's `urgency` value (rough expectation, not an exact date).
+ *  Mirrors JobLead.URGENCY_CHOICES — also drives the homeowner's Post a Job picker. */
+export const URGENCY_LABELS: Record<string, string> = {
   within_1_week: 'Within 1 week',
   within_2_weeks: 'Within 2 weeks',
   within_1_month: 'Within 1 month',

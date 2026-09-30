@@ -6,8 +6,9 @@ import type { TradeCRMOutletContext } from '@/layouts/TradeCRMLayout';
 const JobMarket = () => {
   const { user, profile } = useAuth();
   const { jobMarketCredits, setJobMarketCredits } = useOutletContext<TradeCRMOutletContext>();
-  const creditBalance =
-    jobMarketCredits ?? (user as any)?.credit_balance ?? profile?.credit ?? 0;
+  // `credit_balance` is the real serializer field; the old `profile.credit`
+  // fallback never fired because that key does not exist.
+  const creditBalance = jobMarketCredits ?? user?.credit_balance ?? 0;
 
   return (
     <HomePlusJobsFeed

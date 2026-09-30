@@ -22,10 +22,13 @@ import MessageBubble, { type ChatMessage } from '@/components/chat/MessageBubble
 import ReportMessageDialog from '@/components/chat/ReportMessageDialog';
 import EditHistoryDialog from '@/components/chat/EditHistoryDialog';
 import {
+  BASE,
   blockConversation,
   deleteMessage,
   editMessage,
+  getConversationsUrl,
   getMessagesUrl,
+  getUnreadUrl,
   presignAttachment,
   reportMessage,
   unblockConversation,
@@ -35,10 +38,8 @@ import {
 } from '@/lib/messaging';
 import { uploadAttachment, validateAttachmentClientSide } from '@/lib/attachmentUpload';
 
-// Trader-side chat panel (TradePilot). Talks to the trader messaging mount.
-const BASE = '/api/v1/tradepilot/messaging';
-const CONVERSATIONS_URL = `${BASE}/conversations/`;
-const UNREAD_URL = `${BASE}/unread-count/`;
+// Shared chat panel. Defaults to the trader messaging mount; the homeowner
+// dashboard passes its own base. Both mounts expose identical routes.
 const ATTACHMENT_ACCEPT = 'image/*,video/*,application/pdf,.doc,.docx';
 
 type PendingAttachment = {
@@ -75,9 +76,15 @@ interface ChatPanelProps {
   conversationId: string | null;
   title?: string;
   subtitle?: string;
+  /** Messaging mount to talk to. Defaults to the trader one. */
+  basePath?: string;
 }
 
-const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: ChatPanelProps) => {
+const ChatPanel = ({
+  open, onOpenChange, conversationId, title, subtitle, basePath = BASE,
+}: ChatPanelProps) => {
+  const CONVERSATIONS_URL = getConversationsUrl(basePath);
+  const UNREAD_URL = getUnreadUrl(basePath);
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState('');
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -91,13 +98,16 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const messagesUrl = open && conversationId ? getMessagesUrl(conversationId) : null;
+  const messagesUrl = open && conversationId ? getMessagesUrl(conversationId, basePath) : null;
 
   const { data, isLoading } = useFetch<any>(messagesUrl, { refetchInterval: 8000 });
   const messages: ChatMessage[] = data?.data?.messages ?? [];
   const conversation: ConversationDetail | undefined = data?.data?.conversation;
   const other = conversation?.other_party;
-  const homeowner = other?.role === 'homeowner' ? other : null;
+  // Show the counterparty's contact whichever direction we're looking. For a
+  // trader that is the homeowner (unchanged); for a homeowner it is the trader,
+  // whose details they can already see on the bid once the lead is purchased.
+  const contact = other?.email || other?.phone || other?.address || other?.postcode ? other : null;
   const jobDetail: JobDetail | undefined = conversation?.job_detail;
 
   useEffect(() => {
@@ -129,7 +139,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   const sendMutation = useMutation({
     mutationFn: ({ body, attachment }: { body: string; attachment: PendingAttachment | null }) =>
       postData({
-        url: getMessagesUrl(conversationId as string),
+        url: getMessagesUrl(conversationId as string, basePath),
         data: {
           body,
           ...(attachment && {
@@ -166,7 +176,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
     setIsAttaching(true);
     setAttachmentProgress(0);
     try {
-      const presigned = await presignAttachment(conversationId, file);
+      const presigned = await presignAttachment(conversationId, file, basePath);
       await uploadAttachment(file, presigned, setAttachmentProgress);
       setPendingAttachment({ file, s3_key: presigned.s3_key, attachment_type: presigned.attachment_type });
     } catch (err: any) {
@@ -181,7 +191,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
 
   const editMutation = useMutation({
     mutationFn: ({ messageId, body }: { messageId: string; body: string }) =>
-      editMessage(conversationId as string, messageId, body),
+      editMessage(conversationId as string, messageId, body, basePath),
     onSuccess: () => {
       setDraft('');
       setEditingMessageId(null);
@@ -195,7 +205,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
 
   const deleteMutation = useMutation({
     mutationFn: ({ messageId, scope }: { messageId: string; scope: DeleteScope }) =>
-      deleteMessage(conversationId as string, messageId, scope),
+      deleteMessage(conversationId as string, messageId, scope, basePath),
     onSuccess: () => {
       invalidateThread();
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
@@ -208,7 +218,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
 
   const reportMutation = useMutation({
     mutationFn: (payload: { reason: ReportReason; details?: string }) =>
-      reportMessage(conversationId as string, (reportingMessage as ChatMessage).id, payload),
+      reportMessage(conversationId as string, (reportingMessage as ChatMessage).id, payload, basePath),
     onSuccess: () => {
       toast.success('Message reported.');
       setReportingMessage(null);
@@ -220,7 +230,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   });
 
   const blockMutation = useMutation({
-    mutationFn: () => blockConversation(conversationId as string),
+    mutationFn: () => blockConversation(conversationId as string, basePath),
     onSuccess: () => {
       setBlockConfirmOpen(false);
       invalidateThread();
@@ -233,7 +243,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
   });
 
   const unblockMutation = useMutation({
-    mutationFn: () => unblockConversation(conversationId as string),
+    mutationFn: () => unblockConversation(conversationId as string, basePath),
     onSuccess: () => {
       invalidateThread();
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_URL] });
@@ -329,30 +339,30 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
             </div>
           </div>
 
-          {homeowner && (
+          {contact && (
             <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
-              {homeowner.email && (
+              {contact.email && (
                 <a
-                  href={`mailto:${homeowner.email}`}
+                  href={`mailto:${contact.email}`}
                   className="flex items-center gap-2 hover:text-teal-700"
                 >
                   <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{homeowner.email}</span>
+                  <span className="truncate">{contact.email}</span>
                 </a>
               )}
-              {homeowner.phone && (
+              {contact.phone && (
                 <a
-                  href={`tel:${homeowner.phone}`}
+                  href={`tel:${contact.phone}`}
                   className="flex items-center gap-2 hover:text-teal-700"
                 >
                   <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="font-mono tabular-nums">{homeowner.phone}</span>
+                  <span className="font-mono tabular-nums">{contact.phone}</span>
                 </a>
               )}
-              {(homeowner.address || homeowner.postcode) && (
+              {(contact.address || contact.postcode) && (
                 <div className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span>{[homeowner.address, homeowner.postcode].filter(Boolean).join(', ')}</span>
+                  <span>{[contact.address, contact.postcode].filter(Boolean).join(', ')}</span>
                 </div>
               )}
             </div>
@@ -514,6 +524,7 @@ const ChatPanel = ({ open, onOpenChange, conversationId, title, subtitle }: Chat
           onOpenChange={o => !o && setHistoryMessage(null)}
           conversationId={conversationId}
           messageId={historyMessage?.id ?? null}
+          basePath={basePath}
         />
       </SheetContent>
     </Sheet>

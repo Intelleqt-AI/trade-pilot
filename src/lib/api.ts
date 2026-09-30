@@ -1,4 +1,14 @@
 import { apiRequest } from './apiClient';
+
+/** DRF error envelope: `{message, errors: {field: ["msg"] | "msg"}}`. Typed once
+ *  here so mutation onError handlers stop reaching for `any`. */
+export type ApiError = {
+  response?: { data?: { errors?: Record<string, string | string[]>; message?: string } };
+};
+
+/** First message for a field, whether DRF returned a string or a list. */
+export const firstApiMessage = (v: string | string[] | undefined): string | undefined =>
+  Array.isArray(v) ? v[0] : v;
 import {
   isDemoMode,
   getDemoLeads,

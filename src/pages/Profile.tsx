@@ -14,16 +14,15 @@ const Profile = () => {
   const { user, profile, loading: authLoading } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  // Field names must match TradePilotMeSerializer exactly — DRF drops unknown
+  // keys silently, so anything invented here is saved nowhere and read back blank.
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     email: "",
     phone: "",
-    address_line_1: "",
-    address_line_2: "",
-    city: "",
-    county: "",
-    postal_code: ""
+    address: "",
+    postcode: ""
   })
 
   useEffect(() => {
@@ -33,11 +32,8 @@ const Profile = () => {
         last_name: profile.last_name || "",
         email: profile.email || "",
         phone: profile.phone || "",
-        address_line_1: profile.address_line_1 || "",
-        address_line_2: profile.address_line_2 || "",
-        city: profile.city || "",
-        county: profile.county || "",
-        postal_code: profile.postal_code || ""
+        address: profile.address || "",
+        postcode: profile.postcode || ""
       })
     }
   }, [profile])
@@ -56,11 +52,8 @@ const Profile = () => {
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone: formData.phone,
-          address_line_1: formData.address_line_1,
-          address_line_2: formData.address_line_2,
-          city: formData.city,
-          county: formData.county,
-          postal_code: formData.postal_code,
+          address: formData.address,
+          postcode: formData.postcode,
         },
       })
 
@@ -208,52 +201,26 @@ const Profile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Two fields, because that is what the API stores: address and
+                    postcode. The five-field version here silently lost everything
+                    typed into it — none of those names exist on the serializer. */}
                 <div className="space-y-2">
-                  <Label htmlFor="addressLine1">Address Line 1</Label>
+                  <Label htmlFor="address">Address</Label>
                   <Input
-                    id="addressLine1"
-                    value={formData.address_line_1}
-                    onChange={(e) => updateFormData("address_line_1", e.target.value)}
-                    placeholder="Enter your address"
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => updateFormData("address", e.target.value)}
+                    placeholder="e.g. 12 Example Street, Reading"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="addressLine2">Address Line 2 (Optional)</Label>
+                  <Label htmlFor="postcode">Postcode</Label>
                   <Input
-                    id="addressLine2"
-                    value={formData.address_line_2}
-                    onChange={(e) => updateFormData("address_line_2", e.target.value)}
-                    placeholder="Apartment, suite, etc."
+                    id="postcode"
+                    value={formData.postcode}
+                    onChange={(e) => updateFormData("postcode", e.target.value.toUpperCase())}
+                    placeholder="e.g. RG1 1AA"
                   />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) => updateFormData("city", e.target.value)}
-                      placeholder="Enter your city"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="county">County</Label>
-                    <Input
-                      id="county"
-                      value={formData.county}
-                      onChange={(e) => updateFormData("county", e.target.value)}
-                      placeholder="Enter your county"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input
-                      id="postalCode"
-                      value={formData.postal_code}
-                      onChange={(e) => updateFormData("postal_code", e.target.value)}
-                      placeholder="Enter postal code"
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -17,7 +17,7 @@ export interface SocialAuthResult extends Partial<SocialSignup> {
 export const providerLabel = (provider?: string) => (provider === 'apple' ? 'Apple' : 'Google');
 
 export const homePathFor = (user?: { user_type?: string } | null) =>
-  user?.user_type === 'trade' ? '/trades-crm' : '/dashboard';
+  user?.user_type === 'trade' ? '/trades-crm' : '/homeowner/dashboard';
 
 const first = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 

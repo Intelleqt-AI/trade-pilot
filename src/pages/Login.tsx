@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Eye, EyeOff, Lock, Mail, Loader2, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, Loader2, ArrowRight, Wrench } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "@/lib/toast"
@@ -7,6 +7,8 @@ import { Logo } from "@/components/trade-pilot/Logo"
 import SocialSignInButtons from "@/components/auth/SocialSignInButtons"
 import { authErrorMessage, homePathFor } from "@/lib/socialAuth"
 
+// Trader sign-in. No role is sent, so the backend routes by the account's own
+// user_type; the homeowner entry point is a separate decision still to come.
 const Login = () => {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -23,11 +25,7 @@ const Login = () => {
     try {
       const res: any = await signIn(email, password)
       const user = res?.data?.user
-      if (user?.user_type === 'trade') {
-        navigate('/trades-crm')
-      } else {
-        navigate('/dashboard')
-      }
+      navigate(homePathFor(user))
     } catch (err: any) {
       toast.error(authErrorMessage(err, 'Invalid email or password.'))
     } finally {
@@ -39,7 +37,6 @@ const Login = () => {
     <div className="min-h-screen w-full flex">
       {/* Left panel — branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-navy-800 relative overflow-hidden">
-        {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-teal-500 translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-orange-500 -translate-x-1/2 translate-y-1/2" />
@@ -169,6 +166,7 @@ const Login = () => {
           {/* Social sign-in */}
           <div className="mt-6">
             <SocialSignInButtons
+              signupAs="trade"
               onSuccess={data => {
                 if (data.needs_registration) {
                   toast.success('Finish setting up your trade account')
@@ -196,6 +194,7 @@ const Login = () => {
             to="/trades/join"
             className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl border-2 border-secondary text-secondary dark:text-secondary-foreground font-semibold text-sm hover:bg-secondary hover:text-secondary-foreground transition-all duration-200"
           >
+            <Wrench className="w-4 h-4" />
             Create Trade Professional account
             <ArrowRight className="w-4 h-4" />
           </Link>

@@ -4,26 +4,55 @@ import { Card, CardContent } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Mail, RefreshCw, ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { usePost } from "@/hooks/usePost";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/lib/toast";
+import { patchData } from "@/lib/api";
+import { readJobIntent } from "@/lib/jobIntent";
 
 const VerifyEmail = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [otp, setOtp] = useState("");
+  const { verifyEmail, setAuthUser } = useAuth();
 
   const pendingToken = useMemo(() => params.get("pending_token") || "", [params]);
   const email = useMemo(() => params.get("email") || "", [params]);
 
-  const verifyMutation = usePost({
-    onSuccess: (res: any) => {
+  // verifyEmail goes through postAuth, which seeds the /me/ cache — without that
+  // the user stays "logged out" to the app despite holding valid cookies, and
+  // every route guard bounces them to /login.
+  const verifyMutation = useMutation({
+    mutationFn: () => verifyEmail(pendingToken, otp),
+    onSuccess: async (res: any) => {
       const user = res?.data?.user;
       toast.success("Email verified! Welcome to TradePilot.");
       if (user?.user_type === "trade") {
         navigate("/trades-crm");
-      } else {
-        navigate("/dashboard");
+        return;
       }
+      // Came from the marketing site to get quotes — skip the 3-step wizard and
+      // go straight to the prefilled job form. Marking onboarding complete keeps
+      // HomeownerLayout from bouncing them back into it; the dashboard's Getting
+      // Started checklist still prompts for a property.
+      if (readJobIntent()) {
+        try {
+          const patched: any = await patchData({
+            url: "/api/v1/tradepilot/auth/me/",
+            data: { onboarding_completed: true },
+          });
+          // PATCH /me/ returns the user directly on `data` (verify-email nests it
+          // under `data.user`). Re-seed, or the cached user still says
+          // onboarding_completed:false and the layout redirects to the wizard.
+          if (patched?.data) setAuthUser(patched.data);
+        } catch {
+          // Non-fatal: they'd just see onboarding first, intent stays stashed.
+        }
+        navigate("/homeowner/dashboard");
+        return;
+      }
+      navigate("/homeowner/onboarding");
     },
     onError: (err: any) => {
       const errors = err?.response?.data?.errors ?? {};
@@ -42,10 +71,7 @@ const VerifyEmail = () => {
 
   const handleVerify = () => {
     if (otp.length !== 6 || !pendingToken) return;
-    verifyMutation.mutate({
-      url: "/api/v1/tradepilot/auth/verify-email/",
-      data: { pending_token: pendingToken, otp },
-    } as any);
+    verifyMutation.mutate();
   };
 
   const handleResend = () => {
