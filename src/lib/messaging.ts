@@ -1,8 +1,10 @@
 import { fetchData, postData, patchData, deleteData } from '@/lib/api';
 
-// Trader-side messaging API (TradePilot). Talks to the trader messaging mount —
-// mirrors the homeowner app's equivalent module 1:1 (see plan section 3.1).
+// Messaging API, shared by the trader CRM and the homeowner dashboard. Both mounts
+// expose identical routes and serializers, so every helper takes an optional `base`
+// and defaults to the trader one — existing callers are unaffected.
 export const BASE = '/api/v1/tradepilot/messaging';
+export const HOMEOWNER_BASE = '/api/v1/tradepilot/homeowner/messaging';
 
 export type DeleteScope = 'me' | 'everyone';
 
@@ -34,30 +36,39 @@ export interface MessageHistoryEntry {
 }
 
 // Single source of truth for the thread URL — also the query-key string every
-// messaging mutation invalidates against.
-export const getMessagesUrl = (conversationId: string) =>
-  `${BASE}/conversations/${conversationId}/messages/`;
+// messaging mutation invalidates against. `useFetch` keys on the URL, so passing
+// the right base is what keeps trader and homeowner caches separate.
+export const getMessagesUrl = (conversationId: string, base: string = BASE) =>
+  `${base}/conversations/${conversationId}/messages/`;
 
-// Conversations-list query-key string, kept alongside BASE so every mutation
-// (and the real-time socket, see useMessagingSocket.ts) invalidates the exact
-// same key Messages.tsx queries with.
-export const CONVERSATIONS_URL = `${BASE}/conversations/`;
+// Conversations-list and unread query-key strings, kept alongside BASE so every
+// mutation (and the real-time socket, see useMessagingSocket.ts) invalidates the
+// exact same key the Messages pages query with.
+export const getConversationsUrl = (base: string = BASE) => `${base}/conversations/`;
+export const getUnreadUrl = (base: string = BASE) => `${base}/unread-count/`;
 
-export const blockConversation = (conversationId: string) =>
-  postData({ url: `${BASE}/conversations/${conversationId}/block/` });
+export const CONVERSATIONS_URL = getConversationsUrl();
+export const UNREAD_URL = getUnreadUrl();
 
-export const unblockConversation = (conversationId: string) =>
-  postData({ url: `${BASE}/conversations/${conversationId}/unblock/` });
+export const blockConversation = (conversationId: string, base: string = BASE) =>
+  postData({ url: `${base}/conversations/${conversationId}/block/` });
 
-export const editMessage = (conversationId: string, messageId: string, body: string) =>
+export const unblockConversation = (conversationId: string, base: string = BASE) =>
+  postData({ url: `${base}/conversations/${conversationId}/unblock/` });
+
+export const editMessage = (
+  conversationId: string, messageId: string, body: string, base: string = BASE,
+) =>
   patchData({
-    url: `${BASE}/conversations/${conversationId}/messages/${messageId}/`,
+    url: `${base}/conversations/${conversationId}/messages/${messageId}/`,
     data: { body },
   });
 
-export const deleteMessage = (conversationId: string, messageId: string, scope: DeleteScope) =>
+export const deleteMessage = (
+  conversationId: string, messageId: string, scope: DeleteScope, base: string = BASE,
+) =>
   deleteData({
-    url: `${BASE}/conversations/${conversationId}/messages/${messageId}/`,
+    url: `${base}/conversations/${conversationId}/messages/${messageId}/`,
     data: { scope },
   });
 
@@ -65,14 +76,17 @@ export const reportMessage = (
   conversationId: string,
   messageId: string,
   payload: { reason: ReportReason; details?: string },
+  base: string = BASE,
 ) =>
   postData({
-    url: `${BASE}/conversations/${conversationId}/messages/${messageId}/report/`,
+    url: `${base}/conversations/${conversationId}/messages/${messageId}/report/`,
     data: payload,
   });
 
-export const fetchMessageHistory = (conversationId: string, messageId: string) =>
-  fetchData<any>(`${BASE}/conversations/${conversationId}/messages/${messageId}/history/`);
+export const fetchMessageHistory = (
+  conversationId: string, messageId: string, base: string = BASE,
+) =>
+  fetchData<any>(`${base}/conversations/${conversationId}/messages/${messageId}/history/`);
 
 export type AttachmentType = 'image' | 'video' | 'pdf' | 'docx';
 
@@ -89,9 +103,10 @@ export type PresignedUpload = {
 export const presignAttachment = async (
   conversationId: string,
   file: File,
+  base: string = BASE,
 ): Promise<PresignedUpload> => {
   const res: any = await postData({
-    url: `${BASE}/conversations/${conversationId}/attachments/presign/`,
+    url: `${base}/conversations/${conversationId}/attachments/presign/`,
     data: { file_name: file.name, content_type: file.type, file_size: file.size },
   });
   return res.data;

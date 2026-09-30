@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,17 +6,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, CheckCircle, Star, Shield, Users, Eye, EyeOff, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { usePost } from "@/hooks/usePost";
 import { toast } from "@/lib/toast";
 import SocialSignInButtons from "@/components/auth/SocialSignInButtons";
 import { homePathFor } from "@/lib/socialAuth";
+import { useAuth } from "@/hooks/useAuth";
+import { intentFromParams, writeJobIntent, requestedTradeLabel } from "@/lib/jobIntent";
 
 const CustomerRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated, isCustomer, isTrade, loading: authLoading } = useAuth();
+
+  // The marketing site links here as /join?postcode=RG1+1AA&trade=plumber.
+  // Stash it now; the dashboard opens the job form with it after signup.
+  const intent = useMemo(() => intentFromParams(searchParams), [searchParams]);
+  useEffect(() => {
+    writeJobIntent(intent);
+  }, [intent]);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -28,6 +39,14 @@ const CustomerRegistration = () => {
 
   const totalSteps = 2;
 
+  const intentHint = (() => {
+    if (!intent.postcode && !intent.requestedTrade) return '';
+    const who = intent.requestedTrade ? `${requestedTradeLabel(intent.requestedTrade)}s` : 'tradespeople';
+    return intent.postcode
+      ? `Get quotes from local ${who} near ${intent.postcode}.`
+      : `Get quotes from local ${who}.`;
+  })();
+
   const registerMutation = usePost({
     onError: (err: any) => {
       const errors = err?.response?.data?.errors ?? {};
@@ -37,6 +56,17 @@ const CustomerRegistration = () => {
   });
 
   const loading = registerMutation.isPending;
+
+  // Already signed in? Don't show a signup form. A homeowner goes straight to the
+  // dashboard, where the stashed intent opens the job form; a trader has no
+  // business on the homeowner signup at all.
+  // MUST stay below every hook: useAuth resolves asynchronously, so an early
+  // return above usePost skips a hook on the render where isAuthenticated flips
+  // true — "Rendered fewer hooks than expected".
+  if (!authLoading && isAuthenticated) {
+    if (isCustomer) return <Navigate to="/homeowner/dashboard" replace />;
+    if (isTrade) return <Navigate to="/trades-crm" replace />;
+  }
 
   const nextStep = async () => {
     if (currentStep === 1) {
@@ -95,7 +125,9 @@ const CustomerRegistration = () => {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-semibold text-secondary mb-2">Welcome to Trade Pilot</h2>
-              <p className="text-muted-foreground">Find trusted tradespeople for your next project</p>
+              <p className="text-muted-foreground">
+                {intentHint || 'Find trusted tradespeople for your next project'}
+              </p>
             </div>
 
             <SocialSignInButtons

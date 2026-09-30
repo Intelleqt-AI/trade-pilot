@@ -1,9 +1,16 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  // happy-dom rather than node: the jobIntent tests exercise sessionStorage,
+  // including the Safari-private-mode case where it throws.
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.ts"],
+  },
   server: {
     host: "::",
     port: 8080,

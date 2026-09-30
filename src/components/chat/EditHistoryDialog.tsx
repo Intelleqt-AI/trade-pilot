@@ -8,6 +8,7 @@ interface EditHistoryDialogProps {
   onOpenChange: (open: boolean) => void;
   conversationId: string | null;
   messageId: string | null;
+  basePath?: string;
 }
 
 const fmtDateTime = (iso: string) =>
@@ -19,12 +20,12 @@ const fmtDateTime = (iso: string) =>
     minute: '2-digit',
   });
 
-const EditHistoryDialog = ({ open, onOpenChange, conversationId, messageId }: EditHistoryDialogProps) => {
+const EditHistoryDialog = ({ open, onOpenChange, conversationId, messageId, basePath }: EditHistoryDialogProps) => {
   const enabled = open && !!conversationId && !!messageId;
 
   const { data, isLoading } = useQuery<any>({
-    queryKey: ['message-history', conversationId, messageId],
-    queryFn: () => fetchMessageHistory(conversationId as string, messageId as string),
+    queryKey: ['message-history', basePath, conversationId, messageId],
+    queryFn: () => fetchMessageHistory(conversationId as string, messageId as string, basePath),
     enabled,
   });
 
