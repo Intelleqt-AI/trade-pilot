@@ -172,7 +172,7 @@ const ProfileTab = () => {
 
 const PREF_ROWS = [
   ['email_notifications', 'Email notifications', 'Quotes, job updates and messages'],
-  ['sms_notifications', 'SMS notifications', 'Urgent updates by text message'],
+  ['sms_notifications', 'SMS notifications', 'Urgent updates by text message. Coming soon.'],
   ['calendar_reminders', 'Calendar reminders', 'Reminders for scheduled work'],
   ['marketing_emails', 'Product news', 'Occasional tips and offers from TradePilot'],
 ] as const;
@@ -203,19 +203,22 @@ const NotificationsTab = () => {
         </div>
       ) : (
         <div className="space-y-1">
-          {PREF_ROWS.map(([key, label, desc], i) => (
-            <div key={key} className={cn('flex items-center justify-between gap-4 py-4', i > 0 && 'border-t')}>
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">{label}</div>
-                <div className="text-xs text-muted-foreground">{desc}</div>
+          {PREF_ROWS.map(([key, label, desc], i) => {
+            const isSms = key === 'sms_notifications';
+            return (
+              <div key={key} className={cn('flex items-center justify-between gap-4 py-4', i > 0 && 'border-t', isSms && 'opacity-50')}>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-foreground">{label}</div>
+                  <div className="text-xs text-muted-foreground">{desc}</div>
+                </div>
+                <Switch
+                  checked={isSms ? false : !!prefs[key]}
+                  onCheckedChange={v => !isSms && mutation.mutate({ [key]: v })}
+                  disabled={isSms || mutation.isPending}
+                />
               </div>
-              <Switch
-                checked={!!prefs[key]}
-                onCheckedChange={v => mutation.mutate({ [key]: v })}
-                disabled={mutation.isPending}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </SectionCard>
