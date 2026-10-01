@@ -302,24 +302,28 @@ const HomeownerOnboarding = () => {
           <div className="space-y-1 rounded-xl border">
             {([
               ['email_notifications', 'Email notifications', 'Quotes, job updates and messages'],
-              ['sms_notifications', 'SMS notifications', 'Urgent updates by text message'],
+              ['sms_notifications', 'SMS notifications', 'Urgent updates by text message. Coming soon.'],
               ['calendar_reminders', 'Calendar reminders', 'Reminders for scheduled work'],
               ['marketing_emails', 'Product news', 'Occasional tips and offers from TradePilot'],
-            ] as const).map(([key, label, desc], i) => (
-              <div
-                key={key}
-                className={cn('flex items-center justify-between gap-4 p-4', i > 0 && 'border-t')}
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-foreground">{label}</div>
-                  <div className="text-xs text-muted-foreground">{desc}</div>
+            ] as const).map(([key, label, desc], i) => {
+              const isSms = key === 'sms_notifications';
+              return (
+                <div
+                  key={key}
+                  className={cn('flex items-center justify-between gap-4 p-4', i > 0 && 'border-t', isSms && 'opacity-50')}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">{label}</div>
+                    <div className="text-xs text-muted-foreground">{desc}</div>
+                  </div>
+                  <Switch
+                    checked={isSms ? false : prefs[key]}
+                    onCheckedChange={v => !isSms && setPrefs(p => ({ ...p, [key]: v }))}
+                    disabled={isSms}
+                  />
                 </div>
-                <Switch
-                  checked={prefs[key]}
-                  onCheckedChange={v => setPrefs(p => ({ ...p, [key]: v }))}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
