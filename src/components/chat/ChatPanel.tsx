@@ -57,7 +57,25 @@ interface OtherParty {
   address?: string;
   postcode?: string;
   business_name?: string;
+  /** Trader view only: every household contact for the job, primary first. */
+  contacts?: HouseholdContact[];
 }
+
+interface HouseholdContact {
+  id?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  avatar_url?: string | null;
+  relation?: 'owner' | 'family';
+}
+
+const senderKey = (m: ChatMessage) => m.sender ?? m.sender_name;
+
+const householdContactName =(c: HouseholdContact) =>
+  (c.name || `${c.first_name ?? ''} ${c.last_name ?? ''}`).trim() || 'Contact';
 
 interface ConversationDetail {
   id: string;
@@ -68,6 +86,7 @@ interface ConversationDetail {
   blocked_by_me: boolean;
   blocked_by_name: string;
   can_send: boolean;
+  viewer_side?: 'homeowner' | 'trader';
 }
 
 interface ChatPanelProps {
@@ -108,6 +127,18 @@ const ChatPanel = ({
   // trader that is the homeowner (unchanged); for a homeowner it is the trader,
   // whose details they can already see on the bid once the lead is purchased.
   const contact = other?.email || other?.phone || other?.address || other?.postcode ? other : null;
+  // A household can have several contacts (owner + family members); list them all.
+  const householdContacts = (other?.contacts?.length ?? 0) > 1 ? other!.contacts! : null;
+  // Label household senders once more than one person can write on that side.
+  const otherHouseholdSenders = new Set(
+    messages.filter(m => m.sender_side === 'homeowner' && !m.is_mine).map(senderKey),
+  );
+  const multipleHouseholdSenders =
+    !!householdContacts ||
+    otherHouseholdSenders.size > 1 ||
+    // Viewer is in the household and someone else in it has written too.
+    (otherHouseholdSenders.size > 0 &&
+      (conversation?.viewer_side === 'homeowner' || messages.some(m => m.sender_side === 'homeowner' && m.is_mine)));
   const jobDetail: JobDetail | undefined = conversation?.job_detail;
 
   useEffect(() => {
@@ -339,7 +370,37 @@ const ChatPanel = ({
             </div>
           </div>
 
-          {contact && (
+          {householdContacts ? (
+            <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
+              {householdContacts.map((c, i) => (
+                <div key={c.id ?? i} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="min-w-0 truncate font-medium text-foreground">{householdContactName(c)}</span>
+                  {c.relation === 'family' && (
+                    <span className="shrink-0 text-[10px] uppercase tracking-wide">Family</span>
+                  )}
+                  {(c.phone || c.email) && <span aria-hidden="true">—</span>}
+                  {c.phone && (
+                    <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1 hover:text-teal-700">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span className="font-mono tabular-nums">{c.phone}</span>
+                    </a>
+                  )}
+                  {c.email && (
+                    <a href={`mailto:${c.email}`} className="inline-flex min-w-0 items-center gap-1 hover:text-teal-700">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{c.email}</span>
+                    </a>
+                  )}
+                </div>
+              ))}
+              {(other?.address || other?.postcode) && (
+                <div className="flex items-start gap-2 pt-0.5">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span>{[other?.address, other?.postcode].filter(Boolean).join(', ')}</span>
+                </div>
+              )}
+            </div>
+          ) : contact && (
             <div className="mt-3 space-y-1.5 rounded-lg border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
               {contact.email && (
                 <a
@@ -379,10 +440,17 @@ const ChatPanel = ({
               No messages yet — start the conversation.
             </p>
           ) : (
-            messages.map(m => (
+            messages.map((m, i) => (
               <MessageBubble
                 key={m.id}
                 message={m}
+                showSenderName={
+                  multipleHouseholdSenders &&
+                  (i === 0 ||
+                    messages[i - 1].is_mine ||
+                    messages[i - 1].sender_side !== m.sender_side ||
+                    senderKey(messages[i - 1]) !== senderKey(m))
+                }
                 onEdit={handleEditRequest}
                 onDelete={handleDelete}
                 onReport={setReportingMessage}

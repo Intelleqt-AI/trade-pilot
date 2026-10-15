@@ -65,11 +65,19 @@ const PRIORITY_TONE: Record<string, 'danger' | 'warning' | 'neutral'> = {
 
 type WorkDateLabel = 'Completed' | 'Started' | 'Scheduled' | 'Posted';
 
+interface ExtraContact {
+  name: string;
+  phone: string | null;
+  email: string | null;
+}
+
 interface LeadRow {
   id: string;
   customerName: string | null;
   phone: string | null;
   email: string | null;
+  /** Household contacts besides the primary one (family members). */
+  otherContacts: ExtraContact[];
   jobTitle: string;
   jobDescription: string | null;
   priority: string | null;
@@ -94,8 +102,44 @@ interface LeadGroup {
   customerName: string | null;
   phone: string | null;
   email: string | null;
+  otherContacts: ExtraContact[];
   jobs: LeadRow[]; // newest first
 }
+
+interface ApiContact {
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
+const personName = (p: ApiContact | null | undefined): string =>
+  (p?.name || `${p?.first_name ?? ''} ${p?.last_name ?? ''}`).trim();
+
+/**
+ * Primary contact + the other household contacts. Uses `contacts` (primary first) when the
+ * backend sends it, otherwise falls back to the single `homeowner`.
+ */
+function splitContacts(
+  homeowner: ApiContact | null | undefined,
+  contacts: ApiContact[] | null | undefined,
+): Pick<LeadRow, 'customerName' | 'phone' | 'email' | 'otherContacts'> {
+  const list = Array.isArray(contacts) ? contacts.filter(Boolean) : [];
+  const primary = homeowner ?? list[0] ?? null;
+  // The backend always lists the primary contact first.
+  const others = list
+    .slice(1)
+    .map(c => ({ name: personName(c) || 'Family member', phone: c.phone || null, email: c.email || null }));
+  return {
+    customerName: primary ? personName(primary) || null : null,
+    phone: primary?.phone || null,
+    email: primary?.email || null,
+    otherContacts: others,
+  };
+}
+
+const contactKey = (c: ExtraContact) => c.email ?? c.phone ?? c.name;
 
 function computeWorkDate(status: string, bid: any, job?: any): { workDate: string | null; workDateLabel: WorkDateLabel } {
   if (status === 'completed') {
@@ -116,12 +160,26 @@ function groupByOwner(rows: LeadRow[]): LeadGroup[] {
     const key = row.email ?? row.phone ?? row.customerName ?? row.id;
     let group = groups.get(key);
     if (!group) {
-      group = { ownerKey: key, customerName: row.customerName, phone: row.phone, email: row.email, jobs: [] };
+      group = {
+        ownerKey: key,
+        customerName: row.customerName,
+        phone: row.phone,
+        email: row.email,
+        otherContacts: [...row.otherContacts],
+        jobs: [],
+      };
       groups.set(key, group);
     } else {
       if (!group.customerName && row.customerName) group.customerName = row.customerName;
       if (!group.phone && row.phone) group.phone = row.phone;
       if (!group.email && row.email) group.email = row.email;
+      const seen = new Set(group.otherContacts.map(contactKey));
+      for (const c of row.otherContacts) {
+        if (!seen.has(contactKey(c))) {
+          seen.add(contactKey(c));
+          group.otherContacts.push(c);
+        }
+      }
     }
     group.jobs.push(row);
   }
@@ -132,7 +190,11 @@ function groupByOwner(rows: LeadRow[]): LeadGroup[] {
 }
 
 function toCsv(groups: LeadGroup[]): string {
-  const header = ['Customer', 'Phone', 'Email', 'Job', 'Trade', 'Location', 'Status', 'Value', 'Date'];
+  const header = ['Customer', 'Phone', 'Email', 'Other contacts', 'Job', 'Trade', 'Location', 'Status', 'Value', 'Date'];
+  const others = (g: LeadGroup) =>
+    g.otherContacts
+      .map(c => [c.name, c.phone, c.email].filter(Boolean).join(' / '))
+      .join('; ');
   const escape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines: string[] = [];
   for (const g of groups) {
@@ -142,6 +204,7 @@ function toCsv(groups: LeadGroup[]): string {
           g.customerName ?? '',
           g.phone ?? '',
           g.email ?? '',
+          others(g),
           r.jobTitle,
           r.trade ?? '',
           r.address ?? r.postcode ?? '',
@@ -198,9 +261,7 @@ export default function MyLeads() {
       const { workDate, workDateLabel } = computeWorkDate(job.status ?? 'todo', bid, job);
       return {
         id: String(job.id),
-        customerName: homeowner ? `${homeowner.first_name} ${homeowner.last_name}`.trim() : null,
-        phone: homeowner?.phone ?? null,
-        email: homeowner?.email ?? null,
+        ...splitContacts(homeowner, bid?.contacts),
         jobTitle: job.title,
         jobDescription: job.description ?? null,
         priority: job.priority?.toLowerCase() ?? null,
@@ -231,9 +292,7 @@ export default function MyLeads() {
         const { workDate, workDateLabel } = computeWorkDate(b.status, b);
         return {
           id: String(b.id),
-          customerName: homeowner ? `${homeowner.first_name} ${homeowner.last_name}`.trim() : null,
-          phone: homeowner?.phone ?? null,
-          email: homeowner?.email ?? null,
+          ...splitContacts(homeowner, b.contacts),
           jobTitle: b.job_title,
           jobDescription: b.job_description ?? null,
           priority: b.job_priority?.toLowerCase() ?? null,
@@ -398,8 +457,18 @@ export default function MyLeads() {
                           tone={i % 2 === 0 ? 'brand' : 'navy'}
                         />
                         <div className="min-w-0">
-                          <div className="truncate text-[13px] font-semibold text-foreground">
-                            {group.customerName ?? '—'}
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="truncate text-[13px] font-semibold text-foreground">
+                              {group.customerName ?? '—'}
+                            </span>
+                            {group.otherContacts.length > 0 && (
+                              <span
+                                className="shrink-0 rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted-foreground"
+                                title={`Also: ${group.otherContacts.map(c => c.name).join(', ')}`}
+                              >
+                                +{group.otherContacts.length}
+                              </span>
+                            )}
                           </div>
                           <div className="truncate font-mono text-xs tabular-nums text-muted-foreground">
                             {group.phone ?? '—'}
@@ -568,6 +637,29 @@ export default function MyLeads() {
                         <p className="text-sm text-muted-foreground">No email on file.</p>
                       )}
                     </div>
+                    {detailGroup.otherContacts.length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">Other household contacts</p>
+                        {detailGroup.otherContacts.map(c => (
+                          <div
+                            key={contactKey(c)}
+                            className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-2.5 text-sm"
+                          >
+                            <span className="min-w-0 truncate font-medium text-foreground">{c.name}</span>
+                            {c.phone && (
+                              <a href={`tel:${c.phone}`} className="font-mono text-xs tabular-nums text-muted-foreground hover:text-foreground">
+                                {c.phone}
+                              </a>
+                            )}
+                            {c.email && (
+                              <a href={`mailto:${c.email}`} className="min-w-0 truncate text-xs text-muted-foreground hover:text-foreground">
+                                {c.email}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>

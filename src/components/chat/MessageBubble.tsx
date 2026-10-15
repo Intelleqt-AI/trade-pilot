@@ -31,8 +31,11 @@ import type { DeleteScope } from '@/lib/messaging';
 
 export interface ChatMessage {
   id: string;
-  sender: string;
+  sender: string | null;
   sender_name: string;
+  /** Which side wrote it. Several household members may write in one thread. */
+  sender_side?: 'homeowner' | 'trader';
+  sender_avatar?: string | null;
   body: string;
   created_at: string;
   read_at: string | null;
@@ -55,6 +58,8 @@ interface MessageBubbleProps {
   onDelete: (messageId: string, scope: DeleteScope) => void;
   onReport: (message: ChatMessage) => void;
   onViewHistory: (message: ChatMessage) => void;
+  /** Show the sender's name above the bubble (start of a run from a household member). */
+  showSenderName?: boolean;
 }
 
 const fmtTime = (iso: string) =>
@@ -104,9 +109,15 @@ const AttachmentContent = ({ m }: { m: ChatMessage }) => {
   );
 };
 
-const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }: MessageBubbleProps) => {
+const MessageBubble = ({
+  message: m, onEdit, onDelete, onReport, onViewHistory, showSenderName = false,
+}: MessageBubbleProps) => {
   const isMobile = useIsMobile();
   const [confirmScope, setConfirmScope] = useState<DeleteScope | null>(null);
+  const senderLabel =
+    showSenderName && !m.is_mine && m.sender_side === 'homeowner' && m.sender_name ? (
+      <p className="mb-1 max-w-[80%] truncate px-1 text-[11px] font-medium text-muted-foreground">{m.sender_name}</p>
+    ) : null;
 
   const handleCopy = () => {
     if (!m.body) return;
@@ -118,10 +129,13 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
 
   if (m.is_deleted) {
     return (
-      <div className={cn('flex', m.is_mine ? 'justify-end' : 'justify-start')}>
-        <div className="max-w-[80%] rounded-2xl border border-dashed border-border bg-muted px-3.5 py-2 text-sm italic text-muted-foreground">
-          <p>This message was deleted</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">{fmtTime(m.created_at)}</p>
+      <div>
+        {senderLabel}
+        <div className={cn('flex', m.is_mine ? 'justify-end' : 'justify-start')}>
+          <div className="max-w-[80%] rounded-2xl border border-dashed border-border bg-muted px-3.5 py-2 text-sm italic text-muted-foreground">
+            <p>This message was deleted</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{fmtTime(m.created_at)}</p>
+          </div>
         </div>
       </div>
     );
@@ -172,7 +186,8 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
   );
 
   return (
-    <>
+    <div>
+      {senderLabel}
       <div className={cn('group flex', m.is_mine ? 'justify-end' : 'justify-start')}>
         <ContextMenu>
           <ContextMenuTrigger asChild>
@@ -258,7 +273,7 @@ const MessageBubble = ({ message: m, onEdit, onDelete, onReport, onViewHistory }
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };
 

@@ -151,12 +151,10 @@ interface UnlockedInfo {
   latitude: number | null;
   longitude: number | null;
   contact_unlocked: boolean;
-  homeowner: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-  } | null;
+  /** Primary contact (unchanged keys). */
+  homeowner: Homeowner | null;
+  /** Every household contact for the job, primary first. Missing on older backends. */
+  contacts?: HouseholdContact[];
   my_bid: MyBidSummary | null;
   conversation_id: string | null;
 }
@@ -197,7 +195,89 @@ interface Homeowner {
   last_name: string;
   email: string;
   phone: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
+}
+
+interface HouseholdContact extends Homeowner {
+  id?: string;
+  name?: string;
+  relation?: 'owner' | 'family';
+}
+
+/** Household contacts to show, falling back to the single primary `homeowner`. */
+function resolveContacts(
+  homeowner: Homeowner | null | undefined,
+  contacts: HouseholdContact[] | null | undefined
+): HouseholdContact[] {
+  if (contacts && contacts.length > 0) return contacts;
+  return homeowner ? [{ ...homeowner, relation: 'owner' }] : [];
+}
+
+function contactName(c: HouseholdContact): string {
+  return (c.name || `${c.first_name ?? ''} ${c.last_name ?? ''}`).trim() || 'Homeowner';
+}
+
+function contactRelationLabel(c: HouseholdContact): string {
+  return c.relation === 'family' ? 'Family member' : 'Owner';
+}
+
+/** Contact cards used in the job / my-bid drawers and the contact dialog. */
+function ContactList({ contacts, variant }: { contacts: HouseholdContact[]; variant: 'drawer' | 'dialog' }) {
+  const linkCls =
+    variant === 'drawer'
+      ? 'flex min-w-0 items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10'
+      : 'group flex min-w-0 items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted';
+  const iconCls =
+    variant === 'drawer'
+      ? 'h-4 w-4 shrink-0 text-muted-foreground'
+      : 'h-4 w-4 shrink-0 text-muted-foreground group-hover:text-teal-600';
+  return (
+    <div className={variant === 'drawer' ? 'space-y-4' : 'space-y-5'}>
+      {contacts.map((c, i) => {
+        const name = contactName(c);
+        return (
+          <div key={c.id ?? `${name}-${i}`} className={variant === 'drawer' ? 'space-y-2' : 'space-y-2.5'}>
+            <div
+              className={
+                variant === 'drawer'
+                  ? 'flex min-w-0 items-center gap-3 pt-1'
+                  : 'flex min-w-0 items-center gap-3 rounded-lg bg-muted p-3'
+              }
+            >
+              <UserAvatar name={name} src={c.avatar_url ?? undefined} size={variant === 'drawer' ? 'sm' : 'md'} />
+              <div className="min-w-0">
+                <p
+                  className={`truncate ${variant === 'drawer' ? 'text-sm' : ''} font-semibold text-foreground`}
+                >
+                  {name}
+                </p>
+                <p className="text-xs text-muted-foreground">{contactRelationLabel(c)}</p>
+              </div>
+            </div>
+            {c.email && (
+              <a href={`mailto:${c.email}`} className={linkCls}>
+                <Mail className={iconCls} />
+                <span className={`truncate ${variant === 'dialog' ? 'text-sm text-foreground' : ''}`}>{c.email}</span>
+              </a>
+            )}
+            {c.phone && (
+              <a href={`tel:${c.phone}`} className={linkCls}>
+                <Phone className={iconCls} />
+                <span
+                  className={`truncate font-mono tabular-nums ${variant === 'dialog' ? 'text-sm text-foreground' : ''}`}
+                >
+                  {c.phone}
+                </span>
+              </a>
+            )}
+            {!c.email && !c.phone && (
+              <p className="py-1 text-xs text-muted-foreground">No contact details available.</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface MyBid {
@@ -232,6 +312,8 @@ interface MyBid {
   rated_at: string | null;
   created_at: string;
   homeowner: Homeowner | null;
+  /** Every household contact, primary first. Missing on older backends. */
+  contacts?: HouseholdContact[];
 }
 
 function timeAgo(dateStr: string): string {
@@ -294,6 +376,9 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
   const [bidSuccess, setBidSuccess] = useState(false);
   const [contactBid, setContactBid] = useState<MyBid | null>(null);
   const [detailBid, setDetailBid] = useState<MyBid | null>(null);
+  const detailJobContacts = resolveContacts(detailJob?.unlocked_info?.homeowner, detailJob?.unlocked_info?.contacts);
+  const detailBidContacts = resolveContacts(detailBid?.homeowner, detailBid?.contacts);
+  const contactBidContacts = resolveContacts(contactBid?.homeowner, contactBid?.contacts);
   // Quote dialog (submitted after a lead is purchased). Opened from either the
   // available-jobs drawer (a Job) or the my-bids drawer (a MyBid), so it targets a
   // lightweight shape rather than a full Job.
@@ -906,7 +991,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       </div>
                     )}
                   </div>
-                  {bid.homeowner ? (
+                  {bid.homeowner || bid.contacts?.length ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -916,7 +1001,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                       }}
                     >
                       <User className="h-[15px] w-[15px]" />
-                      View contact
+                      {(bid.contacts?.length ?? 0) > 1 ? 'View contacts' : 'View contact'}
                     </Button>
                   ) : (
                     <span className="text-xs text-muted-foreground">Awaiting homeowner</span>
@@ -1072,9 +1157,13 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                   </div>
                 )}
 
-                {/* Homeowner contact — location unlocks on bid, contact unlocks on acceptance */}
+                {/* Homeowner contact(s) — location and contact unlock when the lead is purchased */}
                 <div>
-                  <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
+                  <SectionLabel className="mb-2">
+                    {detailJob.unlocked_info?.contact_unlocked && detailJobContacts.length > 1
+                      ? 'Contacts'
+                      : 'Homeowner contact'}
+                  </SectionLabel>
                   {detailJob.unlocked_info ? (
                     <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 dark:border-teal-500/30 dark:bg-teal-500/10 p-4">
                       <div className="flex items-center gap-2 text-xs font-semibold text-teal-700">
@@ -1107,45 +1196,8 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                         />
                       )}
 
-                      {detailJob.unlocked_info.contact_unlocked && detailJob.unlocked_info.homeowner ? (
-                        <>
-                          <div className="flex items-center gap-3 pt-1">
-                            <UserAvatar
-                              name={`${detailJob.unlocked_info.homeowner.first_name} ${detailJob.unlocked_info.homeowner.last_name}`}
-                              size="sm"
-                            />
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">
-                                {detailJob.unlocked_info.homeowner.first_name}{' '}
-                                {detailJob.unlocked_info.homeowner.last_name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Homeowner</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            {detailJob.unlocked_info.homeowner.email && (
-                              <a
-                                href={`mailto:${detailJob.unlocked_info.homeowner.email}`}
-                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
-                              >
-                                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                <span className="truncate">{detailJob.unlocked_info.homeowner.email}</span>
-                              </a>
-                            )}
-                            {detailJob.unlocked_info.homeowner.phone && (
-                              <a
-                                href={`tel:${detailJob.unlocked_info.homeowner.phone}`}
-                                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
-                              >
-                                <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                <span className="font-mono tabular-nums">
-                                  {detailJob.unlocked_info.homeowner.phone}
-                                </span>
-                              </a>
-                            )}
-                          </div>
-                        </>
+                      {detailJob.unlocked_info.contact_unlocked && detailJobContacts.length > 0 ? (
+                        <ContactList contacts={detailJobContacts} variant="drawer" />
                       ) : (
                         <div className="relative overflow-hidden rounded-lg border border-teal-200/70">
                           <div className="select-none space-y-2.5 bg-background/70 p-3.5 blur-sm" aria-hidden="true">
@@ -1161,7 +1213,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-background/60">
                             <Lock className="h-4 w-4 text-muted-foreground" />
                             <span className="px-4 text-center text-xs font-semibold text-foreground">
-                              Contact unlocks once the homeowner accepts your bid
+                              Contact unlocks once you buy this lead
                             </span>
                           </div>
                         </div>
@@ -1502,42 +1554,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
 
                 {/* Homeowner contact — unlocked once the lead is purchased */}
                 <div>
-                  <SectionLabel className="mb-2">Homeowner contact</SectionLabel>
-                  {detailBid.homeowner ? (
-                    <div className="space-y-3 rounded-xl border border-teal-200 bg-teal-50/60 dark:border-teal-500/30 dark:bg-teal-500/10 p-4">
-                      <div className="flex items-center gap-3">
-                        <UserAvatar
-                          name={`${detailBid.homeowner.first_name} ${detailBid.homeowner.last_name}`}
-                          src={detailBid.homeowner.avatar_url}
-                          size="sm"
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {detailBid.homeowner.first_name} {detailBid.homeowner.last_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Homeowner</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {detailBid.homeowner.email && (
-                          <a
-                            href={`mailto:${detailBid.homeowner.email}`}
-                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
-                          >
-                            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">{detailBid.homeowner.email}</span>
-                          </a>
-                        )}
-                        {detailBid.homeowner.phone && (
-                          <a
-                            href={`tel:${detailBid.homeowner.phone}`}
-                            className="flex items-center gap-2 rounded-lg border border-teal-200 bg-card p-2.5 text-sm text-foreground transition-colors hover:bg-teal-50 dark:hover:bg-teal-500/10"
-                          >
-                            <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="font-mono tabular-nums">{detailBid.homeowner.phone}</span>
-                          </a>
-                        )}
-                      </div>
+                  <SectionLabel className="mb-2">
+                    {detailBidContacts.length > 1 ? 'Contacts' : 'Homeowner contact'}
+                  </SectionLabel>
+                  {detailBidContacts.length > 0 ? (
+                    <div className="rounded-xl border border-teal-200 bg-teal-50/60 dark:border-teal-500/30 dark:bg-teal-500/10 p-4">
+                      <ContactList contacts={detailBidContacts} variant="drawer" />
                     </div>
                   ) : (
                     <div className="relative overflow-hidden rounded-xl border">
@@ -1557,7 +1579,7 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
                           <Lock className="h-4 w-4" />
                         </span>
                         <span className="px-4 text-center text-xs font-semibold text-foreground">
-                          Contact unlocks once the homeowner accepts your bid
+                          Contact unlocks once you buy this lead
                         </span>
                       </div>
                     </div>
@@ -1606,48 +1628,12 @@ const HomePlusJobsFeed = ({ creditBalance, onCreditChange }: Props) => {
       <Dialog open={!!contactBid} onOpenChange={open => !open && setContactBid(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Homeowner contact</DialogTitle>
+            <DialogTitle>{contactBidContacts.length > 1 ? 'Contacts' : 'Homeowner contact'}</DialogTitle>
             {contactBid && <p className="mt-1 text-sm text-muted-foreground">{contactBid.job_title}</p>}
           </DialogHeader>
-          {contactBid?.homeowner && (
-            <div className="space-y-4 py-2">
-              <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
-                <UserAvatar
-                  name={`${contactBid.homeowner.first_name} ${contactBid.homeowner.last_name}`}
-                  size="md"
-                />
-                <div>
-                  <p className="font-semibold text-foreground">
-                    {contactBid.homeowner.first_name} {contactBid.homeowner.last_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Homeowner</p>
-                </div>
-              </div>
-              <div className="space-y-2.5">
-                {contactBid.homeowner.email && (
-                  <a
-                    href={`mailto:${contactBid.homeowner.email}`}
-                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
-                  >
-                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-teal-600" />
-                    <span className="truncate text-sm text-foreground">{contactBid.homeowner.email}</span>
-                  </a>
-                )}
-                {contactBid.homeowner.phone && (
-                  <a
-                    href={`tel:${contactBid.homeowner.phone}`}
-                    className="group flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted"
-                  >
-                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-teal-600" />
-                    <span className="font-mono text-sm tabular-nums text-foreground">
-                      {contactBid.homeowner.phone}
-                    </span>
-                  </a>
-                )}
-                {!contactBid.homeowner.phone && !contactBid.homeowner.email && (
-                  <p className="py-2 text-center text-sm text-muted-foreground">No contact details available.</p>
-                )}
-              </div>
+          {contactBidContacts.length > 0 && (
+            <div className="max-h-[60vh] overflow-y-auto py-2">
+              <ContactList contacts={contactBidContacts} variant="dialog" />
             </div>
           )}
           <DialogFooter>
